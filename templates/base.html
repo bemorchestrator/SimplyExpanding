@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}Simply Expanding Digital Marketing Services{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="flex h-screen bg-gray-50">
+    <!-- Main Container -->
+    <div class="flex flex-row w-full">
+        <!-- Sidebar -->
+        <div id="sidebar" class="bg-white flex flex-col fixed top-0 left-0 h-screen transition-transform duration-300 ease-in-out z-40 overflow-y-auto w-60 transform -translate-x-full md:translate-x-0">
+            <div class="flex items-center justify-between py-4 px-4">
+                <div class="flex items-center">
+                    <span class="text-blue-400 text-xl font-bold whitespace-nowrap logo-full">Simply</span>
+                    <span class="text-gray-600 text-xl font-bold ml-1 logo-full">Expanding</span>
+                    <span class="text-blue-400 text-xl font-bold hidden logo-short">A</span>
+                    <span class="text-white text-xl font-bold hidden logo-short">H</span>
+                </div>
+                <!-- Toggle button is only for desktop -->
+                <i id="toggle-btn" class="bi bi-chevron-left text-gray-600 cursor-pointer hidden md:inline"></i>
+            </div>
+
+            <!-- Dynamic Menu Start -->
+            {% load menu_tags %}
+            <nav class="mt-4 space-y-4 text-gray-800 pl-6">
+                {% load_menu %}
+            </nav>
+            <!-- Dynamic Menu End -->
+
+            <!-- Logout inside Sidebar -->
+            <div class="mt-auto p-4">
+                <div class="flex items-center space-x-4">
+                    <!-- User Profile Picture -->
+                    <div class="w-10 h-10 rounded-full overflow-hidden">
+                        <img class="object-cover w-full h-full" src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{% static 'avatar.png' %}{% endif %}" alt="{{ request.user.get_full_name }}">
+                    </div>
+                    <!-- Logout Button -->
+                    <a href="{% url 'logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overlay -->
+        <div id="overlay" class="fixed inset-0 bg-black opacity-50 hidden z-30"></div>
+
+        <!-- Content -->
+        <div id="content" class="flex-1 flex flex-col p-6 bg-gray-100 transition-all duration-300 ease-in-out ml-0 md:ml-60 overflow-y-auto h-screen">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-4">
+                <!-- Left Side -->
+                <div class="flex items-center space-x-4">
+                    <!-- Hamburger Menu Icon -->
+                    <div class="md:hidden">
+                        <button id="hamburger-btn" class="text-gray-600 focus:outline-none">
+                            <i class="bi bi-list text-2xl"></i>
+                        </button>
+                    </div>
+                    <!-- Greeting -->
+                    <div class="text-2xl font-bold text-gray-600">Hi, {{ request.user.username }}!</div>
+                </div>
+                <!-- Right Side (Mobile Logout) -->
+                <div class="flex items-center space-x-4 md:hidden">
+                    <!-- User Profile Picture (Mobile) -->
+                    <div class="w-10 h-10 rounded-full overflow-hidden">
+                        <img class="object-cover w-full h-full" src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{% static 'avatar.png' %}{% endif %}" alt="{{ request.user.get_full_name }}">
+                    </div>
+                    <!-- Mobile Logout Button -->
+                    <a href="{% url 'logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
+                </div>
+            </div>
+
+            <!-- Page Content -->
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Sidebar functionality
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggle-btn');
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const overlay = document.getElementById('overlay');
+            const menuTexts = document.querySelectorAll('.menu-text');
+            let isCollapsed = false;
+
+            // Toggle sidebar width on desktop
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    if (!isCollapsed) {
+                        sidebar.classList.add('collapsed');
+                        toggleBtn.classList.replace('bi-chevron-left', 'bi-chevron-right');
+                        menuTexts.forEach(menuText => menuText.classList.add('hidden'));
+                        isCollapsed = true;
+                        document.getElementById('content').classList.add('md:ml-16');
+                        document.getElementById('content').classList.remove('md:ml-60');
+                    } else {
+                        sidebar.classList.remove('collapsed');
+                        toggleBtn.classList.replace('bi-chevron-right', 'bi-chevron-left');
+                        menuTexts.forEach(menuText => menuText.classList.remove('hidden'));
+                        isCollapsed = false;
+                        document.getElementById('content').classList.add('md:ml-60');
+                        document.getElementById('content').classList.remove('md:ml-16');
+                    }
+                });
+            }
+
+            // Hamburger menu functionality
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', () => {
+                    // Show the sidebar
+                    sidebar.classList.remove('-translate-x-full');
+                    // Show the overlay
+                    overlay.classList.remove('hidden');
+                });
+            }
+
+            if (overlay) {
+                overlay.addEventListener('click', () => {
+                    // Hide the sidebar
+                    sidebar.classList.add('-translate-x-full');
+                    // Hide the overlay
+                    overlay.classList.add('hidden');
+                });
+            }
+        });
+    </script>
+
+    <style>
+        /* Custom CSS for collapsed sidebar */
+        #sidebar.collapsed {
+            width: 4rem; /* Collapsed width */
+        }
+
+        #sidebar.collapsed .logo-full,
+        #sidebar.collapsed .menu-text {
+            display: none;
+        }
+
+        #sidebar.collapsed .logo-short {
+            display: inline;
+        }
+
+        /* Adjust submenu alignment in collapsed state */
+        #sidebar.collapsed #clerk-submenu {
+            margin-left: 0 !important; /* Remove left margin for submenu in collapsed state */
+        }
+
+        /* Align the submenu chevron icon properly in collapsed state */
+        #sidebar.collapsed .bi-chevron-right,
+        #sidebar.collapsed .bi-chevron-down {
+            margin-left: 0;
+        }
+
+        /* Ensure content area is scrollable and takes full height */
+        #content {
+            height: 100vh;
+            overflow-y: auto;
+        }
+    </style>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

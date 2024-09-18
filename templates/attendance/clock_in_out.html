@@ -1,0 +1,171 @@
+<!-- attendance/templates/attendance/clock_in_out.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 p-10 flex flex-col items-center">
+    
+    <!-- Display Messages -->
+    {% if messages %}
+        <div class="w-full mb-4">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Clock In/Out Buttons -->
+    <div class="w-full mb-4 flex items-center justify-start space-x-4">
+        <!-- Dynamic Clock In/Out Button -->
+        <form method="post">
+            {% csrf_token %}
+            {% if current_status == 'clocked_out' %}
+                <button type="submit" name="clock_in" class="bg-blue-500 text-white py-3 px-8 rounded-lg hover:bg-blue-600 transition duration-200 w-48">
+                    Clock In
+                </button>
+            {% elif current_status == 'clocked_in' %}
+                <button type="submit" name="clock_out" class="bg-red-500 text-white py-3 px-8 rounded-lg hover:bg-red-600 transition duration-200 w-48">
+                    Clock Out
+                </button>
+            {% endif %}
+        </form>
+
+        <!-- Start/End Break Buttons -->
+        {% if current_status == 'clocked_in' %}
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" name="start_break" class="bg-yellow-500 text-white py-3 px-8 rounded-lg hover:bg-yellow-600 transition duration-200 w-48">
+                    Start Break
+                </button>
+            </form>
+        {% elif current_status == 'on_break' %}
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" name="end_break" class="bg-green-500 text-white py-3 px-8 rounded-lg hover:bg-green-600 transition duration-200 w-48">
+                    End Break
+                </button>
+            </form>
+        {% endif %}
+
+        <!-- Date Range Filter -->
+        <div class="relative">
+            <!-- Date Range Button -->
+            <form method="get" class="flex items-center">
+                <input type="text" id="date_range" name="date_range" class="bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200 cursor-pointer" placeholder="Select Date Range" readonly value="{{ request.GET.date_range }}">
+                <button type="submit" class="ml-2 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition duration-200">
+                    Apply
+                </button>
+            </form>
+        </div>
+
+        <!-- Today Button -->
+        <form method="get" class="ml-4">
+            <button type="submit" name="today" value="1" class="bg-white text-gray-800 py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-100 transition duration-200">
+                Today
+            </button>
+        </form>
+    </div>
+
+    <!-- Attendance Records Dashboard -->
+    <div class="bg-white shadow-md rounded-lg p-8 w-full">
+        <h3 class="text-lg font-semibold text-gray-800 mb-6">Attendance Records</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead>
+                    <tr class="text-left bg-gray-100 text-gray-600">
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Clock In</th>
+                        <th class="py-3 px-4">Clock Out</th>
+                        <th class="py-3 px-4">Break Start</th>
+                        <th class="py-3 px-4">Break End</th>
+                        <th class="py-3 px-4">Total Time</th>
+                        <th class="py-3 px-4">Time Late</th>
+                        <th class="py-3 px-4">Deduction</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance_records %}
+                        <tr class="border-t">
+                            <td class="py-3 px-4">{{ record.clock_in_time|date:"Y-m-d" }}</td>
+                            <td class="py-3 px-4">
+                                {% if record.clock_in_time %}
+                                    {{ record.clock_in_time|time:"H:i:s" }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if record.clock_out_time %}
+                                    {{ record.clock_out_time|time:"H:i:s" }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if record.break_start_time %}
+                                    {{ record.break_start_time|time:"H:i:s" }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if record.break_end_time %}
+                                    {{ record.break_end_time|time:"H:i:s" }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if record.total_time_formatted %}
+                                    {{ record.total_time_formatted }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {{ record.lateness_formatted }}
+                            </td>
+                            <td class="py-3 px-4">
+                                {{ record.lateness_deduction_amount }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-6 text-gray-500">No records found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+<!-- Include Flatpickr CSS and JS -->
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#date_range", {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            defaultDate: [
+                "{{ selected_start_date|default:'' }}",
+                "{{ selected_end_date|default:'' }}"
+            ],
+            locale: {
+                rangeSeparator: " to "
+            }
+        });
+    });
+</script>
+{% endblock %}
