@@ -1,14 +1,15 @@
 # attendance/models.py
 
-from django.db import models
+from django.db import models, transaction
 from employees.models import Employee
+from holidays.models import Holiday
 from datetime import timedelta, datetime, time
 from django.utils import timezone
 from decimal import Decimal
-import logging  # Import logging module
+import logging
 
-# Initialize logger
 logger = logging.getLogger('attendance')
+
 
 class LatenessRule(models.Model):
     name = models.CharField(
@@ -30,6 +31,7 @@ class LatenessRule(models.Model):
     def __str__(self):
         return self.name
 
+
 class LatenessDeduction(models.Model):
     name = models.CharField(
         max_length=100,
@@ -50,9 +52,10 @@ class LatenessDeduction(models.Model):
         minutes, seconds = divmod(remainder, 60)
         return f"{self.name} | Lateness >= {self.min_lateness} | Deduct {int(hours)}h {int(minutes)}m"
 
+
 class GlobalSettings(models.Model):
     scheduled_start_time = models.TimeField(
-        default=time(19, 30),  # Set default to 19:30 (7:30 PM)
+        default=time(19, 30),
         help_text="Global scheduled start time for all employees. Example: 19:30 (24-hour format)"
     )
 
@@ -62,6 +65,7 @@ class GlobalSettings(models.Model):
     class Meta:
         verbose_name = "Global Setting"
         verbose_name_plural = "Global Settings"
+
 
 class Attendance(models.Model):
     STATUS_CHOICES = [
@@ -113,6 +117,27 @@ class Attendance(models.Model):
         default=Decimal('0.00'),
         help_text="Total monetary deduction due to lateness, calculated based on lateness rules."
     )
+    lateness_calculated = models.BooleanField(
+        default=False,
+        help_text="Indicates if lateness has been calculated for the first clock-in of the day."
+    )
+    is_primary_clock_in = models.BooleanField(
+        default=False,
+        help_text="Indicates if this is the first clock-in of the day and eligible for lateness deductions."
+    )
+    holiday = models.ForeignKey(
+        Holiday,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Holiday associated with this attendance record, if any."
+    )
+    total_income = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Total income for the attendance record, including holiday adjustments."
+    )
 
     def __str__(self):
         if self.clock_in_time:
@@ -120,13 +145,13 @@ class Attendance(models.Model):
         else:
             return f"{self.employee.user.username} - {self.get_status_display()} on N/A"
 
-    def is_clocked_in(self):
+    def is_clocked_in_method(self):
         return self.status == 'clocked_in'
 
-    def is_on_break(self):
+    def is_on_break_method(self):
         return self.status == 'on_break'
 
-    def is_clocked_out(self):
+    def is_clocked_out_method(self):
         return self.status == 'clocked_out'
 
     @property
@@ -166,82 +191,153 @@ class Attendance(models.Model):
             return f"Php {self.lateness_deduction}"
         return "Php 0.00"
 
+    def check_holiday(self):
+        attendance_date = self.clock_in_time.date() if self.clock_in_time else None
+        if attendance_date:
+            fixed_holidays = Holiday.objects.filter(
+                is_recurring=True,
+                date__month=attendance_date.month,
+                date__day=attendance_date.day
+            )
+            non_fixed_holidays = Holiday.objects.filter(
+                is_recurring=False,
+                date=attendance_date
+            )
+            holiday = fixed_holidays.first() or non_fixed_holidays.first()
+            if holiday:
+                self.holiday = holiday
+            else:
+                self.holiday = None
+
     def calculate_lateness_and_deduction(self):
-        if self.clock_in_time:
+        if self.clock_in_time and self.is_primary_clock_in and not self.lateness_calculated:
             employee = self.employee
-            # Get the scheduled start time: employee's or global
-            if employee.scheduled_start_time:
-                scheduled_time = datetime.combine(self.clock_in_time.date(), employee.scheduled_start_time)
-            else:
-                global_settings = GlobalSettings.objects.first()
-                if global_settings:
-                    scheduled_time = datetime.combine(self.clock_in_time.date(), global_settings.scheduled_start_time)
-                else:
-                    # Default to 19:30 (7:30 PM) if global settings are not set
-                    scheduled_time = datetime.combine(self.clock_in_time.date(), time(19, 30))
-
-            # Ensure timezone-aware datetime
-            if timezone.is_naive(scheduled_time):
-                scheduled_time = timezone.make_aware(scheduled_time, timezone.get_current_timezone())
-            else:
-                scheduled_time = scheduled_time.astimezone(timezone.get_current_timezone())
-
-            # Ensure clock_in_time is in local timezone
+            scheduled_time = self.get_scheduled_start_time()
             clock_in_time_local = timezone.localtime(self.clock_in_time)
-
-            # Log times for debugging
-            logger.debug(f"Scheduled Time: {scheduled_time} | Clock In Time (Local): {clock_in_time_local}")
-
             lateness = clock_in_time_local - scheduled_time
-
-            logger.debug(f"Lateness Calculated: {lateness}")
-
             if lateness > timedelta(0):
                 self.lateness = lateness
-                # Get all assigned lateness rules
-                lateness_rules = employee.lateness_rules.all()
-                total_deduction = Decimal('0.00')
-                for rule in lateness_rules:
-                    if lateness > rule.grace_period:
-                        # Find applicable deductions for this rule
-                        deductions = rule.deductions.filter(min_lateness__lte=lateness).order_by('-min_lateness')
-                        for deduction in deductions:
-                            per_hour_rate = employee.per_day_rate / Decimal('8.00')  # Assuming 8-hour workday
-                            deduction_hours = Decimal(deduction.deduction_duration.total_seconds()) / Decimal('3600')
-                            total_deduction += (per_hour_rate * deduction_hours).quantize(Decimal('0.01'))
-                self.lateness_deduction = total_deduction
-                logger.debug(f"Total Deduction Calculated: {self.lateness_deduction}")
+                self.apply_lateness_deduction(lateness)
+                self.lateness_calculated = True
+                logger.debug(f"Lateness Calculated: {self.lateness}, Deduction: {self.lateness_deduction}")
             else:
                 self.lateness = timedelta(0)
                 self.lateness_deduction = Decimal('0.00')
                 logger.debug("No lateness detected. No deduction applied.")
-        else:
+        elif not self.clock_in_time:
             self.lateness = None
             self.lateness_deduction = Decimal('0.00')
             logger.debug("Clock-in time is not set. Lateness and deduction are null.")
 
-    def save(self, *args, **kwargs):
-        # Calculate lateness and deductions before saving
-        self.calculate_lateness_and_deduction()
+        self.check_holiday()
 
-        # Calculate total_hours
-        if self.clock_in_time and self.clock_out_time:
-            total_duration = self.clock_out_time - self.clock_in_time
-            if self.break_start_time and self.break_end_time:
-                break_duration = self.break_end_time - self.break_start_time
-                total_duration -= break_duration
-            self.total_hours = total_duration.total_seconds() / 3600
-        else:
-            self.total_hours = None
+        if self.holiday:
+            if self.holiday.holiday_type == 'non_working':
+                self.apply_non_working_holiday_pay()
+            elif self.holiday.holiday_type == 'special_non_working':
+                self.apply_special_non_working_holiday_pay()
 
-        super().save(*args, **kwargs)
+    def get_scheduled_start_time(self):
+        if self.employee.scheduled_start_time:
+            return timezone.make_aware(datetime.combine(self.clock_in_time.date(), self.employee.scheduled_start_time))
+        global_settings = GlobalSettings.objects.first()
+        if global_settings:
+            return timezone.make_aware(datetime.combine(self.clock_in_time.date(), global_settings.scheduled_start_time))
+        return timezone.make_aware(datetime.combine(self.clock_in_time.date(), time(19, 30)))
+
+    def apply_lateness_deduction(self, lateness):
+        total_deduction = Decimal('0.00')
+        lateness_rules = self.employee.lateness_rules.all()
+        for rule in lateness_rules:
+            if lateness > rule.grace_period:
+                deductions = rule.deductions.filter(min_lateness__lte=lateness).order_by('-min_lateness')
+                for deduction in deductions:
+                    per_hour_rate = Decimal(self.employee.per_day_rate) / Decimal('8.00')  # Assuming 8-hour workday
+                    deduction_hours = Decimal(deduction.deduction_duration.total_seconds()) / Decimal('3600')
+                    total_deduction += (per_hour_rate * deduction_hours).quantize(Decimal('0.01'))
+        self.lateness_deduction = total_deduction
+        logger.debug(f"Total Deduction Applied: {self.lateness_deduction}")
+
+    def apply_non_working_holiday_pay(self):
+        if self.is_primary_clock_in:
+            if not self.clock_in_time:
+                # Employee did not clock in, paid full day rate
+                self.total_income = Decimal(self.employee.per_day_rate)
+                logger.debug(f"Non-Working Holiday without clock-in: Total Income set to {self.total_income}")
+            else:
+                # Employee clocked in, get full day rate plus worked hours
+                worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate)
+                self.total_income = Decimal(self.employee.per_day_rate) + worked_pay
+                logger.debug(f"Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
+
+    def apply_special_non_working_holiday_pay(self):
+        if self.is_primary_clock_in and self.clock_in_time:
+            # Add 30% to hours worked
+            worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate) * Decimal('1.3')
+            self.total_income = worked_pay
+            logger.debug(f"Special Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
+        elif self.is_primary_clock_in and not self.clock_in_time:
+            # No pay if not clocked in
+            self.total_income = Decimal('0.00')
+            logger.debug("Special Non-Working Holiday without clock-in: Total Income set to 0.00")
 
     def calculate_income(self):
-        if self.total_hours and self.employee.per_day_rate:
+        if self.holiday and self.is_primary_clock_in:
+            if self.holiday.holiday_type == 'non_working':
+                if not self.clock_in_time:
+                    # Non-Working Holiday without clock-in
+                    self.total_income = Decimal(self.employee.per_day_rate)
+                    logger.debug(f"Non-Working Holiday without clock-in: Total Income set to {self.total_income}")
+                else:
+                    # Non-Working Holiday with clock-in
+                    worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate)
+                    self.total_income = Decimal(self.employee.per_day_rate) + worked_pay
+                    logger.debug(f"Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
+            elif self.holiday.holiday_type == 'special_non_working':
+                if not self.clock_in_time:
+                    # Special Non-Working Holiday without clock-in
+                    self.total_income = Decimal('0.00')
+                    logger.debug("Special Non-Working Holiday without clock-in: Total Income set to 0.00")
+                else:
+                    # Special Non-Working Holiday with clock-in
+                    worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate) * Decimal('1.3')
+                    self.total_income = worked_pay
+                    logger.debug(f"Special Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
+        elif self.total_hours and self.employee.per_day_rate:
             standard_hours_per_day = Decimal('8.0')  # Assuming an 8-hour workday
             fraction_of_day = Decimal(str(self.total_hours)) / standard_hours_per_day
-            income = self.employee.per_day_rate * fraction_of_day
-            # Apply lateness deduction
+            income = Decimal(self.employee.per_day_rate) * fraction_of_day
             income -= self.lateness_deduction
-            return max(income, Decimal('0.00'))  # Ensure income doesn't go negative
-        return Decimal('0.00')
+            self.total_income = income  # Removed max to allow negative incomes
+            logger.debug(f"Regular Day Income calculated: {self.total_income}")
+        else:
+            self.total_income = Decimal('0.00')
+            logger.debug("No income calculated: Total Income set to 0.00")
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            if self.clock_in_time:
+                if not self.is_primary_clock_in:
+                    existing_primary = Attendance.objects.filter(
+                        employee=self.employee,
+                        clock_in_time__date=self.clock_in_time.date(),
+                        is_primary_clock_in=True
+                    ).select_for_update().exists()
+                    if not existing_primary:
+                        self.is_primary_clock_in = True
+
+            if self.status == 'clocked_in' and self.is_primary_clock_in and not self.lateness_calculated:
+                self.calculate_lateness_and_deduction()
+
+            if self.clock_in_time and self.clock_out_time:
+                total_duration = self.clock_out_time - self.clock_in_time
+                if self.break_start_time and self.break_end_time:
+                    break_duration = self.break_end_time - self.break_start_time
+                    total_duration -= break_duration
+                self.total_hours = total_duration.total_seconds() / 3600
+            else:
+                self.total_hours = None
+
+            self.calculate_income()
+
+            super().save(*args, **kwargs)

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'attendance',
     'django_flatpickr',
     'billing',
+    'holidays',
 ]
 
 MIDDLEWARE = [
@@ -86,7 +87,7 @@ WSGI_APPLICATION = 'simplyexpanding.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'seapp',  # Replace with your database name
+        'NAME': 'simplyexpanding',  # Replace with your database name
         'USER': 'postgres',  # Replace with your database user
         'PASSWORD': 'digitalmission2126',  # Replace with your database password
         'HOST': 'localhost',  # Set to your database host

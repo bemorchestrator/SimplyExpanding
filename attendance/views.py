@@ -2,27 +2,41 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from employees.models import Employee  # Import the Employee model
+from employees.models import Employee
 from .models import Attendance
 from django.utils import timezone
 from django.db import transaction
 from django.contrib import messages
+from decimal import Decimal
 
 @login_required
 def clock_in(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
-    
-    # Check if the employee has already clocked in without clocking out
-    if Attendance.objects.filter(employee=employee, clock_out_time__isnull=True).exists():
-        messages.warning(request, 'You have already clocked in.')
-        return redirect('clock_in_out_page')
+    now = timezone.now()
 
-    # Create an attendance record with clock-in time and set status to 'clocked_in'
+    # Create a new attendance record for each clock-in
     with transaction.atomic():
-        Attendance.objects.create(employee=employee, clock_in_time=timezone.now(), status='clocked_in')
-        messages.success(request, 'Successfully clocked in.')
-    
+        is_primary = not Attendance.objects.filter(
+            employee=employee,
+            clock_in_time__date=now.date(),
+            is_primary_clock_in=True
+        ).exists()
+
+        attendance = Attendance.objects.create(
+            employee=employee,
+            clock_in_time=now,
+            status='clocked_in',
+            is_primary_clock_in=is_primary
+        )
+
+        # Mark lateness as calculated only for the first clock-in of the day
+        if is_primary:
+            attendance.calculate_lateness_and_deduction()
+            messages.success(request, 'Successfully clocked in with lateness calculation applied.')
+        else:
+            messages.success(request, 'Successfully clocked in without lateness calculation.')
+
     return redirect('clock_in_out_page')
 
 @login_required
@@ -30,8 +44,11 @@ def clock_out(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
 
-    # Find the employee's open attendance record (not clocked out)
-    attendance = Attendance.objects.filter(employee=employee, clock_out_time__isnull=True).first()
+    # Find the most recent open attendance record
+    attendance = Attendance.objects.filter(
+        employee=employee,
+        clock_out_time__isnull=True
+    ).order_by('-clock_in_time').first()
 
     if not attendance:
         messages.warning(request, 'You have not clocked in yet.')
@@ -43,22 +60,22 @@ def clock_out(request):
         attendance.status = 'clocked_out'
         attendance.save()
         messages.success(request, 'Successfully clocked out.')
-    
+
     return redirect('clock_in_out_page')
 
 @login_required
 def start_break(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
-    
-    # Find the employee's open attendance record (not clocked out and not on break)
+
+    # Find the most recent attendance record not already on break
     attendance = Attendance.objects.filter(
         employee=employee,
         clock_out_time__isnull=True,
         break_start_time__isnull=True
-    ).first()
+    ).order_by('-clock_in_time').first()
 
-    if not attendance or attendance.is_on_break():
+    if not attendance or attendance.is_on_break_method():
         messages.warning(request, 'You cannot start a break at this time.')
         return redirect('clock_in_out_page')
 
@@ -68,7 +85,7 @@ def start_break(request):
         attendance.status = 'on_break'
         attendance.save()
         messages.success(request, 'Break started.')
-    
+
     return redirect('clock_in_out_page')
 
 @login_required
@@ -76,14 +93,14 @@ def end_break(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
 
-    # Find the employee's open attendance record (on break)
+    # Find the most recent attendance record that is currently on break
     attendance = Attendance.objects.filter(
         employee=employee,
-        clock_out_time__isnull=True,
+        break_start_time__isnull=False,
         break_end_time__isnull=True
-    ).first()
+    ).order_by('-clock_in_time').first()
 
-    if not attendance or not attendance.is_on_break():
+    if not attendance or not attendance.is_on_break_method():
         messages.warning(request, 'You are not on a break.')
         return redirect('clock_in_out_page')
 
@@ -93,7 +110,7 @@ def end_break(request):
         attendance.status = 'clocked_in'
         attendance.save()
         messages.success(request, 'Break ended.')
-    
+
     return redirect('clock_in_out_page')
 
 @login_required
@@ -114,7 +131,7 @@ def attendance_dashboard(request):
         else:
             current_status = 'clocked_in'
 
-    return render(request, 'attendance/dashboard.html', {
+    return render(request, 'attendance/clock_in_out.html', {
         'attendance_records': attendance_records,
         'current_status': current_status
     })
@@ -129,15 +146,33 @@ def clock_in_out_page(request):
         with transaction.atomic():
             # Clock in action
             if 'clock_in' in request.POST:
-                if not Attendance.objects.filter(employee=employee, clock_out_time__isnull=True).exists():
-                    Attendance.objects.create(employee=employee, clock_in_time=timezone.now(), status='clocked_in')
-                    messages.success(request, 'Successfully clocked in.')
+                now = timezone.now()
+                is_primary = not Attendance.objects.filter(
+                    employee=employee,
+                    clock_in_time__date=now.date(),
+                    is_primary_clock_in=True
+                ).exists()
+
+                attendance = Attendance.objects.create(
+                    employee=employee,
+                    clock_in_time=now,
+                    status='clocked_in',
+                    is_primary_clock_in=is_primary
+                )
+
+                if is_primary:
+                    attendance.calculate_lateness_and_deduction()
+                    messages.success(request, 'Successfully clocked in with lateness calculation applied.')
                 else:
-                    messages.warning(request, 'You are already clocked in.')
+                    messages.success(request, 'Successfully clocked in without lateness calculation.')
 
             # Clock out action
             elif 'clock_out' in request.POST:
-                attendance = Attendance.objects.filter(employee=employee, clock_out_time__isnull=True).first()
+                attendance = Attendance.objects.filter(
+                    employee=employee,
+                    clock_out_time__isnull=True
+                ).order_by('-clock_in_time').first()
+
                 if attendance:
                     attendance.clock_out_time = timezone.now()
                     attendance.status = 'clocked_out'
@@ -152,8 +187,9 @@ def clock_in_out_page(request):
                     employee=employee,
                     clock_out_time__isnull=True,
                     break_start_time__isnull=True
-                ).first()
-                if attendance and attendance.status == 'clocked_in':
+                ).order_by('-clock_in_time').first()
+
+                if attendance and attendance.is_clocked_in_method():
                     attendance.break_start_time = timezone.now()
                     attendance.status = 'on_break'
                     attendance.save()
@@ -167,8 +203,9 @@ def clock_in_out_page(request):
                     employee=employee,
                     break_start_time__isnull=False,
                     break_end_time__isnull=True
-                ).first()
-                if attendance and attendance.status == 'on_break':
+                ).order_by('-clock_in_time').first()
+
+                if attendance and attendance.is_on_break_method():
                     attendance.break_end_time = timezone.now()
                     attendance.status = 'clocked_in'
                     attendance.save()

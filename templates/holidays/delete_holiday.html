@@ -1,0 +1,23 @@
+<!-- holidays/templates/holidays/delete_holiday.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto mt-8">
+    <div class="flex justify-center">
+        <div class="w-full max-w-7xl">
+            <div class="bg-white shadow-md rounded-lg overflow-hidden p-6">
+                <h2 class="text-2xl font-bold mb-4">Delete Holiday</h2>
+                <p class="mb-4">Are you sure you want to delete the holiday "<strong>{{ holiday.name }}</strong>" scheduled on "{{ holiday.date }}"?</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="flex justify-between">
+                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Confirm Delete</button>
+                        <a href="{% url 'holiday_list' %}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

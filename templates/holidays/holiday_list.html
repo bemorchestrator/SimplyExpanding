@@ -1,0 +1,54 @@
+<!-- holidays/templates/holidays/holiday_list.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto mt-8">
+    <div class="flex justify-center">
+        <div class="w-full max-w-7xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Holidays List</h2>
+                <a href="{% url 'add_holiday' %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Add New Holiday</a>
+            </div>
+            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-800 text-white">
+                        <tr>
+                            <th class="w-1/6 py-3 px-4 text-left uppercase font-semibold text-sm whitespace-nowrap">Name</th>
+                            <th class="w-1/6 py-3 px-4 text-left uppercase font-semibold text-sm whitespace-nowrap">Type</th>
+                            <th class="w-1/6 py-3 px-4 text-left uppercase font-semibold text-sm whitespace-nowrap">Date</th>
+                            <th class="w-1/6 py-3 px-4 text-left uppercase font-semibold text-sm whitespace-nowrap">Recurring</th>
+                            <th class="w-1/3 py-3 px-4 text-left uppercase font-semibold text-sm whitespace-nowrap">Description</th>
+                            <th class="w-1/6 py-3 px-4 text-left uppercase font-semibold text-sm whitespace-nowrap">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700">
+                        {% for holiday in holidays %}
+                        <tr class="bg-gray-100 border-b">
+                            <td class="py-3 px-4 text-left">{{ holiday.name }}</td>
+                            <td class="py-3 px-4 text-left">{{ holiday.get_holiday_type_display }}</td>
+                            <td class="py-3 px-4 text-left">
+                                {% if holiday.is_recurring %}
+                                    {{ holiday.date|date:"F j" }} (Recurring)
+                                {% else %}
+                                    {{ holiday.date }}
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-left">{{ holiday.is_recurring|yesno:"Yes,No" }}</td>
+                            <td class="py-3 px-4 text-left">{{ holiday.description }}</td>
+                            <td class="py-3 px-4 text-left">
+                                <a href="{% url 'delete_holiday' holiday.pk %}" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">No holidays available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
