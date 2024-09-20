@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django_flatpickr',
     'billing',
     'holidays',
+    'client',
 ]
 
 MIDDLEWARE = [

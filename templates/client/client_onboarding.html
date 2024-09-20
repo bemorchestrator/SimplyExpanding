@@ -1,0 +1,499 @@
+<!-- client/templates/client/client_onboarding.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex items-start justify-center min-h-screen bg-gray-100 pt-10">
+    <div class="rounded-lg overflow-hidden w-full max-w-4xl mx-auto">
+        <div class="p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 text-center">Client Onboarding</h2>
+
+            <!-- Progress Bar -->
+            <div class="flex justify-between mt-6 mb-6" id="progress-bar">
+                <!-- Step 1 -->
+                <div class="w-full flex-1 text-center">
+                    <div class="block w-8 h-8 mx-auto bg-blue-300 text-white rounded-full">1</div>
+                    <span class="block text-sm text-gray-600 mt-2">Basic Info</span>
+                </div>
+                <!-- Step 2 -->
+                <div class="w-full flex-1 text-center">
+                    <div class="block w-8 h-8 mx-auto bg-gray-300 text-gray-500 rounded-full">2</div>
+                    <span class="block text-sm text-gray-600 mt-2">SEO Details</span>
+                </div>
+                <!-- Step 3 -->
+                <div class="w-full flex-1 text-center">
+                    <div class="block w-8 h-8 mx-auto bg-gray-300 text-gray-500 rounded-full">3</div>
+                    <span class="block text-sm text-gray-600 mt-2">Keywords</span>
+                </div>
+                <!-- Step 4 -->
+                <div class="w-full flex-1 text-center">
+                    <div class="block w-8 h-8 mx-auto bg-gray-300 text-gray-500 rounded-full">4</div>
+                    <span class="block text-sm text-gray-600 mt-2">Competitors</span>
+                </div>
+                <!-- Step 5 -->
+                <div class="w-full flex-1 text-center">
+                    <div class="block w-8 h-8 mx-auto bg-gray-300 text-gray-500 rounded-full">5</div>
+                    <span class="block text-sm text-gray-600 mt-2">Technical SEO</span>
+                </div>
+                <!-- Step 6 -->
+                <div class="w-full flex-1 text-center">
+                    <div class="block w-8 h-8 mx-auto bg-gray-300 text-gray-500 rounded-full">6</div>
+                    <span class="block text-sm text-gray-600 mt-2">Additional Info</span>
+                </div>
+                <!-- Step 7 -->
+                <div class="w-full flex-1 text-center">
+                    <div class="block w-8 h-8 mx-auto bg-gray-300 text-gray-500 rounded-full">7</div>
+                    <span class="block text-sm text-gray-600 mt-2">Confirmation</span>
+                </div>
+            </div>
+
+            <!-- Form Steps -->
+            <form method="POST" id="onboardingForm" action="{% url 'client_onboarding' %}">
+                {% csrf_token %}
+
+                <!-- Step 1: Basic Info -->
+                <div id="step-1" class="step-content">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800">Tell us about your business</h3>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.name.id_for_label }}">Business Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.name.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.contact_info.id_for_label }}">Contact Information</label>
+                        {{ form.contact_info }}
+                        {% if form.contact_info.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.contact_info.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.email.id_for_label }}">Email Address</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.email.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.phone_number.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.address.id_for_label }}">Address</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.address.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="w-full mt-6 bg-blue-300 text-white py-2 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="nextStep(2)">
+                        Next: SEO Details
+                    </button>
+                </div>
+
+                <!-- Step 2: SEO Details -->
+                <div id="step-2" class="step-content hidden">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800">SEO Information</h3>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.seo_type.id_for_label }}">SEO Type</label>
+                        {{ form.seo_type }}
+                        {% if form.seo_type.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.seo_type.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.target_goals.id_for_label }}">Target Goals</label>
+                        {{ form.target_goals }}
+                        {% if form.target_goals.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.target_goals.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.primary_products_services.id_for_label }}">Primary Products/Services</label>
+                        {{ form.primary_products_services }}
+                        {% if form.primary_products_services.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.primary_products_services.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.target_audience.id_for_label }}">Target Audience</label>
+                        {{ form.target_audience }}
+                        {% if form.target_audience.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.target_audience.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.target_locations.id_for_label }}">Target Locations</label>
+                        {{ form.target_locations }}
+                        {% if form.target_locations.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.target_locations.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="flex justify-between w-full mt-6">
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="prevStep(1)">
+                            Back
+                        </button>
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="nextStep(3)">
+                            Next: Keywords
+                        </button>
+                    </button>
+                </div>
+
+                <!-- Step 3: Keywords -->
+                <div id="step-3" class="step-content hidden">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800">Keyword Information</h3>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.target_keywords.id_for_label }}">Target Keywords</label>
+                        {{ form.target_keywords }}
+                        {% if form.target_keywords.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.target_keywords.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.bulk_keywords.id_for_label }}">Bulk Keywords</label>
+                        {{ form.bulk_keywords }}
+                        {% if form.bulk_keywords.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.bulk_keywords.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="flex justify-between w-full mt-6">
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="prevStep(2)">
+                            Back
+                        </button>
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="nextStep(4)">
+                            Next: Competitors
+                        </button>
+                    </button>
+                </div>
+
+                <!-- Step 4: Competitors -->
+                <div id="step-4" class="step-content hidden">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800">Competitor Information</h3>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.competitor_urls.id_for_label }}">Competitor URLs</label>
+                        {{ form.competitor_urls }}
+                        {% if form.competitor_urls.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.competitor_urls.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="flex justify-between w-full mt-6">
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="prevStep(3)">
+                            Back
+                        </button>
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="nextStep(5)">
+                            Next: Technical SEO
+                        </button>
+                    </button>
+                </div>
+
+                <!-- Step 5: Technical SEO -->
+                <div id="step-5" class="step-content hidden">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800">Technical SEO Information</h3>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.google_analytics_access.id_for_label }}">Google Analytics Access</label>
+                        {{ form.google_analytics_access }}
+                        {% if form.google_analytics_access.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.google_analytics_access.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.google_analytics_login.id_for_label }}">Google Analytics Login Details</label>
+                        {{ form.google_analytics_login }}
+                        {% if form.google_analytics_login.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.google_analytics_login.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.google_search_console_details.id_for_label }}">Google Search Console Details</label>
+                        {{ form.google_search_console_details }}
+                        {% if form.google_search_console_details.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.google_search_console_details.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium" for="{{ form.current_cms.id_for_label }}">Current CMS</label>
+                        {{ form.current_cms }}
+                        {% if form.current_cms.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.current_cms.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Other CMS Field -->
+                    <div id="other-cms-section" class="mb-4 hidden">
+                        <label class="block text-gray-700 font-medium" for="{{ form.other_cms.id_for_label }}">Other CMS</label>
+                        {{ form.other_cms }}
+                        {% if form.other_cms.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.other_cms.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="flex justify-between w-full mt-6">
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="prevStep(4)">
+                            Back
+                        </button>
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="nextStep(6)">
+                            Next: Additional Info
+                        </button>
+                    </button>
+                </div>
+
+                <!-- Step 6: Additional Information -->
+                <div id="step-6" class="step-content hidden">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800">Additional Information</h3>
+
+                    <!-- Local SEO Fields -->
+                    <div id="local-seo-fields" class="additional-fields hidden">
+                        <h4 class="text-md font-semibold mb-2 text-gray-700">Local SEO Details</h4>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium" for="{{ form.google_my_business_url.id_for_label }}">Google My Business URL</label>
+                            {{ form.google_my_business_url }}
+                            {% if form.google_my_business_url.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.google_my_business_url.errors }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium" for="{{ form.service_area.id_for_label }}">Service Area</label>
+                            {{ form.service_area }}
+                            {% if form.service_area.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.service_area.errors }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium" for="{{ form.business_hours.id_for_label }}">Business Hours</label>
+                            {{ form.business_hours }}
+                            {% if form.business_hours.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.business_hours.errors }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium" for="{{ form.customer_reviews.id_for_label }}">Customer Reviews</label>
+                            {{ form.customer_reviews }}
+                            {% if form.customer_reviews.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.customer_reviews.errors }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- International SEO Fields -->
+                    <div id="international-seo-fields" class="additional-fields hidden">
+                        <h4 class="text-md font-semibold mb-2 text-gray-700">International SEO Details</h4>
+
+                        <div class="mb-4">
+                            <label class="inline-flex items-center" for="{{ form.hreflang_implementation.id_for_label }}">
+                                {{ form.hreflang_implementation }}
+                                <span class="ml-2">Is hreflang implemented for language targeting?</span>
+                            </label>
+                            {% if form.hreflang_implementation.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.hreflang_implementation.errors }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium" for="{{ form.international_competitor_websites.id_for_label }}">International Competitor Websites</label>
+                            {{ form.international_competitor_websites }}
+                            {% if form.international_competitor_websites.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.international_competitor_websites.errors }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium" for="{{ form.country_specific_urls.id_for_label }}">Country Specific URLs</label>
+                            {{ form.country_specific_urls }}
+                            {% if form.country_specific_urls.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.country_specific_urls.errors }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium" for="{{ form.languages_supported.id_for_label }}">Languages Supported</label>
+                            {{ form.languages_supported }}
+                            {% if form.languages_supported.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.languages_supported.errors }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <button type="button" class="flex justify-between w-full mt-6">
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="prevStep(5)">
+                            Back
+                        </button>
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="nextStep(7)">
+                            Next: Confirmation
+                        </button>
+                    </button>
+                </div>
+
+                <!-- Step 7: Confirmation -->
+                <div id="step-7" class="step-content hidden">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800">Confirmation</h3>
+                    <p class="text-gray-600">Please review all the details you've entered before submitting.</p>
+
+                    <!-- Optional: Add a summary of the entered data here -->
+
+                    <div class="flex justify-between mt-6">
+                        <button type="button" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400" onclick="prevStep(6)">
+                            Back
+                        </button>
+                        <button type="submit" class="bg-blue-300 text-white py-2 px-4 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            Submit
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 7;
+
+    function showStep(step) {
+        document.querySelectorAll('.step-content').forEach(function (content) {
+            content.classList.add('hidden');
+            disableFields(content.id); // Disable all fields in hidden sections
+        });
+        const currentSection = document.getElementById('step-' + step);
+        currentSection.classList.remove('hidden');
+        enableFields(currentSection.id); // Enable fields in the current visible section
+        currentStep = step;
+        updateProgressBar(step);
+    }
+
+    function nextStep(step) {
+        if (step <= totalSteps) {
+            showStep(step);
+        }
+    }
+
+    function prevStep(step) {
+        if (step >= 1) {
+            showStep(step);
+        }
+    }
+
+    function updateProgressBar(step) {
+        const stepCircles = document.querySelectorAll('#progress-bar > div');
+        stepCircles.forEach(function(circle, index) {
+            if (index < step - 1) {
+                circle.querySelector('div').classList.add('bg-blue-300', 'text-white');
+                circle.querySelector('div').classList.remove('bg-gray-300', 'text-gray-500');
+            } else {
+                circle.querySelector('div').classList.add('bg-gray-300', 'text-gray-500');
+                circle.querySelector('div').classList.remove('bg-blue-300', 'text-white');
+            }
+        });
+    }
+
+    function toggleAdditionalFields() {
+        const seoType = document.querySelector('select[name="seo_type"]').value;
+        const localFields = document.getElementById('local-seo-fields');
+        const internationalFields = document.getElementById('international-seo-fields');
+
+        if (seoType === 'Local') {
+            localFields.classList.remove('hidden');
+            enableFields('local-seo-fields');
+            internationalFields.classList.add('hidden');
+            disableFields('international-seo-fields');
+        } else if (seoType === 'International') {
+            internationalFields.classList.remove('hidden');
+            enableFields('international-seo-fields');
+            localFields.classList.add('hidden');
+            disableFields('local-seo-fields');
+        } else {
+            localFields.classList.add('hidden');
+            disableFields('local-seo-fields');
+            internationalFields.classList.add('hidden');
+            disableFields('international-seo-fields');
+        }
+    }
+
+    function toggleOtherCms() {
+        const cms = document.querySelector('select[name="current_cms"]').value;
+        const otherCmsSection = document.getElementById('other-cms-section');
+
+        if (cms === 'Other') {
+            otherCmsSection.classList.remove('hidden');
+            enableFields('other-cms-section');
+        } else {
+            otherCmsSection.classList.add('hidden');
+            disableFields('other-cms-section');
+        }
+    }
+
+    // Helper function to disable all inputs within a given element except management forms
+    function disableFields(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            // Do not disable management forms
+            const inputs = section.querySelectorAll('input:not([name$="-TOTAL_FORMS"]):not([name$="-INITIAL_FORMS"]), select:not([name$="-TOTAL_FORMS"]):not([name$="-INITIAL_FORMS"]), textarea:not([name$="-TOTAL_FORMS"]):not([name$="-INITIAL_FORMS"]), button');
+            inputs.forEach(input => {
+                input.disabled = true;
+            });
+        }
+    }
+
+    // Helper function to enable all inputs within a given element except management forms
+    function enableFields(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            const inputs = section.querySelectorAll('input, select, textarea, button');
+            inputs.forEach(input => {
+                // Do not enable management forms
+                if (!input.name || (!input.name.endsWith('-TOTAL_FORMS') && !input.name.endsWith('-INITIAL_FORMS'))) {
+                    input.disabled = false;
+                }
+            });
+        }
+    }
+
+    // Initialize the form by showing the first step and setting up toggles
+    document.addEventListener('DOMContentLoaded', function () {
+        showStep(currentStep);
+
+        // Initialize toggles based on current selections
+        toggleAdditionalFields();
+        toggleOtherCms();
+    });
+
+    // Listen for changes in SEO Type and Current CMS to toggle additional fields
+    document.querySelector('select[name="seo_type"]').addEventListener('change', toggleAdditionalFields);
+    document.querySelector('select[name="current_cms"]').addEventListener('change', toggleOtherCms);
+
+    // Enable all fields before form submission to ensure all data is sent
+    document.getElementById('onboardingForm').addEventListener('submit', function() {
+        document.querySelectorAll('.step-content').forEach(function(content) {
+            enableFields(content.id);
+        });
+    });
+</script>
+{% endblock %}
