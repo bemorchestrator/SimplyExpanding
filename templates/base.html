@@ -38,9 +38,11 @@
             <!-- Logout inside Sidebar -->
             <div class="mt-auto p-4">
                 <div class="flex items-center space-x-4">
-                    <!-- User Profile Picture -->
+                    <!-- User Profile Picture (Avatar) -->
                     <div class="w-10 h-10 rounded-full overflow-hidden">
-                        <img class="object-cover w-full h-full" src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{% static 'avatar.png' %}{% endif %}" alt="{{ request.user.get_full_name }}">
+                        <img class="object-cover w-full h-full" 
+                            src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{{ MEDIA_URL }}profile_pictures/Bem_Profile_AdventHub.jpg{% endif %}" 
+                            alt="{{ request.user.get_full_name }}">
                     </div>
                     <!-- Logout Button -->
                     <a href="{% url 'logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
@@ -70,7 +72,9 @@
                 <div class="flex items-center space-x-4 md:hidden">
                     <!-- User Profile Picture (Mobile) -->
                     <div class="w-10 h-10 rounded-full overflow-hidden">
-                        <img class="object-cover w-full h-full" src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{% static 'avatar.png' %}{% endif %}" alt="{{ request.user.get_full_name }}">
+                        <img class="object-cover w-full h-full" 
+                            src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{{ MEDIA_URL }}profile_pictures/Bem_Profile_AdventHub.jpg{% endif %}" 
+                            alt="{{ request.user.get_full_name }}">
                     </div>
                     <!-- Mobile Logout Button -->
                     <a href="{% url 'logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
