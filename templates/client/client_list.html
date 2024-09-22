@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Client List{% endblock %}
+
+{% block content %}
+<div class="container mx-auto mt-8 px-8 py-8 max-w-full">
+    <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">Onboarded Clients</h1>
+
+    <!-- Search and View Toggle Form -->
+    <form method="GET" action="{% url 'client_list' %}" class="mb-8 flex flex-col sm:flex-row justify-start items-center space-y-4 sm:space-y-0 sm:space-x-4" id="searchForm">
+        <div class="flex space-x-2">
+            <input
+                type="text"
+                name="search"
+                placeholder="Search clients..."
+                class="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring focus:ring-blue-300 w-80"
+                value="{{ request.GET.search }}"
+                onkeydown="if(event.key === 'Enter'){document.getElementById('searchForm').submit();}"
+            />
+        </div>
+        
+        <!-- View Toggle Buttons -->
+        <div class="flex space-x-2">
+            {% comment %}
+            Determine the current view mode to set active styles on buttons
+            {% endcomment %}
+            {% with view_mode=request.GET.view %}
+                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}view=grid" class="px-4 py-2 bg-blue-400 rounded-lg shadow-sm hover:bg-blue-500 transition {% if view_mode != 'table' %}bg-blue-500 text-white{% endif %}">
+                    Grid View
+                </a>
+                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}view=table" class="px-4 py-2 bg-blue-400 rounded-lg shadow-sm hover:bg-blue-500 transition {% if view_mode == 'table' %}bg-blue-500 text-white{% endif %}">
+                    Table View
+                </a>
+            {% endwith %}
+        </div>
+    </form>
+
+    {% with view_mode=request.GET.view %}
+        {% if view_mode == 'table' %}
+            <!-- Clients Table View -->
+            <div id="table-container" class="overflow-x-auto relative">
+                <table class="min-w-full bg-white rounded-xl shadow-md whitespace-nowrap">
+                    <thead class="sticky top-0 bg-white">
+                        <tr>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Business Name</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Business Description</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Website</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Contact Person</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Email</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Phone</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Business Goals</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Target Keywords</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Competitor URLs</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">G4A Login</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Google Search Console</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Tag Manager</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Website Login</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">CMS Type</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">Start Date</th>
+                            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm font-semibold text-gray-700">End Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in clients %}
+                            <tr class="{% cycle 'bg-gray-50' 'bg-white' %} hover:bg-gray-100">
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.business_name }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.business_description|truncatewords:10 }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">
+                                    <a href="{{ client.website_url }}" target="_blank" class="text-blue-500 hover:underline">{{ client.website_url }}</a>
+                                </td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.contact_person }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">
+                                    <a href="mailto:{{ client.email }}" class="text-blue-500 hover:underline">{{ client.email }}</a>
+                                </td>
+                                <td class="px-6 py-4 border-b border-gray-200">
+                                    <a href="tel:{{ client.phone_number }}" class="text-blue-500 hover:underline">{{ client.phone_number }}</a>
+                                </td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.business_goals|truncatewords:10 }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.target_keywords|truncatewords:5 }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.competitor_urls|truncatewords:5 }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.g4a_login }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.google_search_console_login }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.tag_manager_login }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.website_login }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.cms_type }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.start_date|date:"M d, Y" }}</td>
+                                <td class="px-6 py-4 border-b border-gray-200">{{ client.end_date|date:"M d, Y" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="15" class="px-6 py-4 text-center text-gray-500">No clients found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- Clients Grid View -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for client in clients %}
+                    <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 p-8 flex flex-col">
+                        <!-- Header Section -->
+                        <div class="mb-4">
+                            <h2 class="text-xl font-semibold text-gray-800">{{ client.business_name }}</h2>
+                            <p class="text-gray-600 mt-1">{{ client.business_description|truncatewords:20 }}</p>
+                        </div>
+                        
+                        <!-- Details Section: Two Columns -->
+                        <div class="flex-1">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Column 1 -->
+                                <ul class="text-gray-700 space-y-2">
+                                    <li><strong>Website:</strong><br> <a href="{{ client.website_url }}" target="_blank" class="text-blue-500 hover:underline">{{ client.website_url }}</a></li>
+                                    <li><strong>Contact Person:</strong><br> {{ client.contact_person }}</li>
+                                    <li><strong>Email:</strong><br> <a href="mailto:{{ client.email }}" class="text-blue-500 hover:underline">{{ client.email }}</a></li>
+                                    <li><strong>Phone:</strong><br> <a href="tel:{{ client.phone_number }}" class="text-blue-500 hover:underline">{{ client.phone_number }}</a></li>
+                                    <li><strong>Business Goals:</strong><br> {{ client.business_goals|truncatewords:15 }}</li>
+                                    <li><strong>Target Keywords:</strong><br> {{ client.target_keywords|truncatewords:10 }}</li>
+                                </ul>
+                                
+                                <!-- Column 2 -->
+                                <ul class="text-gray-700 space-y-2">
+                                    <li><strong>Competitor URLs:</strong><br> {{ client.competitor_urls|truncatewords:10 }}</li>
+                                    <li><strong>G4A Login:</strong><br> {{ client.g4a_login }}</li>
+                                    <li><strong>Google Search Console:</strong><br> {{ client.google_search_console_login }}</li>
+                                    <li><strong>Tag Manager:</strong><br> {{ client.tag_manager_login }}</li>
+                                    <li><strong>Website Login:</strong><br> {{ client.website_login }}</li>
+                                    <li><strong>CMS Type:</strong><br> {{ client.cms_type }}</li>
+                                    <li><strong>Start Date:</strong><br> {{ client.start_date|date:"M d, Y" }}</li>
+                                    <li><strong>End Date:</strong><br> {{ client.end_date|date:"M d, Y" }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-center text-gray-500">No clients found.</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+</div>
+
+<!-- JavaScript for Drag-to-Scroll Functionality -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tableContainer = document.getElementById('table-container');
+
+        if (tableContainer) {
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            tableContainer.addEventListener('mousedown', (e) => {
+                isDown = true;
+                tableContainer.classList.add('cursor-grabbing');
+                startX = e.pageX - tableContainer.offsetLeft;
+                scrollLeft = tableContainer.scrollLeft;
+            });
+
+            tableContainer.addEventListener('mouseleave', () => {
+                isDown = false;
+                tableContainer.classList.remove('cursor-grabbing');
+            });
+
+            tableContainer.addEventListener('mouseup', () => {
+                isDown = false;
+                tableContainer.classList.remove('cursor-grabbing');
+            });
+
+            tableContainer.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - tableContainer.offsetLeft;
+                const walk = (x - startX) * 1; // Adjust scroll speed here
+                tableContainer.scrollLeft = scrollLeft - walk;
+            });
+
+            // Optional: Change cursor to grab/grabbing
+            tableContainer.style.cursor = 'grab';
+            tableContainer.classList.add('cursor-grab');
+
+            tableContainer.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+            });
+        }
+    });
+</script>
+{% endblock %}

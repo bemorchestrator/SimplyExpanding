@@ -1,12 +1,10 @@
-<!-- holidays/templates/holidays/add_holiday.html -->
-
 {% extends 'base.html' %}
 
 {% block content %}
 <div class="container mx-auto mt-8">
     <div class="flex justify-center">
         <div class="w-full max-w-4xl">
-            <div class="bg-white shadow-lg rounded-lg overflow-hidden p-6">
+            <div class=" rounded-lg overflow-hidden p-6">  <!-- Removed bg-white for main container -->
                 <h2 class="text-2xl font-bold mb-4 text-center text-gray-500">Add New Holiday</h2>
                 <form method="post" novalidate>
                     {% csrf_token %}
@@ -19,13 +17,13 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="mb-4">
                             <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.name.label }}</label>
-                            <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" value="{{ form.name.value }}">
+                            <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-indigo-400" value="{{ form.name.value }}">
                             {{ form.name.errors }}
                             <small class="text-gray-600">{{ form.name.help_text }}</small>
                         </div>
                         <div class="mb-4">
                             <label for="{{ form.holiday_type.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.holiday_type.label }}</label>
-                            <select name="{{ form.holiday_type.name }}" id="{{ form.holiday_type.id_for_label }}" class="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <select name="{{ form.holiday_type.name }}" id="{{ form.holiday_type.id_for_label }}" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-indigo-400">
                                 {% for choice in form.holiday_type.field.choices %}
                                     <option value="{{ choice.0 }}" {% if choice.0 == form.holiday_type.value %}selected{% endif %}>{{ choice.1 }}</option>
                                 {% endfor %}
@@ -35,22 +33,40 @@
                         </div>
                         <div class="mb-4">
                             <label for="{{ form.is_recurring.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.is_recurring.label }}</label>
-                            <select name="{{ form.is_recurring.name }}" id="{{ form.is_recurring.id_for_label }}" class="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <select name="{{ form.is_recurring.name }}" id="{{ form.is_recurring.id_for_label }}" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-indigo-400">
                                 <option value="True" {% if form.is_recurring.value == True %}selected{% endif %}>Yes</option>
                                 <option value="False" {% if form.is_recurring.value == False %}selected{% endif %}>No</option>
                             </select>
                             {{ form.is_recurring.errors }}
                             <small class="text-gray-600">{{ form.is_recurring.help_text }}</small>
                         </div>
+                        <!-- Date Field (for non-recurring holidays) -->
                         <div class="mb-4" id="date-field">
                             <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.date.label }}</label>
-                            <input type="date" name="{{ form.date.name }}" id="{{ form.date.id_for_label }}" class="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400" value="{{ form.date.value }}">
+                            <input type="date" name="{{ form.date.name }}" id="{{ form.date.id_for_label }}" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-indigo-400" value="{{ form.date.value }}">
                             {{ form.date.errors }}
                             <small class="text-gray-600">{{ form.date.help_text }}</small>
                         </div>
+                        <!-- Month and Day fields for recurring holidays -->
+                        <div class="mb-4 hidden" id="recurring-fields">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="{{ form.recurring_month.id_for_label }}" class="block text-sm font-medium text-gray-700">Recurring Month</label>
+                                    <select id="recurring_month" name="recurring_month" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                        {% for month in months %}
+                                            <option value="{{ month.0 }}" {% if form.recurring_month.value == month.0 %}selected{% endif %}>{{ month.1 }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="recurring-day" class="block text-sm font-medium text-gray-700">Recurring Day</label>
+                                    <input type="number" id="recurring-day" name="recurring_day" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-indigo-400" min="1" max="31" value="{{ form.recurring_day.value }}">
+                                </div>
+                            </div>
+                        </div>
                         <div class="mb-4 col-span-2">
                             <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.description.label }}</label>
-                            <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">{{ form.description.value }}</textarea>
+                            <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-indigo-400">{{ form.description.value }}</textarea>
                             {{ form.description.errors }}
                             <small class="text-gray-600">{{ form.description.help_text }}</small>
                         </div>
@@ -69,20 +85,23 @@
     document.addEventListener('DOMContentLoaded', function() {
         const isRecurringDropdown = document.getElementById('{{ form.is_recurring.id_for_label }}');
         const dateField = document.getElementById('date-field');
+        const recurringFields = document.getElementById('recurring-fields');
 
-        function toggleDateField() {
-            if (isRecurringDropdown.value === 'True') {  // 'True' corresponds to 'Yes'
+        function toggleFields() {
+            if (isRecurringDropdown.value === 'True') {
                 dateField.style.display = 'none';
+                recurringFields.classList.remove('hidden');
             } else {
                 dateField.style.display = 'block';
+                recurringFields.classList.add('hidden');
             }
         }
 
         // Initial toggle based on current state
-        toggleDateField();
+        toggleFields();
 
         // Add event listener to dropdown
-        isRecurringDropdown.addEventListener('change', toggleDateField);
+        isRecurringDropdown.addEventListener('change', toggleFields);
     });
 </script>
 {% endblock %}

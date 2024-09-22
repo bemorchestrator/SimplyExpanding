@@ -1,9 +1,9 @@
-# client/urls.py
-
 from django.urls import path
 from . import views
+from .views import client_list_view
 
 urlpatterns = [
-    path('onboarding/', views.client_onboarding, name='client_onboarding'),
-    path('onboarding/success/', views.onboarding_success, name='client_onboarding_success'),
+    path('onboarding/', views.client_onboarding_view, name='client_onboarding'),
+    path('onboarding/success/', views.onboarding_success_view, name='onboarding_success'),
+    path('clients/', client_list_view, name='client_list'),
 ]

@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Holiday
 from .forms import HolidayForm
 from django.contrib import messages
+import calendar
 
 @login_required
 def holiday_list(request):
@@ -22,14 +23,39 @@ def add_holiday(request):
     if request.method == 'POST':
         form = HolidayForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Holiday added successfully.')
-            return redirect('holiday_list')
+            # Get the cleaned data
+            is_recurring = form.cleaned_data.get('is_recurring')
+            recurring_month = request.POST.get('recurring_month')
+            recurring_day = request.POST.get('recurring_day')
+            
+            # Check if the holiday is recurring
+            if is_recurring:
+                # Ensure both recurring month and day are provided
+                if not recurring_month or not recurring_day:
+                    form.add_error(None, 'Both recurring month and day must be provided for recurring holidays.')
+                else:
+                    # Save the holiday as a recurring holiday without a date
+                    holiday = form.save(commit=False)
+                    holiday.date = None  # Clear the date since it's recurring
+                    holiday.recurring_month = recurring_month
+                    holiday.recurring_day = recurring_day
+                    holiday.save()
+                    messages.success(request, 'Recurring holiday added successfully.')
+                    return redirect('holiday_list')
+            else:
+                # Non-recurring holiday, save as normal
+                form.save()
+                messages.success(request, 'Holiday added successfully.')
+                return redirect('holiday_list')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
         form = HolidayForm()
-    return render(request, 'holidays/add_holiday.html', {'form': form})
+
+    # Provide the months for the dropdown
+    months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+    return render(request, 'holidays/add_holiday.html', {'form': form, 'months': months})
+
 
 @login_required
 def delete_holiday(request, holiday_id):

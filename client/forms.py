@@ -1,83 +1,93 @@
-# client/forms.py
-
 from django import forms
-from .models import Client
+from .models import ClientOnboarding
 
-class ClientForm(forms.ModelForm):
+class ClientOnboardingForm(forms.ModelForm):
     class Meta:
-        model = Client
+        model = ClientOnboarding
         fields = [
-            'name',
-            'contact_info',
+            'business_name',
+            'business_description',
+            'website_url',
+            'contact_person',
             'email',
             'phone_number',
-            'address',
-            'seo_type',
-            'target_goals',
-            'primary_products_services',
-            'target_audience',
-            'target_locations',
+            'business_goals',
             'target_keywords',
             'competitor_urls',
-            'google_analytics_access',
-            'google_analytics_login',
-            'google_search_console_details',
-            'current_cms',
-            'other_cms',
-            'google_my_business_url',
-            'service_area',
-            'business_hours',
-            'customer_reviews',
-            'hreflang_implementation',
-            'international_competitor_websites',
-            'country_specific_urls',
-            'languages_supported',
-            'bulk_keywords',
-            'ga4_login_details',
-            'website_backend_login_details',
-            'billing_cycle',
-            'contract_start_date',
-            'contract_duration',
-            'assigned_employees'
+            'g4a_login',
+            'google_search_console_login',
+            'tag_manager_login',
+            'website_login',
+            'cms_type',
+            'start_date',
+            'end_date'
         ]
+        # Define placeholders for each field
         widgets = {
-            'contract_start_date': forms.DateInput(attrs={'type': 'date'}),
-            'contract_duration': forms.NumberInput(attrs={'min': 1}),
-            'billing_cycle': forms.Select(choices=Client.BILLING_CYCLE_CHOICES),
-            'seo_type': forms.Select(choices=Client.SEO_TYPE_CHOICES),
-            'current_cms': forms.Select(choices=Client.CMS_CHOICES),
-            'assigned_employees': forms.CheckboxSelectMultiple(),
-            'google_analytics_access': forms.CheckboxInput(),
-            'hreflang_implementation': forms.CheckboxInput(),
-        }
-        labels = {
-            'name': 'Business Name',
-            'contact_info': 'Primary Contact Name',
-            'seo_type': 'SEO Type',
-            'ga4_login_details': 'GA4 Login Details',
-            'google_search_console_details': 'Google Search Console Details',
-            'website_backend_login_details': 'Website Backend Login Details',
-            'billing_cycle': 'Billing Cycle',
-            'contract_start_date': 'Contract Start Date',
-            'contract_duration': 'Contract Duration (months)',
-            'assigned_employees': 'Assigned Employees',
-            'current_cms': 'Current CMS',
-            'other_cms': 'Other CMS',
-            'google_my_business_url': 'Google My Business URL',
-            'google_analytics_access': 'Google Analytics Access',
-            'hreflang_implementation': 'Hreflang Implementation',
-        }
-        help_texts = {
-            'contract_start_date': 'Select the start date of the contract.',
-            'contract_duration': 'Enter the duration of the contract in months.',
-            'billing_cycle': 'Select the billing cycle.',
-            'seo_type': 'Choose the type of SEO service.',
-            'current_cms': 'Select the current CMS. Choose "Other" if not listed.',
-            # Add other help texts as needed
+            'business_name': forms.TextInput(attrs={
+                'placeholder': 'Enter your business name *'
+            }),
+            'business_description': forms.Textarea(attrs={
+                'placeholder': 'Brief description of your business'
+            }),
+            'website_url': forms.URLInput(attrs={
+                'placeholder': 'Enter your website URL *'
+            }),
+            'contact_person': forms.TextInput(attrs={
+                'placeholder': 'Name of the main contact person *'
+            }),
+            'email': forms.EmailInput(attrs={
+                'placeholder': 'Enter a valid email address *'
+            }),
+            'phone_number': forms.TextInput(attrs={
+                'placeholder': 'Enter phone number'
+            }),
+            'business_goals': forms.Textarea(attrs={
+                'placeholder': 'State the business goals for SEO *'
+            }),
+            'target_keywords': forms.Textarea(attrs={
+                'placeholder': 'List target keywords, separated by commas'
+            }),
+            'competitor_urls': forms.Textarea(attrs={
+                'placeholder': 'List competitor URLs, separated by commas'
+            }),
+            'g4a_login': forms.TextInput(attrs={
+                'placeholder': 'G4A login details (if applicable)'
+            }),
+            'google_search_console_login': forms.TextInput(attrs={
+                'placeholder': 'Google Search Console login details (if applicable)'
+            }),
+            'tag_manager_login': forms.TextInput(attrs={
+                'placeholder': 'Tag Manager login details (if applicable)'
+            }),
+            'website_login': forms.TextInput(attrs={
+                'placeholder': 'Website login details (if applicable)'
+            }),
+            'cms_type': forms.TextInput(attrs={
+                'placeholder': 'CMS type (WordPress, Shopify, etc.)'
+            }),
+            'start_date': forms.DateInput(attrs={
+                'placeholder': 'Project start date *',
+                'type': 'date'  # HTML5 date picker
+            }),
+            'end_date': forms.DateInput(attrs={
+                'placeholder': 'Project end date *',
+                'type': 'date'  # HTML5 date picker
+            }),
         }
 
-    def clean_contract_duration(self):
-        duration = self.cleaned_data.get('contract_duration')
-        if duration is not None and duration <= 0:
-            raise forms.ValidationError("Contract duration must be a positive number.")
-        return duration
+    # Add custom labels with asterisk for required fields
+    def __init__(self, *args, **kwargs):
+        super(ClientOnboardingForm, self).__init__(*args, **kwargs)
+        self.fields['business_name'].label = 'Business Name *'
+        self.fields['website_url'].label = 'Website URL *'
+        self.fields['contact_person'].label = 'Contact Person *'
+        self.fields['email'].label = 'Email *'
+        self.fields['business_goals'].label = 'Business Goals *'
+        self.fields['start_date'].label = 'Start Date *'
+        self.fields['end_date'].label = 'End Date *'
+
+        # Make required fields explicitly required in the form
+        for field in self.fields:
+            if self.fields[field].required:
+                self.fields[field].widget.attrs['class'] = 'required-field'  # Add a class for required fields if needed

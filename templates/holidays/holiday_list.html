@@ -1,6 +1,7 @@
-<!-- holidays/templates/holidays/holiday_list.html -->
 
 {% extends 'base.html' %}
+
+{% load holiday_filters %}
 
 {% block content %}
 <div class="container mx-auto mt-8">
@@ -29,9 +30,9 @@
                             <td class="py-3 px-4 text-left">{{ holiday.get_holiday_type_display }}</td>
                             <td class="py-3 px-4 text-left">
                                 {% if holiday.is_recurring %}
-                                    {{ holiday.date|date:"F j" }} (Recurring)
+                                    {{ holiday.recurring_month|get_month_name }} {{ holiday.recurring_day }}
                                 {% else %}
-                                    {{ holiday.date }}
+                                    {{ holiday.date|date:"F j, Y" }}
                                 {% endif %}
                             </td>
                             <td class="py-3 px-4 text-left">{{ holiday.is_recurring|yesno:"Yes,No" }}</td>
