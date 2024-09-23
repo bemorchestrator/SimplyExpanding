@@ -1,6 +1,7 @@
 from django import forms
 from .models import Holiday
 import calendar
+from datetime import date
 
 class HolidayForm(forms.ModelForm):
     RECURRENCE_CHOICES = (
@@ -70,13 +71,23 @@ class HolidayForm(forms.ModelForm):
         recurring_month = cleaned_data.get('recurring_month')
         recurring_day = cleaned_data.get('recurring_day')
 
+        # Non-recurring holiday must have a date
         if not is_recurring and not date:
             self.add_error('date', 'Date is required for non-recurring holidays.')
+
+        # Recurring holiday must not have a date
         if is_recurring and date:
             self.add_error('date', 'Date should not be set for recurring holidays.')
 
+        # Recurring holidays must have a month and a day
         if is_recurring and (not recurring_month or not recurring_day):
             self.add_error('recurring_month', 'Month is required for recurring holidays.')
             self.add_error('recurring_day', 'Day is required for recurring holidays.')
+
+        # Special handling for leap day (February 29)
+        if is_recurring and recurring_month == '2' and recurring_day == 29:
+            current_year = date.today().year
+            if not calendar.isleap(current_year):
+                self.add_error('recurring_day', 'February 29 is only valid in leap years.')
 
         return cleaned_data

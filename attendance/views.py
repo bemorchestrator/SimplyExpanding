@@ -1,5 +1,3 @@
-# attendance/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from employees.models import Employee
@@ -8,14 +6,16 @@ from django.utils import timezone
 from django.db import transaction
 from django.contrib import messages
 from decimal import Decimal
+from billing.models import BillingRecord
+import logging
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def clock_in(request):
-    # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
     now = timezone.now()
 
-    # Create a new attendance record for each clock-in
     with transaction.atomic():
         is_primary = not Attendance.objects.filter(
             employee=employee,
@@ -30,14 +30,16 @@ def clock_in(request):
             is_primary_clock_in=is_primary
         )
 
-        # Mark lateness as calculated only for the first clock-in of the day
         if is_primary:
             attendance.calculate_lateness_and_deduction()
+            attendance.save()  # Ensure changes are saved
             messages.success(request, 'Successfully clocked in with lateness calculation applied.')
         else:
             messages.success(request, 'Successfully clocked in without lateness calculation.')
 
     return redirect('clock_in_out_page')
+
+
 
 @login_required
 def clock_out(request):
@@ -50,18 +52,33 @@ def clock_out(request):
         clock_out_time__isnull=True
     ).order_by('-clock_in_time').first()
 
+    # Raise a ValueError if no clock-in was found
     if not attendance:
-        messages.warning(request, 'You have not clocked in yet.')
-        return redirect('clock_in_out_page')
+        raise ValueError('Cannot clock out without clocking in first.')
 
     # Clock out by setting the clock-out time and updating status
     with transaction.atomic():
         attendance.clock_out_time = timezone.now()
         attendance.status = 'clocked_out'
         attendance.save()
-        messages.success(request, 'Successfully clocked out.')
+
+        # Use the total_income from Attendance instead of recalculating
+        worked_income = attendance.total_income
+        worked_hours = attendance.total_hours  # Get the hours worked from Attendance
+
+        # Create a billing record for this clock-out
+        BillingRecord.objects.create(
+            employee=employee,
+            total_income=worked_income,
+            hours_worked=Decimal(worked_hours) if worked_hours else None  # Pass hours worked to the billing record
+        )
+        logger.debug(f"Billing record created for employee {employee} with income {worked_income} and hours worked {worked_hours}")
+
+        messages.success(request, 'Successfully clocked out and billing record updated.')
 
     return redirect('clock_in_out_page')
+
+
 
 @login_required
 def start_break(request):
@@ -88,6 +105,7 @@ def start_break(request):
 
     return redirect('clock_in_out_page')
 
+
 @login_required
 def end_break(request):
     # Get the Employee instance for the logged-in user
@@ -113,6 +131,7 @@ def end_break(request):
 
     return redirect('clock_in_out_page')
 
+
 @login_required
 def attendance_dashboard(request):
     # Get the Employee instance for the logged-in user
@@ -135,6 +154,7 @@ def attendance_dashboard(request):
         'attendance_records': attendance_records,
         'current_status': current_status
     })
+
 
 @login_required
 def clock_in_out_page(request):
@@ -177,7 +197,18 @@ def clock_in_out_page(request):
                     attendance.clock_out_time = timezone.now()
                     attendance.status = 'clocked_out'
                     attendance.save()
-                    messages.success(request, 'Successfully clocked out.')
+
+                    # Use the total_income from Attendance instead of recalculating
+                    worked_income = attendance.total_income
+
+                    # Create a billing record for this clock-out
+                    BillingRecord.objects.create(
+                        employee=employee,
+                        total_income=worked_income
+                    )
+                    logger.debug(f"Billing record created for employee {employee} with income {worked_income}")
+
+                    messages.success(request, 'Successfully clocked out and billing record updated.')
                 else:
                     messages.warning(request, 'No active clock-in record found.')
 

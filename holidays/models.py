@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+import calendar
+from datetime import date
 
 class Holiday(models.Model):
     HOLIDAY_TYPE_CHOICES = [
@@ -62,6 +64,12 @@ class Holiday(models.Model):
                 raise ValidationError("Recurring holidays must have both a month and a day.")
             if self.date:
                 raise ValidationError("Recurring holidays should not have a specific date.")
+
+            # Check if the holiday is set for February 29 (Leap Day)
+            if self.recurring_month == 2 and self.recurring_day == 29:
+                current_year = date.today().year
+                if not calendar.isleap(current_year):
+                    raise ValidationError("February 29 is only valid for recurring holidays in leap years.")
 
         super().clean()
 

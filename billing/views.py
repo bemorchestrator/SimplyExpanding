@@ -1,9 +1,9 @@
-# billing/views.py
-
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from employees.models import Employee
 from attendance.models import Attendance
+from holidays.models import Holiday
+from .models import BillingRecord  # Import the BillingRecord model
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
@@ -13,11 +13,12 @@ from decimal import Decimal
 
 @login_required
 def billing_dashboard(request):
+    # Get the Employee instance for the logged-in user
     employee = Employee.objects.get(user=request.user)
     per_day_rate = employee.per_day_rate or Decimal('0.00')
-    standard_hours_per_day = Decimal('8.0')
+    standard_hours_per_day = Decimal('8.0')  # Standard 8-hour workday assumption
 
-    # Annotate attendance records with income
+    # Fetch and annotate attendance records with the calculated income
     attendance_records = Attendance.objects.filter(employee=employee).annotate(
         income=ExpressionWrapper(
             F('total_income'),
@@ -25,12 +26,35 @@ def billing_dashboard(request):
         )
     )
 
-    # Total income including all closed attendances
+    # Total income from closed (clocked out) attendance records
     total_income = attendance_records.aggregate(
         total_income=Sum('income')
     )['total_income'] or Decimal('0.00')
 
-    # Current session income
+    # Check if today is a non-working holiday and if the employee has not clocked in
+    today = timezone.now().date()
+    holiday = Holiday.objects.filter(
+        date=today,
+        holiday_type='non_working'
+    ).first()
+
+    if holiday:
+        # Check if the employee has clocked in for today
+        attendance_today = Attendance.objects.filter(
+            employee=employee,
+            clock_in_time__date=today
+        ).exists()
+
+        if not attendance_today:
+            # Automatically add holiday compensation if no attendance record exists for today
+            total_income += per_day_rate
+            # Create a billing record for this holiday compensation
+            BillingRecord.objects.create(
+                employee=employee,
+                total_income=per_day_rate
+            )
+
+    # Handle current session income if the employee is clocked in
     open_attendance = Attendance.objects.filter(employee=employee, clock_out_time__isnull=True).first()
     is_clocked_in = open_attendance and open_attendance.status == 'clocked_in'
     clock_in_time = open_attendance.clock_in_time if is_clocked_in else None
@@ -38,14 +62,13 @@ def billing_dashboard(request):
 
     current_session_income = Decimal('0.00')
     if is_clocked_in and clock_in_time:
+        # Calculate the income for the current session
         elapsed_seconds = (timezone.now() - clock_in_time).total_seconds()
         elapsed_hours = Decimal(elapsed_seconds / 3600).quantize(Decimal('0.0001'))
         current_session_income = (per_day_rate / standard_hours_per_day) * elapsed_hours
-        # No need to use max here; allow negative values
         current_session_income = current_session_income.quantize(Decimal('0.01'))
 
-    # Income per day (last 30 days)
-    today = timezone.now().date()
+    # Income per day for the last 30 days
     one_month_ago = today - timedelta(days=30)
     recent_records = attendance_records.filter(clock_in_time__date__gte=one_month_ago)
 
@@ -69,7 +92,7 @@ def billing_dashboard(request):
         monthly_income=Sum('income')
     ).order_by('month')
 
-    # Prepare data for JavaScript
+    # Prepare JavaScript data
     js_data = json.dumps({
         'clock_in_time': clock_in_time.isoformat() if clock_in_time else None,
         'per_day_rate': float(per_day_rate),

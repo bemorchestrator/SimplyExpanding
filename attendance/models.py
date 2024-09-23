@@ -1,5 +1,3 @@
-# attendance/models.py
-
 from django.db import models, transaction
 from employees.models import Employee
 from holidays.models import Holiday
@@ -7,6 +5,7 @@ from datetime import timedelta, datetime, time
 from django.utils import timezone
 from decimal import Decimal
 import logging
+
 
 logger = logging.getLogger('attendance')
 
@@ -248,27 +247,44 @@ class Attendance(models.Model):
     def apply_lateness_deduction(self, lateness):
         total_deduction = Decimal('0.00')
         lateness_rules = self.employee.lateness_rules.all()
+        logger.debug(f"Applying lateness deductions for employee {self.employee.id}. Lateness: {lateness}")
+
+        if not lateness_rules.exists():
+            logger.warning(f"No lateness rules found for employee {self.employee.id}.")
+            return
+
         for rule in lateness_rules:
+            logger.debug(f"Evaluating LatenessRule: {rule.name}")
             if lateness > rule.grace_period:
-                deductions = rule.deductions.filter(min_lateness__lte=lateness).order_by('-min_lateness')
-                for deduction in deductions:
+                deduction = rule.deductions.filter(min_lateness__lte=lateness).order_by('-min_lateness').first()
+                if deduction:
+                    logger.debug(f"Applying LatenessDeduction: {deduction.name}")
                     per_hour_rate = Decimal(self.employee.per_day_rate) / Decimal('8.00')  # Assuming 8-hour workday
                     deduction_hours = Decimal(deduction.deduction_duration.total_seconds()) / Decimal('3600')
-                    total_deduction += (per_hour_rate * deduction_hours).quantize(Decimal('0.01'))
+                    deduction_amount = (per_hour_rate * deduction_hours).quantize(Decimal('0.01'))
+                    logger.debug(f"Per Hour Rate: {per_hour_rate}, Deduction Hours: {deduction_hours}, Deduction Amount: {deduction_amount}")
+                    total_deduction += deduction_amount
+                    logger.debug(f"Accumulated Total Deduction: {total_deduction}")
+                    break  # Apply only the highest applicable deduction
+                else:
+                    logger.debug(f"No applicable deductions found for rule {rule.name} with lateness {lateness}.")
         self.lateness_deduction = total_deduction
         logger.debug(f"Total Deduction Applied: {self.lateness_deduction}")
+
+
 
     def apply_non_working_holiday_pay(self):
         if self.is_primary_clock_in:
             if not self.clock_in_time:
-                # Employee did not clock in, paid full day rate
+                # Employee did not clock in, assign full day rate
                 self.total_income = Decimal(self.employee.per_day_rate)
                 logger.debug(f"Non-Working Holiday without clock-in: Total Income set to {self.total_income}")
-            else:
-                # Employee clocked in, get full day rate plus worked hours
+            elif self.clock_in_time:
+                # Employee clocked in, only add worked hours to the full day rate
                 worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate)
                 self.total_income = Decimal(self.employee.per_day_rate) + worked_pay
                 logger.debug(f"Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
+
 
     def apply_special_non_working_holiday_pay(self):
         if self.is_primary_clock_in and self.clock_in_time:
@@ -285,37 +301,45 @@ class Attendance(models.Model):
         if self.holiday and self.is_primary_clock_in:
             if self.holiday.holiday_type == 'non_working':
                 if not self.clock_in_time:
-                    # Non-Working Holiday without clock-in
+                    # Employee did not clock in, assign full day rate
                     self.total_income = Decimal(self.employee.per_day_rate)
                     logger.debug(f"Non-Working Holiday without clock-in: Total Income set to {self.total_income}")
-                else:
-                    # Non-Working Holiday with clock-in
+                elif self.clock_in_time:
+                    # Employee clocked in, only add worked hours to the full day rate
                     worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate)
                     self.total_income = Decimal(self.employee.per_day_rate) + worked_pay
                     logger.debug(f"Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
             elif self.holiday.holiday_type == 'special_non_working':
-                if not self.clock_in_time:
-                    # Special Non-Working Holiday without clock-in
+                if self.is_primary_clock_in and self.clock_in_time:
+                    # Add 30% to hours worked
+                    worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate) * Decimal('1.3')
+                    # Apply lateness deduction
+                    worked_pay -= self.lateness_deduction
+                    self.total_income = worked_pay.quantize(Decimal('0.01'))
+                    logger.debug(f"Special Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
+                elif self.is_primary_clock_in and not self.clock_in_time:
+                    # No pay if not clocked in
                     self.total_income = Decimal('0.00')
                     logger.debug("Special Non-Working Holiday without clock-in: Total Income set to 0.00")
-                else:
-                    # Special Non-Working Holiday with clock-in
-                    worked_pay = (Decimal(self.total_hours or 0) / Decimal('8.0')) * Decimal(self.employee.per_day_rate) * Decimal('1.3')
-                    self.total_income = worked_pay
-                    logger.debug(f"Special Non-Working Holiday with clock-in: Total Income set to {self.total_income}")
         elif self.total_hours and self.employee.per_day_rate:
             standard_hours_per_day = Decimal('8.0')  # Assuming an 8-hour workday
             fraction_of_day = Decimal(str(self.total_hours)) / standard_hours_per_day
             income = Decimal(self.employee.per_day_rate) * fraction_of_day
             income -= self.lateness_deduction
-            self.total_income = income  # Removed max to allow negative incomes
+            self.total_income = income.quantize(Decimal('0.01'))  # Ensure proper decimal formatting
             logger.debug(f"Regular Day Income calculated: {self.total_income}")
         else:
             self.total_income = Decimal('0.00')
             logger.debug("No income calculated: Total Income set to 0.00")
 
+
     def save(self, *args, **kwargs):
         with transaction.atomic():
+            # Raise a ValueError if trying to clock out without clocking in
+            if self.status == 'clocked_out' and not self.clock_in_time:
+                raise ValueError("Cannot clock out without clocking in.")
+
+            # Check if this is the primary clock-in for the day
             if self.clock_in_time:
                 if not self.is_primary_clock_in:
                     existing_primary = Attendance.objects.filter(
@@ -326,9 +350,11 @@ class Attendance(models.Model):
                     if not existing_primary:
                         self.is_primary_clock_in = True
 
+            # Calculate lateness and deduction if clocking in as primary
             if self.status == 'clocked_in' and self.is_primary_clock_in and not self.lateness_calculated:
                 self.calculate_lateness_and_deduction()
 
+            # Calculate total hours worked if clock-in and clock-out times are set
             if self.clock_in_time and self.clock_out_time:
                 total_duration = self.clock_out_time - self.clock_in_time
                 if self.break_start_time and self.break_end_time:
@@ -338,6 +364,9 @@ class Attendance(models.Model):
             else:
                 self.total_hours = None
 
+            # Calculate the total income
             self.calculate_income()
 
+            # Save the model
             super().save(*args, **kwargs)
+

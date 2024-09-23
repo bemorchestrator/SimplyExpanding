@@ -1,11 +1,10 @@
-# holidays/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Holiday
 from .forms import HolidayForm
 from django.contrib import messages
 import calendar
+from datetime import date
 
 @login_required
 def holiday_list(request):
@@ -25,16 +24,27 @@ def add_holiday(request):
         if form.is_valid():
             # Get the cleaned data
             is_recurring = form.cleaned_data.get('is_recurring')
-            recurring_month = request.POST.get('recurring_month')
-            recurring_day = request.POST.get('recurring_day')
+            recurring_month = form.cleaned_data.get('recurring_month')
+            recurring_day = form.cleaned_data.get('recurring_day')
             
             # Check if the holiday is recurring
             if is_recurring:
-                # Ensure both recurring month and day are provided
-                if not recurring_month or not recurring_day:
-                    form.add_error(None, 'Both recurring month and day must be provided for recurring holidays.')
+                # Special handling for leap day (February 29)
+                if recurring_month == '2' and recurring_day == 29:
+                    current_year = date.today().year
+                    if not calendar.isleap(current_year):
+                        form.add_error(None, 'February 29 is only valid for recurring holidays in leap years.')
+                    else:
+                        # Save the recurring holiday without a specific date
+                        holiday = form.save(commit=False)
+                        holiday.date = None  # Clear the date since it's recurring
+                        holiday.recurring_month = recurring_month
+                        holiday.recurring_day = recurring_day
+                        holiday.save()
+                        messages.success(request, 'Recurring leap day holiday added successfully.')
+                        return redirect('holiday_list')
                 else:
-                    # Save the holiday as a recurring holiday without a date
+                    # Save the recurring holiday without a specific date
                     holiday = form.save(commit=False)
                     holiday.date = None  # Clear the date since it's recurring
                     holiday.recurring_month = recurring_month

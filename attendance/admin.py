@@ -1,5 +1,3 @@
-# attendance/admin.py
-
 from django.contrib import admin
 from django import forms
 from .models import Attendance, LatenessRule, LatenessDeduction, GlobalSettings
@@ -37,13 +35,25 @@ class AttendanceAdmin(admin.ModelAdmin):
         'clock_out_time',
         'status',
         'holiday',
-        'total_hours',
+        'get_formatted_total_hours',  # Use the formatted total hours
         'lateness_formatted',
         'lateness_deduction_amount',
         'total_income',
         'lateness_calculated',
         'is_primary_clock_in'
     )
+
+    def get_formatted_total_hours(self, obj):
+        if obj.total_hours:
+            total_seconds = obj.total_hours * 3600  # Convert total hours to seconds
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            seconds = int(total_seconds % 60)
+            return f'{hours:02d}:{minutes:02d}:{seconds:02d}'  # Format as HH:MM:SS
+        return 'N/A'
+
+    get_formatted_total_hours.short_description = 'Total Hours (HH:MM:SS)'
+
     search_fields = (
         'employee__user__username',
         'employee__first_name',
