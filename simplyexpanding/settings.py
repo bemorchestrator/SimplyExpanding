@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,7 +30,9 @@ ALLOWED_HOSTS = []
 
 LOGIN_URL = '/'
 
+load_dotenv()
 
+GOOGLE_CREDENTIALS_FILE = os.getenv(r'C:\Users\bem\Desktop\credentials\client_secret_520578449641-vldnvlmflegmd5nar6qvjehaojthhpde.apps.googleusercontent.com.json')
 
 
 # Application definition
@@ -49,6 +52,7 @@ INSTALLED_APPS = [
     'billing',
     'holidays',
     'client',
+    'search_console',
 ]
 
 MIDDLEWARE = [

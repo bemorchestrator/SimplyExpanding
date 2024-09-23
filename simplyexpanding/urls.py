@@ -4,6 +4,7 @@ from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
 
+
 urlpatterns = [
     # Admin and home URLs
     path('admin/', admin.site.urls),
@@ -21,6 +22,8 @@ urlpatterns = [
     path('billing/', include('billing.urls')),
     path('holidays/', include('holidays.urls')), 
     path('client/', include('client.urls')),
+    path('search_console/', include('search_console.urls')),
+    path('analytics/', include('analytics.urls')),
 ]
 
 if settings.DEBUG:

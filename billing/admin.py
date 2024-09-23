@@ -4,8 +4,8 @@ from attendance.models import Attendance  # Import the related Attendance model
 
 @admin.register(BillingRecord)
 class BillingRecordAdmin(admin.ModelAdmin):
-    # Display relevant fields including hours worked
-    list_display = ('employee', 'total_income', 'get_hours_worked', 'payment_type', 'date')
+    # Display relevant fields including hours worked and holiday
+    list_display = ('employee', 'total_income', 'get_hours_worked', 'get_holiday', 'payment_type', 'date')
 
     # Allow searching by employee username and date
     search_fields = ['employee__user__username', 'employee__first_name', 'employee__last_name', 'date']
@@ -30,3 +30,13 @@ class BillingRecordAdmin(admin.ModelAdmin):
     
     # Change column name to "Hours Worked"
     get_hours_worked.short_description = 'Hours Worked'
+
+    # Custom method to pull holiday from the related Attendance record
+    def get_holiday(self, obj):
+        attendance_record = Attendance.objects.filter(employee=obj.employee, clock_in_time__date=obj.date).first()
+        if attendance_record and attendance_record.holiday:
+            return attendance_record.holiday.name  # Return the holiday name
+        return 'N/A'
+
+    # Change column name to "Holiday"
+    get_holiday.short_description = 'Holiday'

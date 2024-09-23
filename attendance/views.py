@@ -66,17 +66,22 @@ def clock_out(request):
         worked_income = attendance.total_income
         worked_hours = attendance.total_hours  # Get the hours worked from Attendance
 
+        # Determine the payment type based on whether there is a holiday in the attendance record
+        payment_type = 'holiday' if attendance.holiday else 'regular'
+
         # Create a billing record for this clock-out
         BillingRecord.objects.create(
             employee=employee,
             total_income=worked_income,
-            hours_worked=Decimal(worked_hours) if worked_hours else None  # Pass hours worked to the billing record
+            hours_worked=Decimal(worked_hours) if worked_hours else None,  # Pass hours worked to the billing record
+            payment_type=payment_type  # Set payment_type based on holiday
         )
-        logger.debug(f"Billing record created for employee {employee} with income {worked_income} and hours worked {worked_hours}")
+        logger.debug(f"Billing record created for employee {employee} with income {worked_income}, hours worked {worked_hours}, and payment type {payment_type}")
 
         messages.success(request, 'Successfully clocked out and billing record updated.')
 
     return redirect('clock_in_out_page')
+
 
 
 
