@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen flex items-start justify-left py-10">
+    <div class="w-full max-w-4xl rounded-lg p-8 flex">
+        <!-- Left Column: Description -->
+        <div class="w-1/3 pr-8">
+            <h2 class="text-xl font-bold text-black mb-4">Personal Information</h2>
+            <p class="text-sm text-black mb-6">Use a permanent address where you can receive mail.</p>
+        </div>
+
+        <!-- Right Column: Form -->
+        <div class="w-2/3">
+            <h1 class="text-2xl font-bold text-black mb-6">Account Settings</h1>
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Avatar Section -->
+                <div class="flex items-center mb-6">
+                    <img class="rounded-full w-24 h-24" src="{{ employee.profile_picture.url }}" alt="Avatar">
+                    <div class="ml-4">
+                        <label for="id_profile_picture" class="block text-sm font-medium text-black">Change avatar</label>
+                        {{ form.profile_picture }}
+                        <p class="mt-1 text-xs text-black">JPG, GIF or PNG. 1MB max.</p>
+                    </div>
+                </div>
+
+                <!-- Personal Information -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="col-span-1">
+                        <label for="id_username" class="block text-sm font-medium text-black">Username</label>
+                        {{ form.username }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_first_name" class="block text-sm font-medium text-black">First name</label>
+                        {{ form.first_name }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_middle_name" class="block text-sm font-medium text-black">Middle name</label>
+                        {{ form.middle_name }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_last_name" class="block text-sm font-medium text-black">Last name</label>
+                        {{ form.last_name }}
+                    </div>
+
+                    <div class="col-span-2">
+                        <label for="id_email" class="block text-sm font-medium text-black">Email address</label>
+                        {{ form.email }}
+                    </div>
+
+                    <div class="col-span-2">
+                        <label for="id_address" class="block text-sm font-medium text-black">Address</label>
+                        {{ form.address }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_phone_number" class="block text-sm font-medium text-black">Phone number</label>
+                        {{ form.phone_number }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_city" class="block text-sm font-medium text-black">City</label>
+                        {{ form.city }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_country" class="block text-sm font-medium text-black">Country</label>
+                        {{ form.country }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_per_day_rate" class="block text-sm font-medium text-black">Per day rate</label>
+                        {{ form.per_day_rate }}
+                    </div>
+
+                    <div class="col-span-1">
+                        <label for="id_scheduled_start_time" class="block text-sm font-medium text-black">Scheduled start time</label>
+                        {{ form.scheduled_start_time }}
+                    </div>
+
+                    <div class="col-span-2">
+                        <label for="id_lateness_rules" class="block text-sm font-medium text-black">Lateness rules</label>
+                        {{ form.lateness_rules }}
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <div class="flex justify-end mt-6">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        color: #000000; /* Black */
+    }
+    input, select {
+        background-color: #ffffff; /* White */
+        color: #000000; /* Black text */
+        padding: 10px;
+        border: 1px solid #d1d5db; /* Tailwind's gray-300 */
+        border-radius: 6px;
+        width: 100%;
+        margin-top: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06); /* Tailwind's shadow-sm */
+    }
+    button {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
