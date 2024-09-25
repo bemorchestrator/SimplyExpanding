@@ -15,6 +15,7 @@ SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
 CREDENTIALS_PATH = r'C:\Users\bem\Desktop\credentials\client_secret_ga4.json'
 TOKEN_PATH = r'C:\Users\bem\Desktop\credentials\token_ga4.json'
 
+
 def authenticate_ga4(request):
     creds = None
 
@@ -64,12 +65,13 @@ def fetch_ga4_data(request):
         end_date = request.POST.get('end_date')
         row_limit = request.POST.get('row_limit')
 
+        # Check if all required fields are provided
         if not property_id or not start_date or not end_date or not row_limit:
             return HttpResponseBadRequest("Please provide valid inputs.")
 
-        # Define the report request
+        # Define the report request with the correct property format
         request_body = {
-            'property': property_id,  # Use only the numeric property ID
+            'property': f'properties/{property_id}',  # Use the full property format
             'metrics': [
                 {'name': 'totalUsers'},               # Total Users
                 {'name': 'bounceRate'},               # Bounce Rate
@@ -77,7 +79,7 @@ def fetch_ga4_data(request):
                 {'name': 'averageSessionDuration'},   # Average Session Duration
             ],
             'date_ranges': [{'start_date': start_date, 'end_date': end_date}],
-            'limit': int(row_limit)  # Optional: You can set this to 1 if you expect only one row
+            'limit': int(row_limit)  # Optional: Limit the number of rows
         }
 
         # Fetch the report data
