@@ -3,10 +3,15 @@
 {% block content %}
 <div class="flex justify-center bg-gray-100 py-10 px-4">
     <div class="w-full max-w-4xl rounded-lg p-8 overflow-auto ">
-        <h2 class="text-3xl font-semibold text-gray-800 text-center mb-8">Client Onboarding</h2>
+        <!-- Dynamic Page Title -->
+        {% if action == 'Create' %}
+            <h2 class="text-3xl font-semibold text-gray-800 text-center mb-8">Client Onboarding</h2>
+        {% elif action == 'Update' %}
+            <h2 class="text-3xl font-semibold text-gray-800 text-center mb-8">Update Client: {{ client.business_name }}</h2>
+        {% endif %}
 
         <!-- Form -->
-        <form method="POST" id="onboardingForm" action="{% url 'client_onboarding' %}">
+        <form method="POST" id="onboardingForm" action="{% if action == 'Create' %}{% url 'client_onboarding' %}{% elif action == 'Update' %}{% url 'client_update' client.pk %}{% endif %}">
             {% csrf_token %}
 
             <!-- Basic Information Section -->
@@ -176,7 +181,11 @@
             <!-- Submit Button -->
             <div class="mb-6">
                 <button type="submit" class="w-full bg-blue-400 text-white py-3 rounded-lg hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 text-lg">
-                    Submit
+                    {% if action == 'Create' %}
+                        Submit
+                    {% elif action == 'Update' %}
+                        Update
+                    {% endif %}
                 </button>
             </div>
         </form>

@@ -88,6 +88,9 @@
                         
                         <!-- End Date -->
                         <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">End Date</th>
+                        
+                        <!-- Actions -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -160,10 +163,15 @@
                             
                             <!-- End Date -->
                             <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.end_date|date:"M d, Y" }}</td>
+                            
+                            <!-- Actions -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">
+                                <a href="{% url 'client_update' client.pk %}" class="text-blue-500 hover:underline">Edit</a>
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="15" class="px-6 py-4 text-center text-gray-500">No clients found.</td>
+                            <td colspan="16" class="px-6 py-4 text-center text-gray-500">No clients found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -174,6 +182,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {% for client in clients %}
                 <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col w-full">
+                    <!-- Edit Link/Button -->
+                    <div class="flex justify-end mb-2">
+                        <a href="{% url 'client_update' client.pk %}" class="text-blue-500 hover:underline">Edit</a>
+                    </div>
+                    
                     <!-- Header Section -->
                     <div class="mb-4">
                         <h2 class="text-xl font-semibold text-gray-800">{{ client.business_name }}</h2>

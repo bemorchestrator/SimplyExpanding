@@ -1,11 +1,12 @@
-from django.shortcuts import render, redirect
+# views.py
+
+from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ClientOnboardingForm
 from .models import ClientOnboarding
 from django.contrib import messages
 from django.db.models import Q  # For search queries
 
-
-# View to handle the client onboarding form
+# View to handle the client onboarding form (Create)
 def client_onboarding_view(request):
     if request.method == 'POST':
         # If the form is submitted, populate the form with POST data
@@ -21,8 +22,31 @@ def client_onboarding_view(request):
         # Display an empty form if the request is GET
         form = ClientOnboardingForm()
 
-    # Render the form in the template
-    return render(request, 'client/client_onboarding.html', {'form': form})
+    # Render the form in the template with 'action' context for dynamic form behavior
+    return render(request, 'client/client_onboarding.html', {'form': form, 'action': 'Create'})
+
+
+# View to handle updating an existing client
+def client_update_view(request, pk):
+    # Retrieve the client instance or return 404 if not found
+    client = get_object_or_404(ClientOnboarding, pk=pk)
+
+    if request.method == 'POST':
+        # Populate the form with POST data and the existing client instance
+        form = ClientOnboardingForm(request.POST, instance=client)
+        if form.is_valid():
+            # Save the updated form data to the database
+            form.save()
+            # Optional: Add a success message
+            messages.success(request, 'Client information updated successfully.')
+            # Redirect to the client list page after successful update
+            return redirect('client_list')  # Adjust the URL name to your client list page
+    else:
+        # Populate the form with the existing client data for GET requests
+        form = ClientOnboardingForm(instance=client)
+
+    # Render the form in the template with 'action' and 'client' context for dynamic form behavior
+    return render(request, 'client/client_onboarding.html', {'form': form, 'action': 'Update', 'client': client})
 
 
 # View to handle the success page after onboarding form submission
@@ -30,6 +54,7 @@ def onboarding_success_view(request):
     return render(request, 'client/onboarding_success.html')
 
 
+# View to handle the client list with search and view toggle (table/grid)
 def client_list_view(request):
     # Get the search query from the request
     query = request.GET.get('search')
