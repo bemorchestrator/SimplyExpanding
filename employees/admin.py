@@ -12,6 +12,7 @@ class EmployeeAdmin(admin.ModelAdmin):
     )
     search_fields = (
         'username', 'first_name', 'last_name', 'email',
+        
         'user__username', 'user__first_name', 'user__last_name', 'user__email'
     )
     list_filter = ('city', 'country', 'scheduled_start_time', 'lateness_rules')

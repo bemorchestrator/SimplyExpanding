@@ -108,7 +108,7 @@
 
     <!-- Serialize Report Data to JavaScript -->
     <script>
-        // Parse the serialized JSON data
+        // Safely parse the serialized JSON data
         const reportData = {{ report_data_json|safe }};
     </script>
 
@@ -118,7 +118,7 @@
     <!-- Initialize and Draw Charts -->
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function () {
-            if (reportData && reportData.length > 0) {
+            if (reportData && Array.isArray(reportData) && reportData.length > 0) {
                 const data = reportData[0];
 
                 // Load the Google Charts packages
