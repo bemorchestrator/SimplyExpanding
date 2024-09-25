@@ -54,14 +54,14 @@ def onboarding_success_view(request):
     return render(request, 'client/onboarding_success.html')
 
 
-# View to handle the client list with search and view toggle (table/grid)
+# View to handle the client list with search and master-detail layout
 def client_list_view(request):
     # Get the search query from the request
     query = request.GET.get('search')
     
-    # Get the view mode from the request (either 'table' or 'grid')
-    view_mode = request.GET.get('view', 'grid')
-
+    # Get the selected client ID from the request (optional)
+    selected_client_id = request.GET.get('selected')
+    
     # If a search query exists, filter the clients based on the query
     if query:
         clients = ClientOnboarding.objects.filter(
@@ -74,7 +74,7 @@ def client_list_view(request):
     else:
         # If no search query, display all clients
         clients = ClientOnboarding.objects.all()
-
+    
     # Preprocess competitor_urls by splitting them into lists
     for client in clients:
         if client.competitor_urls:
@@ -82,20 +82,16 @@ def client_list_view(request):
             client.competitor_urls_list = [url.strip() for url in client.competitor_urls.split(',') if url.strip()]
         else:
             client.competitor_urls_list = []
-
-    # Define the headers list (optional, as you might not need this in the template)
-    headers = [
-        'Business Name', 'Business Description', 'Website URL', 'Contact Person',
-        'Email', 'Phone Number', 'Business Goals', 'Target Keywords',
-        'Competitor URLs', 'G4A Login', 'Google Search Console Login',
-        'Tag Manager Login', 'Website Login', 'CMS Type', 'Start Date', 'End Date'
-    ]
-
-    # Render the client list template with the clients, headers, and the current view mode
+    
+    # Fetch the selected client if a valid ID is provided
+    selected_client = None
+    if selected_client_id:
+        selected_client = get_object_or_404(ClientOnboarding, pk=selected_client_id)
+    
+    # Render the client list template with the clients, and the selected client
     context = {
         'clients': clients,
-        'headers': headers,
-        'view_mode': view_mode,  # Pass the view mode to the template
+        'selected_client': selected_client,
     }
 
     return render(request, 'client/client_list.html', context)
