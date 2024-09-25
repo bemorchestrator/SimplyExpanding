@@ -24,7 +24,7 @@
             {% comment %}
             Determine the current view mode to set active styles on buttons
             {% endcomment %}
-            {% with view_mode=request.GET.view %}
+            {% with view_mode=view_mode %}
                 <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}view=grid" class="px-4 py-2 bg-blue-400 rounded-lg shadow-sm hover:bg-blue-500 transition {% if view_mode != 'table' %}bg-blue-500 text-white{% else %}text-gray-700{% endif %}">
                     Grid View
                 </a>
@@ -35,149 +35,175 @@
         </div>
     </form>
 
-    {% with view_mode=request.GET.view %}
-        {% if view_mode == 'table' %}
-            <!-- Clients Table View -->
-            <div id="table-container" class="overflow-x-auto relative">
-                <table class="min-w-full bg-white rounded-xl shadow-md">
-                    <thead class="sticky top-0 bg-white">
-                        <tr>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Name</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Description</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Website</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Contact Person</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Email</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Phone</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Goals</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Target Keywords</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Competitor URLs</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">G4A Login</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Google Search Console</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Tag Manager</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Website Login</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">CMS Type</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Start Date</th>
-                            <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">End Date</th>
+    {% if view_mode == 'table' %}
+        <!-- Clients Table View -->
+        <div id="table-container" class="overflow-x-auto relative">
+            <table class="min-w-full bg-white rounded-xl shadow-md">
+                <thead class="sticky top-0 bg-white">
+                    <tr>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Name</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Description</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Website</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Contact Person</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Email</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Phone</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Goals</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Target Keywords</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Competitor URLs</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">G4A Login</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Google Search Console</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Tag Manager</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Website Login</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">CMS Type</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Start Date</th>
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">End Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients %}
+                        <tr class="{% cycle 'bg-gray-50' 'bg-white' %} hover:bg-gray-100">
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_name }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_description|truncatewords:10 }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                                <a href="{{ client.website_url }}" target="_blank" class="text-blue-500 hover:underline break-all">{{ client.website_url }}</a>
+                            </td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.contact_person }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                                <a href="mailto:{{ client.email }}" class="text-blue-500 hover:underline break-all">{{ client.email }}</a>
+                            </td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                                <a href="tel:{{ client.phone_number }}" class="text-blue-500 hover:underline break-all">{{ client.phone_number }}</a>
+                            </td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_goals|truncatewords:10 }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.target_keywords|truncatewords:5 }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                                {% if client.competitor_urls_list %}
+                                    <ul class="list-disc pl-5">
+                                        {% for url in client.competitor_urls_list %}
+                                            <li>
+                                                <a href="{{ url }}" target="_blank" class="text-blue-500 hover:underline break-all">
+                                                    {{ url }}
+                                                </a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.g4a_login }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.google_search_console_login }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.tag_manager_login }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.website_login }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.cms_type }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.start_date|date:"M d, Y" }}</td>
+                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.end_date|date:"M d, Y" }}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {% for client in clients %}
-                            <tr class="{% cycle 'bg-gray-50' 'bg-white' %} hover:bg-gray-100">
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_name }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_description|truncatewords:10 }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">
+                    {% empty %}
+                        <tr>
+                            <td colspan="15" class="px-6 py-4 text-center text-gray-500">No clients found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <!-- Clients Grid View -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for client in clients %}
+                <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col w-full">
+                    <!-- Header Section -->
+                    <div class="mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">{{ client.business_name }}</h2>
+                        <p class="text-gray-600 mt-1">{{ client.business_description|truncatewords:20 }}</p>
+                    </div>
+                    
+                    <!-- Details Section in Two Columns -->
+                    <div class="flex-1">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Left Column -->
+                            <div class="space-y-2">
+                                <div>
+                                    <strong>Website:</strong><br>
                                     <a href="{{ client.website_url }}" target="_blank" class="text-blue-500 hover:underline break-all">{{ client.website_url }}</a>
-                                </td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.contact_person }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">
+                                </div>
+                                <div>
+                                    <strong>Contact Person:</strong><br>
+                                    {{ client.contact_person }}
+                                </div>
+                                <div>
+                                    <strong>Email:</strong><br>
                                     <a href="mailto:{{ client.email }}" class="text-blue-500 hover:underline break-all">{{ client.email }}</a>
-                                </td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">
+                                </div>
+                                <div>
+                                    <strong>Phone:</strong><br>
                                     <a href="tel:{{ client.phone_number }}" class="text-blue-500 hover:underline break-all">{{ client.phone_number }}</a>
-                                </td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_goals|truncatewords:10 }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.target_keywords|truncatewords:5 }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.competitor_urls|truncatewords:5 }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.g4a_login }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.google_search_console_login }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.tag_manager_login }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.website_login }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.cms_type }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.start_date|date:"M d, Y" }}</td>
-                                <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.end_date|date:"M d, Y" }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="15" class="px-6 py-4 text-center text-gray-500">No clients found.</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <!-- Clients Grid View -->
-            <div class="grid grid-cols-2 gap-6">
-                {% for client in clients %}
-                    <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col w-full">
-                        <!-- Header Section -->
-                        <div class="mb-4">
-                            <h2 class="text-xl font-semibold text-gray-800">{{ client.business_name }}</h2>
-                            <p class="text-gray-600 mt-1">{{ client.business_description|truncatewords:20 }}</p>
-                        </div>
-                        
-                        <!-- Details Section in Two Columns -->
-                        <div class="flex-1">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <ul class="text-gray-700 space-y-2 text-sm">
-                                    <li>
-                                        <strong>Website:</strong><br>
-                                        <a href="{{ client.website_url }}" target="_blank" class="text-blue-500 hover:underline break-all">{{ client.website_url }}</a>
-                                    </li>
-                                    <li>
-                                        <strong>Contact Person:</strong><br>
-                                        {{ client.contact_person }}
-                                    </li>
-                                    <li>
-                                        <strong>Email:</strong><br>
-                                        <a href="mailto:{{ client.email }}" class="text-blue-500 hover:underline break-all">{{ client.email }}</a>
-                                    </li>
-                                    <li>
-                                        <strong>Phone:</strong><br>
-                                        <a href="tel:{{ client.phone_number }}" class="text-blue-500 hover:underline break-all">{{ client.phone_number }}</a>
-                                    </li>
-                                    <li>
-                                        <strong>Business Goals:</strong><br>
-                                        {{ client.business_goals|truncatewords:15 }}
-                                    </li>
-                                </ul>
-                                
-                                <ul class="text-gray-700 space-y-2 text-sm">
-                                    <li>
-                                        <strong>Target Keywords:</strong><br>
-                                        {{ client.target_keywords|truncatewords:10 }}
-                                    </li>
-                                    <li>
-                                        <strong>Competitor URLs:</strong><br>
-                                        {{ client.competitor_urls|truncatewords:10 }}
-                                    </li>
-                                    <li>
-                                        <strong>G4A Login:</strong><br>
-                                        {{ client.g4a_login }}
-                                    </li>
-                                    <li>
-                                        <strong>Google Search Console:</strong><br>
-                                        {{ client.google_search_console_login }}
-                                    </li>
-                                    <li>
-                                        <strong>Tag Manager:</strong><br>
-                                        {{ client.tag_manager_login }}
-                                    </li>
-                                    <li>
-                                        <strong>Website Login:</strong><br>
-                                        {{ client.website_login }}
-                                    </li>
-                                    <li>
-                                        <strong>CMS Type:</strong><br>
-                                        {{ client.cms_type }}
-                                    </li>
-                                    <li>
-                                        <strong>Start Date:</strong><br>
-                                        {{ client.start_date|date:"M d, Y" }}
-                                    </li>
-                                    <li>
-                                        <strong>End Date:</strong><br>
-                                        {{ client.end_date|date:"M d, Y" }}
-                                    </li>
-                                </ul>
+                                </div>
+                                <div>
+                                    <strong>Business Goals:</strong><br>
+                                    {{ client.business_goals|truncatewords:15 }}
+                                </div>
+                            </div>
+                            
+                            <!-- Right Column -->
+                            <div class="space-y-2">
+                                <div>
+                                    <strong>Target Keywords:</strong><br>
+                                    {{ client.target_keywords|truncatewords:10 }}
+                                </div>
+                                <div>
+                                    <strong>Competitor URLs:</strong><br>
+                                    {% if client.competitor_urls_list %}
+                                        <ul class="list-disc pl-5">
+                                            {% for url in client.competitor_urls_list %}
+                                                <li>
+                                                    <a href="{{ url }}" target="_blank" class="text-blue-500 hover:underline break-all">
+                                                        {{ url }}
+                                                    </a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <strong>G4A Login:</strong><br>
+                                    {{ client.g4a_login }}
+                                </div>
+                                <div>
+                                    <strong>Google Search Console:</strong><br>
+                                    {{ client.google_search_console_login }}
+                                </div>
+                                <div>
+                                    <strong>Tag Manager:</strong><br>
+                                    {{ client.tag_manager_login }}
+                                </div>
+                                <div>
+                                    <strong>Website Login:</strong><br>
+                                    {{ client.website_login }}
+                                </div>
+                                <div>
+                                    <strong>CMS Type:</strong><br>
+                                    {{ client.cms_type }}
+                                </div>
+                                <div>
+                                    <strong>Start Date:</strong><br>
+                                    {{ client.start_date|date:"M d, Y" }}
+                                </div>
+                                <div>
+                                    <strong>End Date:</strong><br>
+                                    {{ client.end_date|date:"M d, Y" }}
+                                </div>
                             </div>
                         </div>
                     </div>
-                {% empty %}
-                    <p class="col-span-2 text-center text-gray-500">No clients found.</p>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+                </div>
+            {% empty %}
+                <p class="col-span-1 sm:col-span-2 lg:col-span-3 text-center text-gray-500">No clients found.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
 
 <!-- JavaScript for Drag-to-Scroll Functionality -->

@@ -30,10 +30,6 @@ def onboarding_success_view(request):
     return render(request, 'client/onboarding_success.html')
 
 
-from django.db.models import Q
-from django.shortcuts import render
-from .models import ClientOnboarding
-
 def client_list_view(request):
     # Get the search query from the request
     query = request.GET.get('search')
@@ -54,7 +50,15 @@ def client_list_view(request):
         # If no search query, display all clients
         clients = ClientOnboarding.objects.all()
 
-    # Define the headers list
+    # Preprocess competitor_urls by splitting them into lists
+    for client in clients:
+        if client.competitor_urls:
+            # Split the competitor_urls by comma and strip any extra whitespace
+            client.competitor_urls_list = [url.strip() for url in client.competitor_urls.split(',') if url.strip()]
+        else:
+            client.competitor_urls_list = []
+
+    # Define the headers list (optional, as you might not need this in the template)
     headers = [
         'Business Name', 'Business Description', 'Website URL', 'Contact Person',
         'Email', 'Phone Number', 'Business Goals', 'Target Keywords',
@@ -70,4 +74,3 @@ def client_list_view(request):
     }
 
     return render(request, 'client/client_list.html', context)
-
