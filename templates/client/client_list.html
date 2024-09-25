@@ -41,42 +41,90 @@
             <table class="min-w-full bg-white rounded-xl shadow-md">
                 <thead class="sticky top-0 bg-white">
                     <tr>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Name</th>
+                        <!-- Business Name -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Business Name</th>
+                        
+                        <!-- Business Description (Wrap Allowed) -->
                         <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Description</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Website</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Contact Person</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Email</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Phone</th>
+                        
+                        <!-- Website URL -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Website</th>
+                        
+                        <!-- Contact Person -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Contact Person</th>
+                        
+                        <!-- Email -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Email</th>
+                        
+                        <!-- Phone Number -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Phone</th>
+                        
+                        <!-- Business Goals (Wrap Allowed) -->
                         <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Business Goals</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Target Keywords</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Competitor URLs</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">G4A Login</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Google Search Console</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Tag Manager</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Website Login</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">CMS Type</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">Start Date</th>
-                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">End Date</th>
+                        
+                        <!-- Target Keywords -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Target Keywords</th>
+                        
+                        <!-- Competitor URLs -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Competitor URLs</th>
+                        
+                        <!-- G4A Login -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">G4A Login</th>
+                        
+                        <!-- Google Search Console Login -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Google Search Console</th>
+                        
+                        <!-- Tag Manager Login -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Tag Manager</th>
+                        
+                        <!-- Website Login -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Website Login</th>
+                        
+                        <!-- CMS Type -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">CMS Type</th>
+                        
+                        <!-- Start Date -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">Start Date</th>
+                        
+                        <!-- End Date -->
+                        <th class="px-6 py-3 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">End Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for client in clients %}
                         <tr class="{% cycle 'bg-gray-50' 'bg-white' %} hover:bg-gray-100">
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_name }}</td>
+                            <!-- Business Name -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.business_name }}</td>
+                            
+                            <!-- Business Description (Wrap Allowed) -->
                             <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_description|truncatewords:10 }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                            
+                            <!-- Website URL -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">
                                 <a href="{{ client.website_url }}" target="_blank" class="text-blue-500 hover:underline break-all">{{ client.website_url }}</a>
                             </td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.contact_person }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                            
+                            <!-- Contact Person -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.contact_person }}</td>
+                            
+                            <!-- Email -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">
                                 <a href="mailto:{{ client.email }}" class="text-blue-500 hover:underline break-all">{{ client.email }}</a>
                             </td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                            
+                            <!-- Phone Number -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">
                                 <a href="tel:{{ client.phone_number }}" class="text-blue-500 hover:underline break-all">{{ client.phone_number }}</a>
                             </td>
+                            
+                            <!-- Business Goals (Wrap Allowed) -->
                             <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.business_goals|truncatewords:10 }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.target_keywords|truncatewords:5 }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">
+                            
+                            <!-- Target Keywords -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.target_keywords|truncatewords:5 }}</td>
+                            
+                            <!-- Competitor URLs -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">
                                 {% if client.competitor_urls_list %}
                                     <ul class="list-disc pl-5">
                                         {% for url in client.competitor_urls_list %}
@@ -91,13 +139,27 @@
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.g4a_login }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.google_search_console_login }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.tag_manager_login }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.website_login }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.cms_type }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.start_date|date:"M d, Y" }}</td>
-                            <td class="px-6 py-4 border-b border-gray-200 break-words">{{ client.end_date|date:"M d, Y" }}</td>
+                            
+                            <!-- G4A Login -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.g4a_login }}</td>
+                            
+                            <!-- Google Search Console Login -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.google_search_console_login }}</td>
+                            
+                            <!-- Tag Manager Login -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.tag_manager_login }}</td>
+                            
+                            <!-- Website Login -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.website_login }}</td>
+                            
+                            <!-- CMS Type -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.cms_type }}</td>
+                            
+                            <!-- Start Date -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.start_date|date:"M d, Y" }}</td>
+                            
+                            <!-- End Date -->
+                            <td class="px-6 py-4 border-b border-gray-200 break-words whitespace-nowrap">{{ client.end_date|date:"M d, Y" }}</td>
                         </tr>
                     {% empty %}
                         <tr>
