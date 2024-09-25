@@ -2,99 +2,105 @@
 {% load static %}
 {% block content %}
 
-<div class="min-h-screen bg-gray-100 p-10 flex flex-col items-center">
+<div class="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-10 flex flex-col items-center">
     <h1 class="text-2xl font-bold mb-6">Billing Dashboard</h1>
 
     <!-- Total Income -->
-    <div class="bg-white shadow-md rounded-lg p-8 w-full mb-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-6">Total Income</h3>
+    <div class="bg-white shadow-md rounded-lg p-6 sm:p-8 w-full mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 sm:mb-6">Total Income</h3>
         <p class="text-3xl font-bold">Php{{ total_income|floatformat:2 }}</p>
     </div>
 
     <!-- Current Session Income -->
     {% if is_clocked_in %}
-    <div class="bg-white shadow-md rounded-lg p-8 w-full mb-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-6">Current Session Income</h3>
+    <div class="bg-white shadow-md rounded-lg p-6 sm:p-8 w-full mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 sm:mb-6">Current Session Income</h3>
         <p class="text-3xl font-bold" id="current-income">Php{{ current_session_income|floatformat:2 }}</p>
     </div>
     {% endif %}
 
     <!-- Income per Day and Income per Week -->
-    <div class="flex w-full mb-6">
+    <div class="flex flex-col md:flex-row w-full mb-6 space-y-6 md:space-y-0 md:space-x-6">
         <!-- Income per Day -->
-        <div class="bg-white shadow-md rounded-lg p-8 w-1/2 mr-3">
-            <h3 class="text-lg font-semibold text-gray-800 mb-6">Income per Day (Last 30 Days)</h3>
-            <table class="min-w-full bg-white rounded-lg">
-                <thead>
-                    <tr class="text-left text-gray-600">
-                        <th class="py-3 px-4">Date</th>
-                        <th class="py-3 px-4">Income</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in income_per_day %}
-                    <tr>
-                        <td class="py-3 px-4">{{ entry.date|date:"Y-m-d" }}</td>
-                        <td class="py-3 px-4">Php{{ entry.daily_income|floatformat:2 }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="2" class="text-center py-6 text-gray-500">No records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="bg-white shadow-md rounded-lg p-6 sm:p-8 flex-1">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4 sm:mb-6">Income per Day (Last 30 Days)</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg">
+                    <thead>
+                        <tr class="text-left text-gray-600">
+                            <th class="py-3 px-4">Date</th>
+                            <th class="py-3 px-4">Income</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in income_per_day %}
+                        <tr>
+                            <td class="py-3 px-4">{{ entry.date|date:"Y-m-d" }}</td>
+                            <td class="py-3 px-4">Php{{ entry.daily_income|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center py-6 text-gray-500">No records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Income per Week -->
-        <div class="bg-white shadow-md rounded-lg p-8 w-1/2 ml-3">
-            <h3 class="text-lg font-semibold text-gray-800 mb-6">Income per Week</h3>
-            <table class="min-w-full bg-white rounded-lg">
-                <thead>
-                    <tr class="text-left text-gray-600">
-                        <th class="py-3 px-4">Week Starting</th>
-                        <th class="py-3 px-4">Income</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in income_per_week %}
-                    <tr>
-                        <td class="py-3 px-4">{{ entry.week|date:"Y-m-d" }}</td>
-                        <td class="py-3 px-4">Php{{ entry.weekly_income|floatformat:2 }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="2" class="text-center py-6 text-gray-500">No records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="bg-white shadow-md rounded-lg p-6 sm:p-8 flex-1">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4 sm:mb-6">Income per Week</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg">
+                    <thead>
+                        <tr class="text-left text-gray-600">
+                            <th class="py-3 px-4">Week Starting</th>
+                            <th class="py-3 px-4">Income</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in income_per_week %}
+                        <tr>
+                            <td class="py-3 px-4">{{ entry.week|date:"Y-m-d" }}</td>
+                            <td class="py-3 px-4">Php{{ entry.weekly_income|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center py-6 text-gray-500">No records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <!-- Income per Month -->
-    <div class="bg-white shadow-md rounded-lg p-8 w-full mb-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-6">Income per Month</h3>
-        <table class="min-w-full bg-white rounded-lg">
-            <thead>
-                <tr class="text-left text-gray-600">
-                    <th class="py-3 px-4">Month</th>
-                    <th class="py-3 px-4">Income</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in income_per_month %}
-                <tr>
-                    <td class="py-3 px-4">{{ entry.month|date:"Y-m" }}</td>
-                    <td class="py-3 px-4">Php{{ entry.monthly_income|floatformat:2 }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="2" class="text-center py-6 text-gray-500">No records found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="bg-white shadow-md rounded-lg p-6 sm:p-8 w-full mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 sm:mb-6">Income per Month</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white rounded-lg">
+                <thead>
+                    <tr class="text-left text-gray-600">
+                        <th class="py-3 px-4">Month</th>
+                        <th class="py-3 px-4">Income</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in income_per_month %}
+                    <tr>
+                        <td class="py-3 px-4">{{ entry.month|date:"Y-m" }}</td>
+                        <td class="py-3 px-4">Php{{ entry.monthly_income|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center py-6 text-gray-500">No records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
 </div>
