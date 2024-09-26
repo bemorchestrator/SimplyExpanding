@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'holidays',
     'client',
     'search_console',
+    'payroll',
 ]
 
 MIDDLEWARE = [

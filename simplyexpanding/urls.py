@@ -24,6 +24,7 @@ urlpatterns = [
     path('client/', include('client.urls')),
     path('search_console/', include('search_console.urls')),
     path('analytics/', include('analytics.urls')),
+    path('payroll/', include('payroll.urls')),
 ]
 
 if settings.DEBUG:

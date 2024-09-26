@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 p-10 flex flex-col items-center">
+    <!-- Payroll Dashboard Header -->
+    <h2 class="text-xl font-semibold text-gray-800 mb-6">Payroll Dashboard</h2>
+
+    <!-- Payroll Records Table -->
+    <div class="bg-white shadow-md rounded-lg p-8 w-full">
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white rounded-lg">
+                <thead>
+                    <tr class="text-left text-gray-600">
+                        <th class="py-3 px-4">Employee</th>
+                        <th class="py-3 px-4">Pay Period</th>
+                        <th class="py-3 px-4">Total Income</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Proof of Payment</th> <!-- New Column Header -->
+                        <th class="py-3 px-4">Date Processed</th>
+                        <th class="py-3 px-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payroll in payroll_data %}
+                        <tr class="border-t">
+                            <td class="py-3 px-4">{{ payroll.employee }}</td>
+                            <td class="py-3 px-4">{{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}</td>
+                            <td class="py-3 px-4">Php {{ payroll.total_income|floatformat:2 }}</td>
+                            <td class="py-3 px-4">
+                                {% if payroll.status == 'pending' %}
+                                    <span class="bg-orange-100 text-orange-600 font-semibold px-4 py-2 rounded-full">Pending</span>
+                                {% elif payroll.status == 'paid' %}
+                                    <span class="bg-green-100 text-green-600 font-semibold px-4 py-2 rounded-full">Paid</span>
+                                {% elif payroll.status == 'no_income' %}
+                                    <span>No Income</span>
+                                {% else %}
+                                    <span>{{ payroll.status_display }}</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Proof of Payment Column -->
+                            <td class="py-3 px-4">
+                                {% if payroll.status == 'paid' and payroll.payment_proof %}
+                                    <!-- Thumbnail Image -->
+                                    <img 
+                                        src="{{ payroll.payment_proof }}" 
+                                        alt="Proof of Payment" 
+                                        class="w-8 h-8 object-cover rounded cursor-pointer" 
+                                        onclick="openModal('{{ payroll.payment_proof }}')"
+                                    >
+                                {% else %}
+                                    <span class="text-gray-500">N/A</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="py-3 px-4">
+                                {% if payroll.date_processed %}
+                                    {{ payroll.date_processed|date:"Y-m-d" }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if payroll.status == 'pending' %}
+                                    {% if payroll.id %}
+                                        <a href="{% url 'process_payroll' payroll.id %}" class="bg-orange-100 text-orange-600 font-semibold px-4 py-2 rounded hover:bg-orange-200">Process</a>
+                                    {% else %}
+                                        <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" class="bg-orange-100 text-orange-600 font-semibold px-4 py-2 rounded hover:bg-orange-200">Initiate Payroll</a>
+                                    {% endif %}
+                                {% elif payroll.status == 'paid' %}
+                                    <span class="bg-green-100 text-green-600 font-semibold px-4 py-2 rounded-full">Paid</span>
+                                {% elif payroll.status == 'no_income' %}
+                                    <span>No Income</span>
+                                {% else %}
+                                    <span>{{ payroll.status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-6 text-gray-500">No payroll records available.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg overflow-hidden shadow-lg max-w-3xl w-full">
+            <div class="flex justify-end p-2">
+                <button onclick="closeModal()" class="text-gray-700 hover:text-gray-900">
+                    <!-- Close Icon (SVG) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4">
+                <img id="modalImage" src="" alt="Full Proof of Payment" class="w-full h-auto">
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Modal Functionality -->
+    <script>
+        function openModal(imageSrc) {
+            document.getElementById('modalImage').src = imageSrc;
+            document.getElementById('imageModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+            document.getElementById('modalImage').src = '';
+        }
+
+        // Optional: Close modal when clicking outside the modal content
+        window.onclick = function(event) {
+            const modal = document.getElementById('imageModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</div>
+{% endblock %}
