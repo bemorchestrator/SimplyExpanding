@@ -10,15 +10,22 @@ def is_in_group(user, group_name):
 def filter_items(items, user_groups):
     filtered_items = []
     for item in items:
+        # Determine if the item should be included
+        include_item = False
         if item.visibility.exists():
             if item.visibility.filter(id__in=user_groups).exists():
-                # Filter children recursively
-                item.filtered_children = filter_items(item.children.all(), user_groups)
-                filtered_items.append(item)
+                include_item = True
         else:
-            # No visibility restrictions, include item
-            item.filtered_children = filter_items(item.children.all(), user_groups)
-            filtered_items.append(item)
+            include_item = True  # No visibility restrictions
+
+        if include_item:
+            # Recursively filter children
+            children = filter_items(item.children.all(), user_groups)
+            # Create a dictionary to hold item data and filtered children
+            filtered_items.append({
+                'item': item,
+                'children': children
+            })
     return filtered_items
 
 # Menu loading with role-based filtering
@@ -27,10 +34,14 @@ def load_menu(request):
     menus = Menu.objects.prefetch_related('items__children').all()
     filtered_menus = []
     for menu in menus:
-        filtered_items = filter_items(menu.items.all(), user_groups)
+        # Start with top-level items (parent=None)
+        top_level_items = menu.items.filter(parent=None)
+        filtered_items = filter_items(top_level_items, user_groups)
         if filtered_items:
-            menu.filtered_items = filtered_items
-            filtered_menus.append(menu)
+            filtered_menus.append({
+                'menu': menu,
+                'items': filtered_items
+            })
     return {'menus': filtered_menus}
 
 # View for Admin users
