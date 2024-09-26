@@ -8,7 +8,7 @@
                 
                 <!-- Menu Items -->
                 <ul class="pl-6">
-                    {% for item in menu.items.all %}
+                    {% for item in menu.items %}
                         <!-- Menu Item -->
                         <li class="mb-3 text-sm">
                             <a href="{{ item.url }}" class="flex items-center p-2 rounded-md mr-4 hover:bg-gray-200 {% if request.path == item.url %}bg-blue-400 text-white{% endif %}">
