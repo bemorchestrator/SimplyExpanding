@@ -16,12 +16,13 @@ def load_menu(request):
     for menu in menus:
         filtered_items = []
         for item in menu.items.all():
-            # Only display menu items if the user is in the allowed group
-            if (is_in_group(request.user, 'Admin') or 
-                is_in_group(request.user, 'Accountant') or 
-                is_in_group(request.user, 'Employee')):
+            # Only display menu items if the user is in the allowed group or if no restrictions
+            if item.visibility.exists():  # If visibility is set
+                if item.visibility.filter(id__in=request.user.groups.values_list('id', flat=True)).exists():
+                    filtered_items.append(item)
+            else:  # If no visibility is set, show to everyone
                 filtered_items.append(item)
-        
+
         # Add the menu with filtered items
         if filtered_items:
             menu.items = filtered_items
@@ -29,32 +30,20 @@ def load_menu(request):
 
     return {'menus': filtered_menus}
 
-# Function to check if the user is an Admin
-def is_admin(user):
-    return is_in_group(user, 'Admin')
-
-# Function to check if the user is an Accountant
-def is_accountant(user):
-    return is_in_group(user, 'Accountant')
-
-# Function to check if the user is an Employee
-def is_employee(user):
-    return is_in_group(user, 'Employee')
-
 # View for Admin users
-@user_passes_test(is_admin)
+@user_passes_test(lambda u: is_in_group(u, 'Admin'))
 def admin_dashboard(request):
     # Logic for admin dashboard
     return render(request, 'admin_dashboard.html')
 
 # View for Accountant users
-@user_passes_test(is_accountant)
+@user_passes_test(lambda u: is_in_group(u, 'Accountant'))
 def financial_reports(request):
     # Logic for financial reports
     return render(request, 'financial_reports.html')
 
 # View for Employee users
-@user_passes_test(is_employee)
+@user_passes_test(lambda u: is_in_group(u, 'Employee'))
 def employee_tasks(request):
     # Logic for employee tasks
     return render(request, 'employee_tasks.html')

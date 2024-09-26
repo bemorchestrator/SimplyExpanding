@@ -9,31 +9,28 @@
                 <!-- Menu Items -->
                 <ul class="pl-6">
                     {% for item in menu.items.all %}
-                        <!-- Check for user roles -->
-                        {% if user.groups.filter(name="Admin").exists or user.groups.filter(name="Accountant").exists or user.groups.filter(name="Employee").exists %}
-                            <li class="mb-3 text-sm">
-                                <!-- Menu Item -->
-                                <a href="{{ item.url }}" class="flex items-center p-2 rounded-md mr-4 hover:bg-gray-200 {% if request.path == item.url %}bg-blue-400 text-white{% endif %}">
-                                    <!-- Dynamic Icon for each menu item -->
-                                    <i class="{{ item.icon }} mr-2"></i>
-                                    {{ item.name }}
-                                </a>
-                                
-                                <!-- Submenu (Child Items) -->
-                                {% if item.children.all %}
-                                    <ul class="pl-6 mt-2">
-                                        {% for child in item.children.all %}
-                                            <li class="mb-1 text-sm">
-                                                <a href="{{ child.url }}" class="flex items-center p-2 rounded-md hover:bg-gray-200 {% if request.path == child.url %}bg-blue-400 text-white{% endif %}">
-                                                    <i class="bi bi-file-earmark-text-fill mr-2"></i>
-                                                    {{ child.name }}
-                                                </a>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                {% endif %}
-                            </li>
-                        {% endif %}
+                        <!-- Menu Item -->
+                        <li class="mb-3 text-sm">
+                            <a href="{{ item.url }}" class="flex items-center p-2 rounded-md mr-4 hover:bg-gray-200 {% if request.path == item.url %}bg-blue-400 text-white{% endif %}">
+                                <!-- Dynamic Icon for each menu item -->
+                                <i class="{{ item.icon }} mr-2"></i>
+                                {{ item.name }}
+                            </a>
+                            
+                            <!-- Submenu (Child Items) -->
+                            {% if item.children.all %}
+                                <ul class="pl-6 mt-2">
+                                    {% for child in item.children.all %}
+                                        <li class="mb-1 text-sm">
+                                            <a href="{{ child.url }}" class="flex items-center p-2 rounded-md hover:bg-gray-200 {% if request.path == child.url %}bg-blue-400 text-white{% endif %}">
+                                                <i class="bi bi-file-earmark-text-fill mr-2"></i>
+                                                {{ child.name }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </li>
                     {% endfor %}
                 </ul>
             </div>
