@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-100 p-10 flex flex-col items-center">
-    
+
     <!-- Display Messages -->
     {% if messages %}
         <div class="w-full mb-4">
@@ -29,22 +29,19 @@
                 <button type="submit" name="clock_out" class="bg-red-500 text-white py-3 px-8 rounded-lg hover:bg-red-600 transition duration-200 w-48">
                     Clock Out
                 </button>
+            {% elif current_status == 'on_break' %}
+                <button type="submit" name="end_break" class="bg-green-500 text-white py-3 px-8 rounded-lg hover:bg-green-600 transition duration-200 w-48">
+                    End Break
+                </button>
             {% endif %}
         </form>
 
-        <!-- Start/End Break Buttons -->
+        <!-- Start Break Button -->
         {% if current_status == 'clocked_in' %}
             <form method="post">
                 {% csrf_token %}
                 <button type="submit" name="start_break" class="bg-yellow-500 text-white py-3 px-8 rounded-lg hover:bg-yellow-600 transition duration-200 w-48">
                     Start Break
-                </button>
-            </form>
-        {% elif current_status == 'on_break' %}
-            <form method="post">
-                {% csrf_token %}
-                <button type="submit" name="end_break" class="bg-green-500 text-white py-3 px-8 rounded-lg hover:bg-green-600 transition duration-200 w-48">
-                    End Break
                 </button>
             </form>
         {% endif %}
@@ -166,7 +163,7 @@
     </div>
 </div>
 
-{% if is_clocked_in %}
+{% if current_status == 'clocked_in' %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var data = JSON.parse('{{ js_data|escapejs }}');

@@ -16,6 +16,9 @@ def clock_in(request):
     employee = get_object_or_404(Employee, user=request.user)
     now = timezone.now()
 
+    # Automatically clock out if it's past 5 PM
+    check_for_auto_clock_out(employee)
+
     with transaction.atomic():
         is_primary = not Attendance.objects.filter(
             employee=employee,
@@ -40,11 +43,13 @@ def clock_in(request):
     return redirect('clock_in_out_page')
 
 
-
 @login_required
 def clock_out(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
+
+    # Automatically clock out if it's past 5 PM
+    check_for_auto_clock_out(employee)
 
     # Find the most recent open attendance record
     attendance = Attendance.objects.filter(
@@ -83,12 +88,13 @@ def clock_out(request):
     return redirect('clock_in_out_page')
 
 
-
-
 @login_required
 def start_break(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
+
+    # Automatically clock out if it's past 5 PM
+    check_for_auto_clock_out(employee)
 
     # Find the most recent attendance record not already on break
     attendance = Attendance.objects.filter(
@@ -116,6 +122,9 @@ def end_break(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
 
+    # Automatically clock out if it's past 5 PM
+    check_for_auto_clock_out(employee)
+
     # Find the most recent attendance record that is currently on break
     attendance = Attendance.objects.filter(
         employee=employee,
@@ -142,6 +151,9 @@ def attendance_dashboard(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
 
+    # Automatically clock out if it's past 5 PM
+    check_for_auto_clock_out(employee)
+
     # Display all attendance records for the logged-in employee
     attendance_records = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')
 
@@ -165,6 +177,9 @@ def attendance_dashboard(request):
 def clock_in_out_page(request):
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
+
+    # Automatically clock out if it's past 5 PM
+    check_for_auto_clock_out(employee)
 
     # If it's a POST request, process the form submission (clock in/out/start/end break)
     if request.method == 'POST':
@@ -289,3 +304,33 @@ def clock_in_out_page(request):
         'selected_start_date': selected_start_date,
         'selected_end_date': selected_end_date,
     })
+
+
+def check_for_auto_clock_out(employee):
+    """
+    Automatically clock out the employee if it's 5 PM or later.
+    """
+    now = timezone.now()
+
+    # Check if it's past 5 PM
+    if now.hour >= 17:  # 5 PM
+        # Find the most recent open attendance record
+        attendance = Attendance.objects.filter(
+            employee=employee,
+            clock_out_time__isnull=True
+        ).order_by('-clock_in_time').first()
+
+        # If the employee is still clocked in, clock them out
+        if attendance:
+            with transaction.atomic():
+                attendance.clock_out_time = now
+                attendance.status = 'clocked_out'
+                attendance.save()
+
+                # Create a billing record
+                worked_income = attendance.total_income
+                BillingRecord.objects.create(
+                    employee=employee,
+                    total_income=worked_income
+                )
+                logger.debug(f"Auto clock-out applied for employee {employee} at 5 PM.")
