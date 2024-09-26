@@ -2,7 +2,7 @@
 
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login, logout
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from employees.models import Employee
@@ -10,6 +10,7 @@ import pyotp
 import qrcode
 from io import BytesIO
 import base64
+from django.http import HttpResponseServerError
 
 def home_view(request):
     """
@@ -86,63 +87,76 @@ def totp_verification(request):
 
 @login_required
 def enable_2fa(request):
-    """
-    Enables Two-Factor Authentication for the authenticated user.
-    Generates a temporary TOTP secret, displays a QR code, and verifies the TOTP code entered by the user.
-    Only after successful verification is the TOTP secret saved to the Employee model.
-    """
     user = request.user
-    employee, created = Employee.objects.get_or_create(user=user)
+    employee = get_object_or_404(Employee, user=user)
 
-    if request.method == 'POST':
-        # User has submitted the TOTP code for verification
-        totp_code = request.POST.get('totp_code')
-        temp_secret = request.session.get('temp_totp_secret')
+    try:
+        if request.method == 'POST':
+            # User has submitted the TOTP code for verification
+            totp_code = request.POST.get('totp_code')
+            temp_secret = request.session.get('temp_totp_secret')
 
-        if not temp_secret:
-            messages.error(request, 'Temporary TOTP secret not found. Please try enabling 2FA again.')
-            return redirect('home:enable_2fa')
+            if not temp_secret:
+                messages.error(request, 'Temporary TOTP secret not found. Please try enabling 2FA again.')
+                return redirect('home:enable_2fa')
 
-        totp = pyotp.TOTP(temp_secret)
-        if totp.verify(totp_code):
-            # Verification successful; save the TOTP secret
-            employee.totp_secret = temp_secret
-            employee.save()
-            # Remove the temporary secret from the session
-            del request.session['temp_totp_secret']
-            messages.success(request, 'Two-Factor Authentication has been enabled successfully.')
-            return redirect('employees:employee_profile')
-        else:
-            messages.error(request, 'Invalid TOTP code. Please try again.')
-
-    else:
-        # GET request; generate a temporary TOTP secret and QR code
-        if not employee.totp_secret:
-            # Generate a new temporary TOTP secret
-            temp_secret = pyotp.random_base32()
-            request.session['temp_totp_secret'] = temp_secret
-
-            # Generate the provisioning URI for the authenticator app
             totp = pyotp.TOTP(temp_secret)
-            provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name="YourAppName")
-
-            # Generate QR code in PNG format
-            img = qrcode.make(provisioning_uri)
-            buffer = BytesIO()
-            img.save(buffer, format='PNG')
-            qr_png = base64.b64encode(buffer.getvalue()).decode()
-
-            # Create data URI for embedding the image
-            qr_data_uri = f"data:image/png;base64,{qr_png}"
-
-            context = {
-                'qr_data_uri': qr_data_uri,
-            }
-
-            return render(request, 'home/enable_2fa.html', context)
+            if totp.verify(totp_code):
+                # Verification successful; save the TOTP secret
+                employee.totp_secret = temp_secret
+                employee.save()
+                # Remove the temporary secret from the session
+                del request.session['temp_totp_secret']
+                messages.success(request, 'Two-Factor Authentication has been enabled successfully.')
+                return redirect('employees:employee_profile')
+            else:
+                messages.error(request, 'Invalid TOTP code. Please try again.')
+                # Regenerate QR code
+                provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name="Simply Expanding")
+                img = qrcode.make(provisioning_uri)
+                buffer = BytesIO()
+                img.save(buffer, format='PNG')
+                qr_png = base64.b64encode(buffer.getvalue()).decode()
+                qr_data_uri = f"data:image/png;base64,{qr_png}"
+                context = {
+                    'qr_data_uri': qr_data_uri,
+                }
+                return render(request, 'home/enable_2fa.html', context)
         else:
-            messages.info(request, 'Two-Factor Authentication is already enabled.')
-            return redirect('employees:employee_profile')
+            # GET request; generate a temporary TOTP secret and QR code
+            if not employee.totp_secret:
+                # Generate a new temporary TOTP secret
+                temp_secret = pyotp.random_base32()
+                request.session['temp_totp_secret'] = temp_secret
+
+                # Generate the provisioning URI for the authenticator app
+                totp = pyotp.TOTP(temp_secret)
+                provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name="Simply Expanding")
+
+                # Generate QR code in PNG format
+                img = qrcode.make(provisioning_uri)
+                buffer = BytesIO()
+                img.save(buffer, format='PNG')
+                qr_png = base64.b64encode(buffer.getvalue()).decode()
+
+                # Create data URI for embedding the image
+                qr_data_uri = f"data:image/png;base64,{qr_png}"
+                request.session['qr_data_uri'] = qr_data_uri  # Store QR code in session
+
+                context = {
+                    'qr_data_uri': qr_data_uri,
+                }
+
+                return render(request, 'home/enable_2fa.html', context)
+            else:
+                messages.info(request, 'Two-Factor Authentication is already enabled.')
+                return redirect('employees:employee_profile')
+
+    except Exception as e:
+        # Log the exception (you can replace print with logging)
+        print(f"Exception in enable_2fa: {e}")
+        messages.error(request, 'An unexpected error occurred. Please try again.')
+        return HttpResponseServerError('Internal Server Error')
 
 
 @login_required

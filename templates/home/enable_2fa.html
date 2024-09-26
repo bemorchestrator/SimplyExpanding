@@ -16,9 +16,20 @@
             
             <!-- Display QR Code as PNG -->
             <div class="flex justify-center mb-6">
-                <img src="{{ qr_data_uri }}" alt="QR Code for 2FA" class="w-48 h-48">
+                {% if qr_data_uri %}
+                    <img src="{{ qr_data_uri }}" alt="QR Code for 2FA" class="w-48 h-48">
+                {% else %}
+                    <p class="text-red-500">An error occurred while generating the QR code. Please try again.</p>
+                {% endif %}
             </div>
             
+            <!-- Error Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <p class="text-red-500 text-sm mb-2">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+
             <!-- Form to Verify TOTP Code -->
             <form class="mt-4" method="post">
                 {% csrf_token %}
@@ -37,13 +48,6 @@
                         placeholder="123456"
                     >
                 </div>
-
-                <!-- Error Messages -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <p class="text-red-500 text-sm mb-2">{{ message }}</p>
-                    {% endfor %}
-                {% endif %}
 
                 <!-- Submit Button -->
                 <button 
