@@ -4,7 +4,8 @@ from django.contrib import messages
 from .models import Employee
 from .forms import EmployeeProfileForm
 from attendance.models import Attendance
-from datetime import timedelta
+from datetime import timedelta, date
+from django.db.models import Sum
 
 @login_required
 def employee_profile(request):
@@ -16,9 +17,15 @@ def employee_profile(request):
 
     # Calculate attendance stats
     total_attendance = attendance_logs.count()
-    # Compare lateness with a timedelta object
-    late_days = attendance_logs.filter(lateness__gt=timedelta(seconds=0)).count()  # This should work for DurationField
+    late_days = attendance_logs.filter(lateness__gt=timedelta(seconds=0)).count()
     absent_days = attendance_logs.filter(status='absent').count()
+
+    # Calculate the total income for the current month
+    current_month = date.today().month
+    current_year = date.today().year
+    total_income_month = attendance_logs.filter(
+        clock_in_time__year=current_year, clock_in_time__month=current_month
+    ).aggregate(Sum('total_income'))['total_income__sum'] or 0  # Handle None case with 'or 0'
 
     # Pass the employee object and attendance data to the template
     context = {
@@ -27,9 +34,9 @@ def employee_profile(request):
         'total_attendance': total_attendance,
         'late_days': late_days,
         'absent_days': absent_days,
+        'total_income_month': total_income_month,  # Pass total income to the template
     }
     return render(request, 'employees/profile.html', context)
-
 
 
 @login_required
