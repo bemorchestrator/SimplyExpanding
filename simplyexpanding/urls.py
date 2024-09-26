@@ -8,7 +8,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     # Admin and home URLs
     path('admin/', admin.site.urls),
-    path('', include('home.urls')),
+    path('', include('home.urls', namespace='home')),
 
     # Authentication URLs
     path('password_reset/', auth_views.PasswordResetView.as_view(template_name='home/password_reset_form.html'), name='password_reset'),
@@ -17,7 +17,7 @@ urlpatterns = [
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='home/password_reset_complete.html'), name='password_reset_complete'),
 
     # App-specific URLs
-    path('employees/', include('employees.urls')),
+    path('', include('employees.urls', namespace='employees')),
     path('attendance/', include('attendance.urls')),
     path('billing/', include('billing.urls')),
     path('holidays/', include('holidays.urls')), 

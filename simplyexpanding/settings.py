@@ -34,6 +34,8 @@ load_dotenv()
 
 GOOGLE_CREDENTIALS_FILE = os.getenv(r'C:\Users\bem\Desktop\credentials\client_secret_520578449641-vldnvlmflegmd5nar6qvjehaojthhpde.apps.googleusercontent.com.json')
 
+GOOGLE_OAUTH_CREDENTIALS_FILE = os.getenv('GOOGLE_OAUTH_CREDENTIALS_FILE', r'C:\Users\bem\Desktop\credentials\login_protection.json')
+
 
 # Application definition
 

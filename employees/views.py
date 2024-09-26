@@ -1,63 +1,66 @@
+# employees/views.py
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from .models import Employee
-from .forms import EmployeeProfileForm
 from attendance.models import Attendance
-from datetime import timedelta, date
+from datetime import date
 from django.db.models import Sum
 
 @login_required
 def employee_profile(request):
-    # Retrieve the employee instance linked to the current user
-    employee = get_object_or_404(Employee, user=request.user)
+    """
+    Displays the employee's profile, including attendance statistics and 2FA status.
+    """
+    user = request.user
+    employee = get_object_or_404(Employee, user=user)
 
-    # Fetch attendance records for the employee
-    attendance_logs = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')
+    # Attendance calculations
+    total_attendance = Attendance.objects.filter(employee=employee).count()
+    total_income_month = Attendance.objects.filter(
+        employee=employee,
+        clock_in_time__month=date.today().month
+    ).aggregate(Sum('total_income'))['total_income__sum'] or 0
+    absent_days = Attendance.objects.filter(employee=employee, status='absent').count()
+    attendance_logs = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')[:10]  # Limit to 10
 
-    # Calculate attendance stats
-    total_attendance = attendance_logs.count()
-    late_days = attendance_logs.filter(lateness__gt=timedelta(seconds=0)).count()
-    absent_days = attendance_logs.filter(status='absent').count()
-
-    # Calculate the total income for the current month
-    current_month = date.today().month
-    current_year = date.today().year
-    total_income_month = attendance_logs.filter(
-        clock_in_time__year=current_year, clock_in_time__month=current_month
-    ).aggregate(Sum('total_income'))['total_income__sum'] or 0  # Handle None case with 'or 0'
-
-    # Pass the employee object and attendance data to the template
     context = {
+        'user': user,
         'employee': employee,
-        'attendance_logs': attendance_logs,
         'total_attendance': total_attendance,
-        'late_days': late_days,
+        'total_income_month': total_income_month,
         'absent_days': absent_days,
-        'total_income_month': total_income_month,  # Pass total income to the template
+        'attendance_logs': attendance_logs,
     }
+
     return render(request, 'employees/profile.html', context)
 
 
 @login_required
 def profile_settings(request):
-    # Retrieve the employee instance linked to the current user
+    """
+    Handles profile settings for the employee.
+    """
+    # Implementation for profile settings (not related to 2FA)
+    return render(request, 'employees/profile_settings.html')
+
+
+@login_required
+def disable_2fa(request):
+    """
+    Disables Two-Factor Authentication for the authenticated user.
+    """
     employee = get_object_or_404(Employee, user=request.user)
 
+    if not employee.totp_secret:
+        messages.info(request, 'Two-Factor Authentication is not enabled.')
+        return redirect('employees:employee_profile')
+
     if request.method == 'POST':
-        # Populate the form with POST data and files (for profile picture)
-        form = EmployeeProfileForm(request.POST, request.FILES, instance=employee)
-        
-        if form.is_valid():
-            # Save the form and update employee details
-            form.save()
-            messages.success(request, 'Your profile has been updated successfully.')
-            return redirect('profile_settings')  # Redirect to avoid resubmission issues
-        else:
-            messages.error(request, 'Please correct the error below.')
-    else:
-        # For GET requests, prepopulate the form with the employee data
-        form = EmployeeProfileForm(instance=employee)
-    
-    # Render the profile settings template
-    return render(request, 'employees/profile_settings.html', {'form': form, 'employee': employee})
+        employee.totp_secret = ''
+        employee.save()
+        messages.success(request, 'Two-Factor Authentication has been disabled successfully.')
+        return redirect('employees:employee_profile')
+
+    return render(request, 'employees/disable_2fa.html')

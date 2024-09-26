@@ -46,7 +46,7 @@
                             alt="{{ request.user.get_full_name }}">
                     </div>
                     <!-- Logout Button -->
-                    <a href="{% url 'logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
+                    <a href="{% url 'home:logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
                 </div>
             </div>
         </div>
@@ -78,7 +78,7 @@
                             alt="{{ request.user.get_full_name }}">
                     </div>
                     <!-- Mobile Logout Button -->
-                    <a href="{% url 'logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
+                    <a href="{% url 'home:logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
                 </div>
             </div>
 

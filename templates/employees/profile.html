@@ -1,3 +1,5 @@
+<!-- employees/templates/employees/profile.html -->
+
 {% extends 'base.html' %}
 
 {% block title %}
@@ -7,7 +9,7 @@ Employee Profile - Simply Expanding
 {% load static %}
 
 {% block breadcrumb %}
-    <li><a href="/profile/" class="text-blue-500 hover:underline">Dashboard</a></li>
+    <li><a href="{% url 'employees:employee_profile' %}" class="text-blue-500 hover:underline">Dashboard</a></li>
     <li>/</li>
     <li>Profile</li>
 {% endblock %}
@@ -15,14 +17,14 @@ Employee Profile - Simply Expanding
 {% block content %}
 <!-- Profile and Information Section -->
 <div class="flex flex-col md:flex-row md:space-x-6">
-    
+
     <!-- Column 1: Profile Card -->
     <div class="w-full md:w-1/3">
         <div class="bg-blue-500 text-white p-6 rounded-lg shadow-lg">
             <!-- Profile Image and Name -->
             <div class="flex items-center mb-6">
                 <img class="rounded-full w-24 h-24 mr-4 object-cover" 
-                     src="{% if employee.profile_picture %}{{ employee.profile_picture.url }}{% else %}{{ MEDIA_URL }}profile_pictures/default_profile.png{% endif %}" 
+                     src="{% if employee.profile_picture %}{{ employee.profile_picture.url }}{% else %}{% static 'profile_pictures/default_profile.png' %}{% endif %}" 
                      alt="{{ employee.first_name }} {{ employee.last_name }}">
                 <div>
                     <h2 class="text-2xl font-bold">{{ employee.first_name }} {{ employee.last_name }}</h2>
@@ -32,7 +34,7 @@ Employee Profile - Simply Expanding
 
             <!-- Employee Details in Two Columns -->
             <div class="grid grid-cols-2 gap-4">
-                <p><strong>Username:</strong> {{ employee.username }}</p>
+                <p><strong>Username:</strong> {{ user.username }}</p>
                 <p><strong>Email:</strong> <a href="mailto:{{ employee.email }}" class="text-white">{{ employee.email }}</a></p>
 
                 <p><strong>First Name:</strong> {{ employee.first_name }}</p>
@@ -63,24 +65,43 @@ Employee Profile - Simply Expanding
         </div>
     </div>
 
-    <!-- Column 2: Additional Cards and Attendance Table -->
+    <!-- Column 2: Cards and Attendance Table -->
     <div class="flex-1 space-y-6 mt-6 md:mt-0">
-        <!-- Cards: Attendance Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Row with Total Attendance Card and Total Income This Month Card Side by Side -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Total Attendance Card -->
             <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-                <p class="text-3xl font-bold">{{ total_attendance }}</p>
-                <p class="text-gray-600">Total Days</p>
+                <h3 class="text-4xl font-bold text-blue-900">{{ total_attendance }}</h3>
+                <p class="text-gray-700">Total Days Present</p>
             </div>
+
+            <!-- Total Income This Month Card -->
             <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-                <p class="text-3xl font-bold">{{ total_income_month }}</p> <!-- Display total income here -->
-                <p class="text-gray-600">Income This Month</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
-                <p class="text-3xl font-bold">{{ absent_days }}</p>
-                <p class="text-gray-600">Absent Days</p>
+                <h3 class="text-4xl font-bold text-blue-900">Php {{ total_income_month }}</h3>
+                <p class="text-gray-700">Income This Month</p>
             </div>
         </div>
-        
+
+        <!-- Row with Absent Days Card and 2FA Card Side by Side -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Absent Days Card -->
+            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                <h3 class="text-4xl font-bold text-blue-900">{{ absent_days }}</h3>
+                <p class="text-gray-700">Total Absent Days</p>
+            </div>
+
+            <!-- 2FA Status and Actions -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-bold text-blue-900 mb-4">Two-Factor Authentication</h3>
+                {% if employee.totp_secret %}
+                    <p class="text-green-600 mb-4">Two-Factor Authentication is <strong>enabled</strong>.</p>
+                    <a href="{% url 'employees:disable_2fa' %}" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Disable Two-Factor Authentication</a>
+                {% else %}
+                    <p class="text-gray-700 mb-4">Two-Factor Authentication is <strong>not enabled</strong>.</p>
+                    <a href="{% url 'home:enable_2fa' %}" class="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600">Enable Two-Factor Authentication</a>
+                {% endif %}
+            </div>
+        </div>
 
         <!-- Attendance Log -->
         <div class="bg-white p-6 rounded-lg shadow-lg">
@@ -118,7 +139,6 @@ Employee Profile - Simply Expanding
                 </tbody>
             </table>
         </div>
-
     </div>
 </div>
 

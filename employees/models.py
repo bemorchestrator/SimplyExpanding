@@ -1,11 +1,9 @@
-# employees/models.py
-
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from datetime import time
 from decimal import Decimal
+import pyotp  # Import pyotp for TOTP functionality
 
 # Global flag to prevent recursion
 updating_employee = False
@@ -59,7 +57,6 @@ class Employee(models.Model):
         default="Default Country",
         help_text="Country where the employee resides. Example: Philippines"
     )
-    # Add profile_picture field
     profile_picture = models.ImageField(
         upload_to='profile_pictures/',
         blank=True,
@@ -82,6 +79,13 @@ class Employee(models.Model):
         'attendance.LatenessRule',
         blank=True,
         help_text="Assign one or more lateness rules to the employee. If not set, the global default rule is applied."
+    )
+
+    # Add TOTP secret field for 2FA (Google Authenticator)
+    totp_secret = models.CharField(
+        max_length=32,
+        default=pyotp.random_base32,
+        help_text="TOTP secret for two-factor authentication"
     )
 
     def __str__(self):
