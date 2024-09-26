@@ -41,7 +41,7 @@
                     <!-- User Profile Picture (Avatar) -->
                     <div class="w-10 h-10 rounded-full overflow-hidden">
                         <img class="object-cover w-full h-full" 
-                            src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{{ MEDIA_URL }}profile_pictures/Bem_Profile_AdventHub.jpg{% endif %}" 
+                            src="{% if request.user.employee.profile_picture %}{{ request.user.employee.profile_picture.url }}{% else %}{{ MEDIA_URL }}profile_pictures/default_profile.png{% endif %}" 
                             alt="{{ request.user.get_full_name }}">
                     </div>
                     <!-- Logout Button -->
@@ -73,7 +73,7 @@
                     <!-- User Profile Picture (Mobile) -->
                     <div class="w-10 h-10 rounded-full overflow-hidden">
                         <img class="object-cover w-full h-full" 
-                            src="{% if request.user.member.profile_picture %}{{ request.user.member.profile_picture.url }}{% else %}{{ MEDIA_URL }}profile_pictures/Bem_Profile_AdventHub.jpg{% endif %}" 
+                            src="{% if request.user.employee.profile_picture %}{{ request.user.employee.profile_picture.url }}{% else %}{{ MEDIA_URL }}profile_pictures/default_profile.png{% endif %}" 
                             alt="{{ request.user.get_full_name }}">
                     </div>
                     <!-- Mobile Logout Button -->
