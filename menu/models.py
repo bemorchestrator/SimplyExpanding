@@ -14,7 +14,7 @@ class MenuItem(models.Model):
     icon = models.CharField(max_length=100, blank=True, null=True)  # Field to store icon class
     parent = models.ForeignKey('self', blank=True, null=True, related_name='children', on_delete=models.CASCADE)
     
-    # New field to control visibility by user group
+    # Field to control visibility by user group
     visibility = models.ManyToManyField(Group, blank=True, help_text="Select which groups can see this menu item. Leave empty for everyone.")
 
     def __str__(self):

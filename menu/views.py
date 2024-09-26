@@ -6,28 +6,31 @@ from django.contrib.auth.decorators import user_passes_test
 def is_in_group(user, group_name):
     return user.groups.filter(name=group_name).exists()
 
+# Recursive function to filter menu items based on visibility
+def filter_items(items, user_groups):
+    filtered_items = []
+    for item in items:
+        if item.visibility.exists():
+            if item.visibility.filter(id__in=user_groups).exists():
+                # Filter children recursively
+                item.filtered_children = filter_items(item.children.all(), user_groups)
+                filtered_items.append(item)
+        else:
+            # No visibility restrictions, include item
+            item.filtered_children = filter_items(item.children.all(), user_groups)
+            filtered_items.append(item)
+    return filtered_items
+
 # Menu loading with role-based filtering
 def load_menu(request):
-    # Get all menus and their items
-    menus = Menu.objects.prefetch_related('items').all()
-
-    # Filter the menu items based on the user's role
+    user_groups = request.user.groups.values_list('id', flat=True)
+    menus = Menu.objects.prefetch_related('items__children').all()
     filtered_menus = []
     for menu in menus:
-        filtered_items = []
-        for item in menu.items.all():
-            # Only display menu items if the user is in the allowed group or if no restrictions
-            if item.visibility.exists():  # If visibility is set
-                if item.visibility.filter(id__in=request.user.groups.values_list('id', flat=True)).exists():
-                    filtered_items.append(item)
-            else:  # If no visibility is set, show to everyone
-                filtered_items.append(item)
-
-        # Add the menu with filtered items
+        filtered_items = filter_items(menu.items.all(), user_groups)
         if filtered_items:
-            menu.items = filtered_items
+            menu.filtered_items = filtered_items
             filtered_menus.append(menu)
-
     return {'menus': filtered_menus}
 
 # View for Admin users

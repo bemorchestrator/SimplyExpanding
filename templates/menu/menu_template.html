@@ -8,7 +8,7 @@
                 
                 <!-- Menu Items -->
                 <ul class="pl-6">
-                    {% for item in menu.items %}
+                    {% for item in menu.filtered_items %}
                         <!-- Menu Item -->
                         <li class="mb-3 text-sm">
                             <a href="{{ item.url }}" class="flex items-center p-2 rounded-md mr-4 hover:bg-gray-200 {% if request.path == item.url %}bg-blue-400 text-white{% endif %}">
@@ -18,9 +18,9 @@
                             </a>
                             
                             <!-- Submenu (Child Items) -->
-                            {% if item.children.all %}
+                            {% if item.filtered_children %}
                                 <ul class="pl-6 mt-2">
-                                    {% for child in item.children.all %}
+                                    {% for child in item.filtered_children %}
                                         <li class="mb-1 text-sm">
                                             <a href="{{ child.url }}" class="flex items-center p-2 rounded-md hover:bg-gray-200 {% if request.path == child.url %}bg-blue-400 text-white{% endif %}">
                                                 <i class="bi bi-file-earmark-text-fill mr-2"></i>
