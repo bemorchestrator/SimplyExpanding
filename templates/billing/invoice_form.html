@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+  <div class="flex space-x-8">
+    <!-- Form Section -->
+    <div class="w-1/2 bg-white shadow-md rounded-lg p-6 overflow-auto" style="max-height: 90vh;">
+      <h2 class="text-2xl font-semibold mb-6">
+        {% if is_edit %}
+            Edit Invoice #{{ invoice.id }}
+        {% else %}
+            Create Invoice
+        {% endif %}
+      </h2>
+      
+      <!-- Display Form Errors -->
+      {% if form.errors %}
+        <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <strong>There were some errors with your submission:</strong>
+          <ul class="mt-2 list-disc list-inside">
+            {% for field in form %}
+              {% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+      
+      <form method="POST" enctype="multipart/form-data" id="invoiceForm">
+        {% csrf_token %}
+        
+        <!-- Invoice Number -->
+        <div class="mb-4">
+          <label for="{{ form.invoice_number.id_for_label }}" class="block text-sm font-medium text-gray-700">Invoice Number</label>
+          <input 
+            type="text" 
+            name="{{ form.invoice_number.html_name }}" 
+            id="{{ form.invoice_number.id_for_label }}" 
+            value="{{ form.invoice_number.value }}" 
+            {% if form.invoice_number.field.required %}required{% endif %}
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {% if form.invoice_number.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.invoice_number.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Select Client -->
+        <div class="mb-4">
+          <label for="{{ form.client.id_for_label }}" class="block text-sm font-medium text-gray-700">Select Client</label>
+          <select 
+            name="{{ form.client.html_name }}" 
+            id="{{ form.client.id_for_label }}" 
+            {% if form.client.field.required %}required{% endif %}
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">-- Select Client --</option>
+            {% for client in form.client.field.queryset %}
+              <option value="{{ client.id }}" {% if form.client.value == client.id %}selected{% endif %}>{{ client.business_name }}</option>
+            {% endfor %}
+          </select>
+          {% if form.client.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.client.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Or Enter Client Name -->
+        <div class="mb-4">
+          <label for="{{ form.client_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Or Enter Client Name</label>
+          <input 
+            type="text" 
+            name="{{ form.client_name.html_name }}" 
+            id="{{ form.client_name.id_for_label }}" 
+            value="{{ form.client_name.value }}" 
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {% if form.client_name.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.client_name.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Client Address -->
+        <div class="mb-4">
+          <label for="{{ form.client_address.id_for_label }}" class="block text-sm font-medium text-gray-700">Client Address</label>
+          <textarea 
+            name="{{ form.client_address.html_name }}" 
+            id="{{ form.client_address.id_for_label }}" 
+            rows="3"
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >{{ form.client_address.value }}</textarea>
+          {% if form.client_address.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.client_address.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Invoice Date -->
+        <div class="mb-4">
+          <label for="{{ form.invoice_date.id_for_label }}" class="block text-sm font-medium text-gray-700">Invoice Date</label>
+          <input 
+            type="date" 
+            name="{{ form.invoice_date.html_name }}" 
+            id="{{ form.invoice_date.id_for_label }}" 
+            value="{{ form.invoice_date.value }}" 
+            {% if form.invoice_date.field.required %}required{% endif %}
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {% if form.invoice_date.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.invoice_date.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Due Date -->
+        <div class="mb-4">
+          <label for="{{ form.due_date.id_for_label }}" class="block text-sm font-medium text-gray-700">Due Date</label>
+          <input 
+            type="date" 
+            name="{{ form.due_date.html_name }}" 
+            id="{{ form.due_date.id_for_label }}" 
+            value="{{ form.due_date.value }}" 
+            {% if form.due_date.field.required %}required{% endif %}
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {% if form.due_date.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.due_date.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Total Amount -->
+        <div class="mb-4">
+          <label for="{{ form.total_amount.id_for_label }}" class="block text-sm font-medium text-gray-700">Total Amount</label>
+          <input 
+            type="number" 
+            step="0.01"
+            name="{{ form.total_amount.html_name }}" 
+            id="{{ form.total_amount.id_for_label }}" 
+            value="{{ form.total_amount.value }}" 
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {% if form.total_amount.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.total_amount.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Status -->
+        <div class="mb-4">
+          <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700">Status</label>
+          <select 
+            name="{{ form.status.html_name }}" 
+            id="{{ form.status.id_for_label }}" 
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {% for choice in form.status.field.choices %}
+              <option value="{{ choice.0 }}" {% if form.status.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+            {% endfor %}
+          </select>
+          {% if form.status.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.status.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Currency -->
+        <div class="mb-4">
+          <label for="{{ form.currency.id_for_label }}" class="block text-sm font-medium text-gray-700">Currency</label>
+          <select 
+            name="{{ form.currency.html_name }}" 
+            id="{{ form.currency.id_for_label }}" 
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {% for choice in form.currency.field.choices %}
+              <option value="{{ choice.0 }}" {% if form.currency.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+            {% endfor %}
+          </select>
+          {% if form.currency.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.currency.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-6">
+          <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">Notes</label>
+          <textarea 
+            name="{{ form.notes.html_name }}" 
+            id="{{ form.notes.id_for_label }}" 
+            rows="3"
+            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >{{ form.notes.value }}</textarea>
+          {% if form.notes.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ form.notes.errors }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Invoice Items -->
+        <h3 class="text-xl font-semibold mb-4">Invoice Items</h3>
+        <div class="invoice-item mb-6 p-4 border border-gray-300 rounded-lg">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Description</label>
+            <input 
+              type="text" 
+              name="description" 
+              id="id_description" 
+              class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              placeholder="Item Description"
+            >
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Quantity</label>
+            <input 
+              type="number" 
+              name="quantity" 
+              id="id_quantity" 
+              min="1" 
+              class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              placeholder="Quantity"
+            >
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Rate</label>
+            <input 
+              type="number" 
+              name="rate" 
+              id="id_rate" 
+              min="0" 
+              step="0.01" 
+              class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              placeholder="Item Price"
+            >
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Amount</label>
+            <input 
+              type="text" 
+              name="amount" 
+              id="id_amount" 
+              readonly 
+              class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-gray-100" 
+              value="0.00"
+            >
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md"
+        >
+          {% if is_edit %}
+            Save Changes
+          {% else %}
+            Create Invoice
+          {% endif %}
+        </button>
+      </form>
+    </div>
+
+    <!-- Invoice Preview Section -->
+    <div class="w-1/2 bg-gray-100 shadow-md rounded-lg p-6 overflow-auto" style="max-height: 90vh;">
+      <h2 class="text-2xl font-semibold mb-6">Invoice Preview</h2>
+      <div class="bg-white shadow-sm rounded-lg p-6">
+        <div class="mb-6">
+          <h3 class="text-xl font-bold">Invoice #<span id="preview_invoice_number">N/A</span></h3>
+        </div>
+        <div class="mb-6">
+          <h4 class="text-xl font-bold">Client: <span id="preview_client">N/A</span></h4>
+          <p id="preview_client_address" class="mt-2 text-gray-700">N/A</p>
+        </div>
+        <div class="mb-6">
+          <p><strong>Invoice Date:</strong> <span id="preview_invoice_date">N/A</span></p>
+          <p><strong>Due Date:</strong> <span id="preview_due_date">N/A</span></p>
+        </div>
+        <div class="mb-6">
+          <table class="w-full table-auto border-collapse">
+            <thead>
+              <tr>
+                <th class="px-4 py-2 border">Description</th>
+                <th class="px-4 py-2 border">Quantity</th>
+                <th class="px-4 py-2 border">Rate</th>
+                <th class="px-4 py-2 border">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="preview_items">
+              <tr>
+                <td id="preview_item_description" class="px-4 py-2 border">N/A</td>
+                <td id="preview_item_quantity" class="px-4 py-2 border">N/A</td>
+                <td id="preview_item_rate" class="px-4 py-2 border">N/A</td>
+                <td id="preview_item_amount" class="px-4 py-2 border">0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <hr class="mb-6">
+        <div>
+          <h4 class="text-xl font-bold">Simply Expanding Digital Marketing Services</h4>
+          <p class="mt-2 text-gray-700">#23 Ground Floor Jomabo Building Kadulasan Street, Dadiangas East,<br> General Santos City 9500 Philippines</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript for Dynamic Preview -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Form Fields
+      const invoiceNumberInput = document.getElementById('{{ form.invoice_number.id_for_label }}');
+      const clientSelect = document.getElementById('{{ form.client.id_for_label }}');
+      const clientNameInput = document.getElementById('{{ form.client_name.id_for_label }}');
+      const clientAddressInput = document.getElementById('{{ form.client_address.id_for_label }}');
+      const invoiceDateInput = document.getElementById('{{ form.invoice_date.id_for_label }}');
+      const dueDateInput = document.getElementById('{{ form.due_date.id_for_label }}');
+  
+      // Invoice Item Fields
+      const descriptionInput = document.getElementById('id_description');
+      const quantityInput = document.getElementById('id_quantity');
+      const rateInput = document.getElementById('id_rate');
+      const amountInput = document.getElementById('id_amount');
+  
+      // Preview Elements
+      const previewInvoiceNumber = document.getElementById('preview_invoice_number');
+      const previewClient = document.getElementById('preview_client');
+      const previewClientAddress = document.getElementById('preview_client_address');
+      const previewInvoiceDate = document.getElementById('preview_invoice_date');
+      const previewDueDate = document.getElementById('preview_due_date');
+  
+      const previewItemDescription = document.getElementById('preview_item_description');
+      const previewItemQuantity = document.getElementById('preview_item_quantity');
+      const previewItemRate = document.getElementById('preview_item_rate');
+      const previewItemAmount = document.getElementById('preview_item_amount');
+  
+      // Function to update the preview
+      function updatePreview() {
+        // Update Invoice Number
+        previewInvoiceNumber.textContent = invoiceNumberInput.value || 'N/A';
+  
+        // Update Client Name
+        let clientName = 'N/A';
+        if (clientSelect.value) {
+          const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+          clientName = selectedOption.text || clientNameInput.value.trim() || 'N/A';
+        } else {
+          clientName = clientNameInput.value.trim() || 'N/A';
+        }
+        previewClient.textContent = clientName;
+  
+        // Update Client Address
+        previewClientAddress.textContent = clientAddressInput.value.trim() || 'N/A';
+  
+        // Update Invoice Date
+        previewInvoiceDate.textContent = invoiceDateInput.value || 'N/A';
+  
+        // Update Due Date
+        previewDueDate.textContent = dueDateInput.value || 'N/A';
+  
+        // Update Invoice Item Description
+        previewItemDescription.textContent = descriptionInput.value.trim() || 'N/A';
+  
+        // Update Invoice Item Quantity
+        previewItemQuantity.textContent = quantityInput.value || 'N/A';
+  
+        // Update Invoice Item Rate
+        const rate = parseFloat(rateInput.value).toFixed(2);
+        previewItemRate.textContent = rate > 0 ? rate : 'N/A';
+  
+        // Calculate and Update Amount
+        const qty = parseInt(quantityInput.value, 10) || 0;
+        const rt = parseFloat(rateInput.value) || 0;
+        const amt = (qty * rt).toFixed(2);
+        amountInput.value = amt;
+        previewItemAmount.textContent = amt;
+      }
+  
+      // Event Listeners for Form Fields
+      if (invoiceNumberInput) invoiceNumberInput.addEventListener('input', updatePreview);
+      if (clientSelect) clientSelect.addEventListener('change', updatePreview);
+      if (clientNameInput) clientNameInput.addEventListener('input', updatePreview);
+      if (clientAddressInput) clientAddressInput.addEventListener('input', updatePreview);
+      if (invoiceDateInput) invoiceDateInput.addEventListener('input', updatePreview);
+      if (dueDateInput) dueDateInput.addEventListener('input', updatePreview);
+  
+      if (descriptionInput) descriptionInput.addEventListener('input', updatePreview);
+      if (quantityInput) quantityInput.addEventListener('input', updatePreview);
+      if (rateInput) rateInput.addEventListener('input', updatePreview);
+  
+      // Initialize Preview on Page Load
+      updatePreview();
+    });
+</script>
+
+{% endblock %}

@@ -4,7 +4,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ClientOnboardingForm
 from .models import ClientOnboarding
 from django.contrib import messages
-from django.db.models import Q  # For search queries
+from django.db.models import Q
+from .models import ClientOnboarding
 
 # View to handle the client onboarding form (Create)
 def client_onboarding_view(request):
@@ -95,3 +96,5 @@ def client_list_view(request):
     }
 
     return render(request, 'client/client_list.html', context)
+
+

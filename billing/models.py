@@ -1,5 +1,9 @@
+# billing/models.py
+
 from django.db import models
 from employees.models import Employee
+from client.models import ClientOnboarding
+from django.utils import timezone
 
 class BillingRecord(models.Model):
     PAYMENT_TYPE_CHOICES = [
@@ -19,3 +23,38 @@ class BillingRecord(models.Model):
     # Optional method to format total income display (for future use)
     def formatted_total_income(self):
         return f"Php {self.total_income:.2f}"
+
+
+class Invoice(models.Model):
+    CURRENCY_CHOICES = [
+        ('USD', 'US Dollar'),
+        ('EUR', 'Euro'),
+        ('PHP', 'Philippine Peso'),
+        # Add other currencies as needed
+    ]
+
+    client = models.ForeignKey(ClientOnboarding, on_delete=models.CASCADE)
+    client_name = models.CharField(max_length=255)
+    invoice_number = models.CharField(max_length=20, unique=True, blank=True, null=True)  # New field
+    client_address = models.TextField(blank=True, null=True)  # New field
+    invoice_date = models.DateField(default=timezone.now, editable=True)
+    due_date = models.DateField()
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(
+        max_length=10,
+        choices=[
+            ('pending', 'Pending'),
+            ('paid', 'Paid'),
+            ('overdue', 'Overdue'),
+        ],
+        default='pending'
+    )
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default='USD'
+    )
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Invoice {self.id} - {self.client_name} - {self.total_amount} {self.currency}"

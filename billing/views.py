@@ -1,15 +1,28 @@
-from django.shortcuts import render
+# billing/views.py
+
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from employees.models import Employee
 from attendance.models import Attendance
 from holidays.models import Holiday
-from .models import BillingRecord  # Import the BillingRecord model
+from .models import BillingRecord
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 import json
 from decimal import Decimal
+from django.shortcuts import render
+from .models import Invoice
+from .forms import InvoiceForm
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, HttpResponse
+from .models import Invoice
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+
+
 
 @login_required
 def billing_dashboard(request):
@@ -116,3 +129,154 @@ def billing_dashboard(request):
     }
 
     return render(request, 'billing/dashboard.html', context)
+
+
+
+
+def invoice_list(request):
+    invoices = Invoice.objects.all().order_by('-invoice_date')
+    context = {
+        'invoices': invoices,
+    }
+    return render(request, 'billing/invoice_list.html', context)
+
+
+def create_invoice(request):
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST)
+        if form.is_valid():
+            invoice = form.save(commit=False)
+            
+            # Retrieve quantity and rate from the form data
+            quantity = int(request.POST.get('quantity', 0))
+            rate = float(request.POST.get('rate', 0.0))
+
+            # Calculate the total amount
+            total_amount = quantity * rate
+
+            # Set the calculated total amount to the invoice
+            invoice.total_amount = total_amount
+
+            # Save the invoice object
+            invoice.save()
+            
+            messages.success(request, 'Invoice created successfully.')
+            return redirect('invoice_list')  # Adjust the redirect URL as needed
+        else:
+            messages.error(request, 'There were errors in the form submission.')
+    else:
+        form = InvoiceForm()
+
+    return render(request, 'billing/invoice_form.html', {'form': form, 'is_edit': False})
+
+
+def edit_invoice(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST, instance=invoice)
+        if form.is_valid():
+            invoice = form.save(commit=False)
+            # Process static item fields as above
+            description = request.POST.get('description', '')
+            quantity = request.POST.get('quantity', 0)
+            rate = request.POST.get('rate', 0.0)
+            amount = float(quantity) * float(rate)
+
+            # Save or handle the data as needed
+            invoice.save()
+
+            messages.success(request, 'Invoice updated successfully.')
+            return redirect('invoice_list')
+    else:
+        form = InvoiceForm(instance=invoice)
+
+    return render(request, 'billing/invoice_form.html', {'form': form, 'is_edit': True, 'invoice': invoice})
+
+
+def mark_invoice_paid(request, id):
+    # Retrieve the invoice object
+    invoice = get_object_or_404(Invoice, id=id)
+
+    # Update the invoice status
+    invoice.status = 'paid'
+    invoice.save()
+
+    # Provide feedback to the user
+    messages.success(request, 'Invoice marked as paid successfully.')
+    return redirect('invoice_list')  # Adjust the redirect as needed
+
+
+def share_invoice(request, id):
+    # Retrieve the invoice object
+    invoice = get_object_or_404(Invoice, id=id)
+
+    # Logic for sharing the invoice goes here (e.g., sending an email, generating a shareable link)
+    messages.success(request, f'Invoice #{invoice.id} shared successfully.')
+    
+    # Redirect back to the invoice list or any relevant page
+    return redirect('invoice_list')  # Adjust as needed
+
+
+
+def generate_invoice_pdf(request, id):
+    # Retrieve the invoice object
+    invoice = get_object_or_404(Invoice, id=id)
+
+    # Create a HttpResponse object with PDF headers
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="invoice_{invoice.id}.pdf"'
+
+    # Create the PDF object using ReportLab
+    pdf = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+
+    # Set up the basic structure of the PDF
+    pdf.setTitle(f"Invoice {invoice.id}")
+    pdf.drawString(100, height - 50, f"Invoice #{invoice.invoice_number}")
+    pdf.drawString(100, height - 70, f"Client: {invoice.client_name or invoice.client.business_name}")
+    pdf.drawString(100, height - 90, f"Date: {invoice.invoice_date.strftime('%B %d, %Y')}")
+    pdf.drawString(100, height - 110, f"Due Date: {invoice.due_date.strftime('%B %d, %Y')}")
+
+    # Draw items header
+    pdf.drawString(100, height - 150, "Description")
+    pdf.drawString(300, height - 150, "Quantity")
+    pdf.drawString(400, height - 150, "Rate")
+    pdf.drawString(500, height - 150, "Amount")
+
+    # Draw each item line by line
+    y_position = height - 170
+    for item in invoice.items.all():
+        pdf.drawString(100, y_position, item.description)
+        pdf.drawString(300, y_position, str(item.quantity))
+        pdf.drawString(400, y_position, f"{item.rate:.2f}")
+        pdf.drawString(500, y_position, f"{item.amount:.2f}")
+        y_position -= 20
+
+    # Draw the total amount
+    pdf.drawString(400, y_position - 20, "Total:")
+    pdf.drawString(500, y_position - 20, f"{invoice.total_amount:.2f}")
+
+    # Finalize the PDF
+    pdf.showPage()
+    pdf.save()
+
+    return response
+
+
+
+def delete_invoice(request, id):
+    # Retrieve the invoice object by its ID
+    invoice = get_object_or_404(Invoice, id=id)
+
+    # Store the invoice number before deletion
+    invoice_number = invoice.invoice_number
+
+    # Delete the invoice
+    invoice.delete()
+
+    # Display a success message
+    messages.success(request, f'Invoice #{invoice_number} has been deleted successfully.')
+
+    # Redirect to the invoice list view (adjust the redirect URL as needed)
+    return redirect('invoice_list')

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import BillingRecord
 from attendance.models import Attendance  # Import the related Attendance model
+from .models import Invoice
 
 @admin.register(BillingRecord)
 class BillingRecordAdmin(admin.ModelAdmin):
@@ -40,3 +41,17 @@ class BillingRecordAdmin(admin.ModelAdmin):
 
     # Change column name to "Holiday"
     get_holiday.short_description = 'Holiday'
+
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'client_name', 'total_amount', 'currency', 'status', 'invoice_date', 'due_date')
+    search_fields = ('client_name', 'client__name')
+    list_filter = ('status', 'currency', 'invoice_date', 'due_date')
+    ordering = ('-invoice_date',)
+    readonly_fields = ('total_amount', 'invoice_date')
+
+    def client_name_display(self, obj):
+        return obj.client_name
+    client_name_display.short_description = 'Client Name'
