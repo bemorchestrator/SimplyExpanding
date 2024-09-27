@@ -7,6 +7,7 @@ from .models import Employee
 from attendance.models import Attendance
 from datetime import date
 from django.db.models import Sum
+from .forms import EmployeeProfileForm
 
 @login_required
 def employee_profile(request):
@@ -41,9 +42,22 @@ def employee_profile(request):
 def profile_settings(request):
     """
     Handles profile settings for the employee.
+    Allows the employee to update their profile information.
     """
-    # Implementation for profile settings (not related to 2FA)
-    return render(request, 'employees/profile_settings.html')
+    employee = get_object_or_404(Employee, user=request.user)
+
+    if request.method == 'POST':
+        form = EmployeeProfileForm(request.POST, request.FILES, instance=employee)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated successfully.')
+            return redirect('employees:employee_profile')  # Redirect to profile after saving
+        else:
+            messages.error(request, 'There was an error updating your profile. Please correct the errors below.')
+    else:
+        form = EmployeeProfileForm(instance=employee)
+
+    return render(request, 'employees/profile_settings.html', {'form': form, 'employee': employee})
 
 
 @login_required

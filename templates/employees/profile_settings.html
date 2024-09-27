@@ -1,4 +1,8 @@
+<!-- employees/templates/employees/profile_settings.html -->
+
 {% extends 'base.html' %}
+
+{% load static %}
 
 {% block content %}
 <div class="min-h-screen flex items-start justify-left py-10">
@@ -14,66 +18,67 @@
             <h1 class="text-2xl font-bold text-black mb-6">Account Settings</h1>
             <form method="post" enctype="multipart/form-data" class="space-y-6">
                 {% csrf_token %}
-                
-                <!-- Avatar Section -->
+
+                <!-- Avatar Section (Moved to Top) -->
                 <div class="flex items-center mb-6">
-                    <img class="rounded-full w-24 h-24" src="{{ employee.profile_picture.url }}" alt="Avatar">
+                    {% if employee.profile_picture %}
+                        <img class="rounded-full w-24 h-24" src="{{ employee.profile_picture.url }}" alt="Avatar">
+                    {% else %}
+                        <img class="rounded-full w-24 h-24" src="{% static 'profile_pictures/default-profile.png' %}" alt="Default Avatar">
+                    {% endif %}
                     <div class="ml-4">
-                        <label for="id_profile_picture" class="block text-sm font-medium text-black">Change avatar</label>
+                        <label for="{{ form.profile_picture.id_for_label }}" class="block text-sm font-medium text-black">Change avatar</label>
                         {{ form.profile_picture }}
                         <p class="mt-1 text-xs text-black">JPG, GIF or PNG. 1MB max.</p>
                     </div>
                 </div>
 
-                <!-- Personal Information -->
+                <!-- User Information -->
+                <h3 class="text-lg font-semibold text-black">User Information</h3>
                 <div class="grid grid-cols-2 gap-6">
                     <div class="col-span-1">
-                        <label for="id_username" class="block text-sm font-medium text-black">Username</label>
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-black">Username</label>
                         {{ form.username }}
                     </div>
-
                     <div class="col-span-1">
-                        <label for="id_first_name" class="block text-sm font-medium text-black">First name</label>
-                        {{ form.first_name }}
-                    </div>
-
-                    <div class="col-span-1">
-                        <label for="id_middle_name" class="block text-sm font-medium text-black">Middle name</label>
-                        {{ form.middle_name }}
-                    </div>
-
-                    <div class="col-span-1">
-                        <label for="id_last_name" class="block text-sm font-medium text-black">Last name</label>
-                        {{ form.last_name }}
-                    </div>
-
-                    <div class="col-span-2">
-                        <label for="id_email" class="block text-sm font-medium text-black">Email address</label>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-black">Email address</label>
                         {{ form.email }}
                     </div>
-
-                    <div class="col-span-2">
-                        <label for="id_address" class="block text-sm font-medium text-black">Address</label>
-                        {{ form.address }}
-                    </div>
-
                     <div class="col-span-1">
-                        <label for="id_phone_number" class="block text-sm font-medium text-black">Phone number</label>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-black">First name</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-span-1">
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-black">Last name</label>
+                        {{ form.last_name }}
+                    </div>
+                </div>
+
+                <!-- Employee Information -->
+                <h3 class="text-lg font-semibold text-black mt-8">Employee Information</h3>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="col-span-1">
+                        <label for="{{ form.middle_name.id_for_label }}" class="block text-sm font-medium text-black">Middle name</label>
+                        {{ form.middle_name }}
+                    </div>
+                    <div class="col-span-1">
+                        <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-black">Phone number</label>
                         {{ form.phone_number }}
                     </div>
-
+                    <div class="col-span-2">
+                        <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-black">Address</label>
+                        {{ form.address }}
+                    </div>
                     <div class="col-span-1">
-                        <label for="id_city" class="block text-sm font-medium text-black">City</label>
+                        <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-black">City</label>
                         {{ form.city }}
                     </div>
-
                     <div class="col-span-1">
-                        <label for="id_country" class="block text-sm font-medium text-black">Country</label>
+                        <label for="{{ form.country.id_for_label }}" class="block text-sm font-medium text-black">Country</label>
                         {{ form.country }}
                     </div>
-
                     <div class="col-span-1">
-                        <label for="id_scheduled_start_time" class="block text-sm font-medium text-black">Scheduled start time</label>
+                        <label for="{{ form.scheduled_start_time.id_for_label }}" class="block text-sm font-medium text-black">Scheduled Start Time</label>
                         {{ form.scheduled_start_time }}
                     </div>
                 </div>
@@ -85,6 +90,21 @@
                     </button>
                 </div>
             </form>
+
+            <!-- Display form errors, if any -->
+            {% if form.errors %}
+                <ul class="text-red-500 mt-4">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
         </div>
     </div>
 </div>

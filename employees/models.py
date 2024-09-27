@@ -1,12 +1,21 @@
+# employees/models.py
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from decimal import Decimal
-import pyotp  # Import pyotp for TOTP functionality
+import pyotp
+import threading
 
-# Global flag to prevent recursion
-updating_employee = False
+# Initialize thread-local storage
+_thread_locals = threading.local()
+
+def is_updating_employee():
+    return getattr(_thread_locals, 'updating_employee', False)
+
+def set_updating_employee(value):
+    _thread_locals.updating_employee = value
 
 class Employee(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -94,8 +103,7 @@ class Employee(models.Model):
 # Signal to create or update Employee whenever a User is created or updated
 @receiver(post_save, sender=User)
 def create_or_update_employee(sender, instance, created, **kwargs):
-    global updating_employee
-    if updating_employee:
+    if is_updating_employee():
         return  # Avoid recursion
 
     if created:
@@ -109,15 +117,14 @@ def create_or_update_employee(sender, instance, created, **kwargs):
     else:
         try:
             employee = instance.employee
-            updating_employee = True
-            # Only update specific fields on the Employee model if User model is updated
+            set_updating_employee(True)
+            # Update Employee fields based on User fields
             employee.username = instance.username
             employee.first_name = instance.first_name or "Juan"
             employee.last_name = instance.last_name or "Dela Cruz"
             employee.email = instance.email or "default@example.com"
             employee.save(update_fields=['username', 'first_name', 'last_name', 'email'])
         except Employee.DoesNotExist:
-            # Handle the case where Employee does not exist
             Employee.objects.create(
                 user=instance,
                 username=instance.username,
@@ -126,27 +133,26 @@ def create_or_update_employee(sender, instance, created, **kwargs):
                 email=instance.email or "default@example.com"
             )
         finally:
-            updating_employee = False
+            set_updating_employee(False)
 
 # Signal to update User when Employee is updated
 @receiver(post_save, sender=Employee)
 def update_user_from_employee(sender, instance, **kwargs):
-    global updating_employee
-    if updating_employee:
+    if is_updating_employee():
         return  # Avoid recursion
 
     try:
         user = instance.user
         if user:
-            updating_employee = True
-            # Only update specific fields on the User model if Employee model is updated
+            set_updating_employee(True)
+            # Update User fields based on Employee fields
             user.username = instance.username
             user.first_name = instance.first_name
             user.last_name = instance.last_name
             user.email = instance.email
             user.save(update_fields=['username', 'first_name', 'last_name', 'email'])
     finally:
-        updating_employee = False
+        set_updating_employee(False)
 
 # Signal to delete User when Employee is deleted
 @receiver(post_delete, sender=Employee)
