@@ -17,7 +17,7 @@ urlpatterns = [
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='home/password_reset_complete.html'), name='password_reset_complete'),
 
     # App-specific URLs
-    path('', include('employees.urls', namespace='employees')),
+    path('employees/', include('employees.urls', namespace='employees')),
     path('attendance/', include('attendance.urls')),
     path('billing/', include('billing.urls')),
     path('holidays/', include('holidays.urls')), 
