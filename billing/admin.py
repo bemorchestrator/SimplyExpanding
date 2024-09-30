@@ -46,12 +46,13 @@ class BillingRecordAdmin(admin.ModelAdmin):
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client_name', 'total_amount', 'currency', 'status', 'invoice_date', 'due_date')
-    search_fields = ('client_name', 'client__name')
+    list_display = ('id', 'client_name_display', 'total_amount', 'currency', 'status', 'invoice_date', 'due_date')
+    search_fields = ('client__business_name',)  # Assuming 'business_name' is a field in ClientOnboarding
     list_filter = ('status', 'currency', 'invoice_date', 'due_date')
     ordering = ('-invoice_date',)
     readonly_fields = ('total_amount', 'invoice_date')
 
+    # Updated method to display the client's name from the related ClientOnboarding model
     def client_name_display(self, obj):
-        return obj.client_name
+        return obj.client.business_name  # Assuming the related field is 'business_name'
     client_name_display.short_description = 'Client Name'

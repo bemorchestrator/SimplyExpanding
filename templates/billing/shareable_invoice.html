@@ -1,197 +1,108 @@
-<!-- billing/templates/billing/shareable_invoice.html -->
+{% extends 'base.html' %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    {% load static %}
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice #{{ invoice.id }}</title>
-    <link href="{% static 'css/output.css' %}" rel="stylesheet">
-</head>
-<body class="bg-gray-100">
-    <!-- Invoice -->
-    <div class="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto my-4 sm:my-10">
-        <div class="sm:w-11/12 lg:w-3/4 mx-auto">
-            <!-- Card -->
-            <div class="flex flex-col p-4 sm:p-10 bg-white shadow-md rounded-xl">
-                <!-- Grid -->
-                <div class="flex justify-between">
-                    <div>
-                        <!-- Company Logo -->
-                        <img src="{% static 'images/logo.png' %}" alt="Company Logo" class="h-10 w-auto">
-                        <h1 class="mt-2 text-lg md:text-xl font-semibold text-blue-600">{{ invoice.client.business_name }}</h1>
-                    </div>
-                    <!-- Col -->
-    
-                    <div class="text-end">
-                        <h2 class="text-2xl md:text-3xl font-semibold text-gray-800">Invoice #{{ invoice.id }}</h2>
-                        <span class="mt-1 block text-gray-500">{{ invoice.invoice_date }}</span>
-    
-                        <address class="mt-4 not-italic text-gray-800">
-                            {{ invoice.client.address_line1 }}<br>
-                            {{ invoice.client.address_line2 }}<br>
-                            {{ invoice.client.city }}, {{ invoice.client.state }} {{ invoice.client.zip_code }}<br>
-                            {{ invoice.client.country }}<br>
-                        </address>
-                    </div>
-                    <!-- Col -->
-                </div>
-                <!-- End Grid -->
-    
-                <!-- Grid -->
-                <div class="mt-8 grid sm:grid-cols-2 gap-3">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800">Bill to:</h3>
-                        <h3 class="text-lg font-semibold text-gray-800">{{ invoice.client.business_name }}</h3>
-                        <address class="mt-2 not-italic text-gray-500">
-                            {{ invoice.client.address_line1 }}<br>
-                            {{ invoice.client.address_line2 }}<br>
-                            {{ invoice.client.city }}, {{ invoice.client.state }} {{ invoice.client.zip_code }}<br>
-                            {{ invoice.client.country }}<br>
-                        </address>
-                    </div>
-                    <!-- Col -->
-    
-                    <div class="sm:text-end space-y-2">
-                        <!-- Grid -->
-                        <div class="grid grid-cols-2 sm:grid-cols-1 gap-3 sm:gap-2">
-                            <dl class="grid sm:grid-cols-5 gap-x-3">
-                                <dt class="col-span-3 font-semibold text-gray-800">Invoice date:</dt>
-                                <dd class="col-span-2 text-gray-500">{{ invoice.invoice_date }}</dd>
-                            </dl>
-                            <dl class="grid sm:grid-cols-5 gap-x-3">
-                                <dt class="col-span-3 font-semibold text-gray-800">Due date:</dt>
-                                <dd class="col-span-2 text-gray-500">{{ invoice.due_date }}</dd>
-                            </dl>
-                        </div>
-                        <!-- End Grid -->
-                    </div>
-                    <!-- Col -->
-                </div>
-                <!-- End Grid -->
-    
-                <!-- Table -->
-                <div class="mt-6">
-                    <div class="border border-gray-200 p-4 rounded-lg space-y-4">
-                        <div class="hidden sm:grid sm:grid-cols-5">
-                            <div class="sm:col-span-2 text-xs font-medium text-gray-500 uppercase">Item</div>
-                            <div class="text-start text-xs font-medium text-gray-500 uppercase">Qty</div>
-                            <div class="text-start text-xs font-medium text-gray-500 uppercase">Rate</div>
-                            <div class="text-end text-xs font-medium text-gray-500 uppercase">Amount</div>
-                        </div>
-    
-                        <div class="hidden sm:block border-b border-gray-200"></div>
-    
-                        <!-- Invoice Items -->
+{% block content %}
+<div class="flex items-center justify-center min-h-screen bg-gray-100 py-12">
+    <div class="max-w-4xl w-full bg-white shadow-lg rounded-lg px-8 py-10">
+        <!-- Invoice Header -->
+        <div class="flex justify-between items-center border-b pb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Invoice #{{ invoice.invoice_number }}</h1>
+                <span class="block text-sm text-gray-600">Issued: {{ invoice.invoice_date|date:"M d, Y" }}</span>
+            </div>
+            <div class="text-right">
+                <span class="block text-sm text-gray-600">Due: {{ invoice.due_date|date:"M d, Y" }}</span>
+            </div>
+        </div>
+
+        <!-- Billing Section -->
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold text-gray-900">Bill to:</h3>
+            <address class="text-sm text-gray-700 not-italic">
+                {{ invoice.client.business_name }}<br>
+                {{ invoice.client_address }}<br>
+            </address>
+        </div>
+
+        <!-- Items Table -->
+        <div class="mt-8">
+            <table class="w-full table-auto text-left border-collapse">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Description</th>
+                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Quantity</th>
+                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Rate</th>
+                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% if invoice.items.all %}
                         {% for item in invoice.items.all %}
-                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                                <div class="col-span-full sm:col-span-2">
-                                    <h5 class="sm:hidden text-xs font-medium text-gray-500 uppercase">Item</h5>
-                                    <p class="font-medium text-gray-800">{{ item.description }}</p>
-                                </div>
-                                <div>
-                                    <h5 class="sm:hidden text-xs font-medium text-gray-500 uppercase">Qty</h5>
-                                    <p class="text-gray-800">{{ item.quantity }}</p>
-                                </div>
-                                <div>
-                                    <h5 class="sm:hidden text-xs font-medium text-gray-500 uppercase">Rate</h5>
-                                    <p class="text-gray-800">${{ item.rate }}</p>
-                                </div>
-                                <div>
-                                    <h5 class="sm:hidden text-xs font-medium text-gray-500 uppercase">Amount</h5>
-                                    <p class="sm:text-end text-gray-800">${{ item.amount }}</p>
-                                </div>
-                            </div>
-    
-                            <div class="sm:hidden border-b border-gray-200"></div>
-                        {% empty %}
-                            <p class="text-gray-500">No items added.</p>
+                        <tr>
+                            <td class="px-4 py-2 text-sm text-gray-700">{{ item.description }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-700">{{ item.quantity }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-700">{{ invoice.currency }} {{ item.rate|floatformat:2 }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-700 text-right">{{ invoice.currency }} {{ item.amount|floatformat:2 }}</td>
+                        </tr>
                         {% endfor %}
-                    </div>
-                </div>
-                <!-- End Table -->
-    
-                <!-- Flex -->
-                <div class="mt-8 flex sm:justify-end">
-                    <div class="w-full max-w-2xl sm:text-end space-y-2">
-                        <!-- Grid -->
-                        <div class="grid grid-cols-2 sm:grid-cols-1 gap-3 sm:gap-2">
-                            <dl class="grid sm:grid-cols-5 gap-x-3">
-                                <dt class="col-span-3 font-semibold text-gray-800">Subtotal:</dt>
-                                <dd class="col-span-2 text-gray-500">${{ invoice.subtotal }}</dd>
-                            </dl>
-    
-                            <dl class="grid sm:grid-cols-5 gap-x-3">
-                                <dt class="col-span-3 font-semibold text-gray-800">Tax:</dt>
-                                <dd class="col-span-2 text-gray-500">${{ invoice.tax }}</dd>
-                            </dl>
-    
-                            <dl class="grid sm:grid-cols-5 gap-x-3">
-                                <dt class="col-span-3 font-semibold text-gray-800">Total:</dt>
-                                <dd class="col-span-2 text-gray-500">${{ invoice.total }}</dd>
-                            </dl>
-    
-                            <dl class="grid sm:grid-cols-5 gap-x-3">
-                                <dt class="col-span-3 font-semibold text-gray-800">Amount paid:</dt>
-                                <dd class="col-span-2 text-gray-500">${{ invoice.amount_paid }}</dd>
-                            </dl>
-    
-                            <dl class="grid sm:grid-cols-5 gap-x-3">
-                                <dt class="col-span-3 font-semibold text-gray-800">Due balance:</dt>
-                                <dd class="col-span-2 text-gray-500">${{ invoice.due_balance }}</dd>
-                            </dl>
-                        </div>
-                        <!-- End Grid -->
-                    </div>
-                </div>
-                <!-- End Flex -->
-    
-                <div class="mt-8 sm:mt-12">
-                    <h4 class="text-lg font-semibold text-gray-800">Thank you!</h4>
-                    <p class="text-gray-500">If you have any questions concerning this invoice, use the following contact information:</p>
-                    <div class="mt-2">
-                        <p class="block text-sm font-medium text-gray-800">{{ invoice.company.email }}</p>
-                        <p class="block text-sm font-medium text-gray-800">{{ invoice.company.phone }}</p>
-                    </div>
-                </div>
-    
-                <p class="mt-5 text-sm text-gray-500">© {{ current_year }} {{ invoice.company.name }}.</p>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-center text-sm text-gray-500">No items added.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Total Amount Section -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Notes Section -->
+            {% if invoice.notes %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Notes:</h3>
+                <p class="text-sm text-gray-700">{{ invoice.notes }}</p>
             </div>
-            <!-- End Card -->
-    
-            <!-- Buttons -->
-            <div class="mt-6 flex justify-end gap-x-3">
-                <a href="{% url 'download_invoice_pdf' invoice.id %}" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:bg-gray-50">
-                    <!-- PDF Icon -->
-                    <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" x2="12" y1="15" y2="3"/>
-                    </svg>
-                    Invoice PDF
-                </a>
-                <a href="#" id="print-button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700">
-                    <!-- Print Icon -->
-                    <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 6 2 18 2 18 9"/>
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                        <rect width="12" height="8" x="6" y="14"/>
-                    </svg>
-                    Print
-                </a>
+            {% endif %}
+            
+            <!-- Total Amount -->
+            <div class="text-right">
+                <div class="flex justify-between py-2">
+                    <span class="text-sm font-medium text-gray-600">Total Amount:</span>
+                    <span class="text-sm text-gray-700">{{ invoice.currency }} {{ invoice.total_amount|floatformat:2 }}</span>
+                </div>
             </div>
-            <!-- End Buttons -->
+        </div>
+
+        <!-- Thank You Note -->
+        <div class="mt-8">
+            <h4 class="text-lg font-semibold text-gray-900">Thank you!</h4>
+            <p class="text-sm text-gray-600">If you have any questions concerning this invoice, contact:</p>
+            {# Contact information could go here, if available #}
+            <p class="mt-5 text-sm text-gray-500">© {{ current_year }} {{ company_name }}</p>
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-8 flex justify-end gap-3">
+            <a href="{% url 'generate_invoice_pdf' invoice.id %}" class="py-2 px-4 text-sm font-medium rounded-md border border-gray-200 bg-white text-gray-800 hover:bg-gray-50">
+                <svg class="w-4 h-4 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/>
+                </svg>
+                Download PDF
+            </a>
+            <a href="#" id="print-button" class="py-2 px-4 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                <svg class="w-4 h-4 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V3h12v6m0 4v7H6v-7m5 3h2"/>
+                </svg>
+                Print Invoice
+            </a>
         </div>
     </div>
-    <!-- End Invoice -->
+</div>
 
-    <!-- JavaScript for Print Functionality -->
-    <script>
-        document.getElementById('print-button').addEventListener('click', function(event) {
-            event.preventDefault();
-            window.print();
-        });
-    </script>
-</body>
-</html>
+<!-- JavaScript for Print Functionality -->
+<script>
+    document.getElementById('print-button').addEventListener('click', function(event) {
+        event.preventDefault();
+        window.print();
+    });
+</script>
+{% endblock %}

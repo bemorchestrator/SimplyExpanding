@@ -1,44 +1,67 @@
 # billing/forms.py
 
 from django import forms
-from .models import Invoice
+from .models import Invoice, InvoiceItem
+from django.forms import inlineformset_factory
 
 class InvoiceForm(forms.ModelForm):
     class Meta:
         model = Invoice
         fields = [
-            'invoice_number',  # Newly added
+            'invoice_number',
             'client',
-            'client_name',
-            'client_address',  # Newly added
+            'client_address',
             'invoice_date',
             'due_date',
-            'total_amount',
             'status',
             'currency',
             'notes'
         ]
         widgets = {
-            'invoice_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'client': forms.Select(attrs={'class': 'form-control'}),
-            'client_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'client_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'invoice_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'total_amount': forms.NumberInput(attrs={'class': 'form-control'}),
-            'status': forms.Select(attrs={'class': 'form-control'}),
-            'currency': forms.Select(attrs={'class': 'form-control'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'invoice_number': forms.TextInput(attrs={'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'}),
+            'client': forms.Select(attrs={'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'}),
+            'client_address': forms.Textarea(attrs={'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500', 'rows': 3}),
+            'invoice_date': forms.DateInput(attrs={'type': 'date', 'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'}),
+            'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'}),
+            'status': forms.Select(attrs={'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'}),
+            'currency': forms.Select(attrs={'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'}),
+            'notes': forms.Textarea(attrs={'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500', 'rows': 3}),
         }
 
     def __init__(self, *args, **kwargs):
         super(InvoiceForm, self).__init__(*args, **kwargs)
-        # Make fields optional as per your original setup
-        self.fields['total_amount'].required = False
+        # Make 'status' and 'currency' optional
         self.fields['status'].required = False
         self.fields['currency'].required = False
 
-    def clean(self):
-        cleaned_data = super().clean()
-        # Add any custom validation logic if needed
-        return cleaned_data
+class InvoiceItemForm(forms.ModelForm):
+    class Meta:
+        model = InvoiceItem
+        fields = ('description', 'quantity', 'rate')
+        widgets = {
+            'description': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Item Description'
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': '1',
+                'placeholder': 'Quantity'
+            }),
+            'rate': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'min': '0',
+                'step': '0.01',
+                'placeholder': 'Item Price'
+            }),
+        }
+
+# Create an inline formset for handling Invoice Items
+InvoiceItemFormSet = inlineformset_factory(
+    Invoice,
+    InvoiceItem,
+    form=InvoiceItemForm,
+    fields=('description', 'quantity', 'rate'),
+    extra=1,
+    can_delete=True,
+)

@@ -30,11 +30,11 @@ class Invoice(models.Model):
         ('USD', 'US Dollar'),
         ('EUR', 'Euro'),
         ('PHP', 'Philippine Peso'),
+        ('AUD', 'Australian Dollar'),
         # Add other currencies as needed
     ]
 
     client = models.ForeignKey(ClientOnboarding, on_delete=models.CASCADE)
-    client_name = models.CharField(max_length=255)
     invoice_number = models.CharField(max_length=20, unique=True, blank=True, null=True)  # New field
     client_address = models.TextField(blank=True, null=True)  # New field
     invoice_date = models.DateField(default=timezone.now, editable=True)
@@ -58,3 +58,17 @@ class Invoice(models.Model):
 
     def __str__(self):
         return f"Invoice {self.id} - {self.client_name} - {self.total_amount} {self.currency}"
+    
+    # models.py
+
+class InvoiceItem(models.Model):
+    invoice = models.ForeignKey(Invoice, related_name='items', on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    quantity = models.IntegerField()
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        # Ensure the amount is calculated based on quantity and rate
+        self.amount = self.quantity * self.rate
+        super().save(*args, **kwargs)

@@ -20,6 +20,8 @@ from django.shortcuts import get_object_or_404, HttpResponse
 from .models import Invoice
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from django.forms import inlineformset_factory
+from .models import Invoice, InvoiceItem
 
 
 
@@ -146,20 +148,39 @@ def create_invoice(request):
         form = InvoiceForm(request.POST)
         if form.is_valid():
             invoice = form.save(commit=False)
-            
-            # Retrieve quantity and rate from the form data
-            quantity = int(request.POST.get('quantity', 0))
-            rate = float(request.POST.get('rate', 0.0))
+            invoice.save()  # Save the invoice to get an ID
 
-            # Calculate the total amount
-            total_amount = quantity * rate
+            # Retrieve Invoice Item data from POST request
+            description = request.POST.get('description')
+            quantity = request.POST.get('quantity')
+            rate = request.POST.get('rate')
 
-            # Set the calculated total amount to the invoice
-            invoice.total_amount = total_amount
+            # Convert quantity and rate to appropriate types
+            try:
+                quantity = int(quantity)
+            except (TypeError, ValueError):
+                quantity = 0
 
-            # Save the invoice object
+            try:
+                rate = float(rate)
+            except (TypeError, ValueError):
+                rate = 0.0
+
+            amount = quantity * rate
+
+            # Create an InvoiceItem instance
+            InvoiceItem.objects.create(
+                invoice=invoice,
+                description=description,
+                quantity=quantity,
+                rate=rate,
+                amount=amount
+            )
+
+            # Update the total amount of the invoice
+            invoice.total_amount = amount
             invoice.save()
-            
+
             messages.success(request, 'Invoice created successfully.')
             return redirect('invoice_list')  # Adjust the redirect URL as needed
         else:
@@ -167,8 +188,13 @@ def create_invoice(request):
     else:
         form = InvoiceForm()
 
-    return render(request, 'billing/invoice_form.html', {'form': form, 'is_edit': False})
-
+    return render(request, 'billing/invoice_form.html', {
+        'form': form,
+        'is_edit': False,
+        'invoice_item_data': {}  # Empty dict for consistency
+    })
+# Create an inline formset for handling Invoice Items
+InvoiceItemFormSet = inlineformset_factory(Invoice, InvoiceItem, fields=('description', 'quantity', 'rate'), extra=1, can_delete=True)
 
 def edit_invoice(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
@@ -177,21 +203,66 @@ def edit_invoice(request, invoice_id):
         form = InvoiceForm(request.POST, instance=invoice)
         if form.is_valid():
             invoice = form.save(commit=False)
-            # Process static item fields as above
-            description = request.POST.get('description', '')
-            quantity = request.POST.get('quantity', 0)
-            rate = request.POST.get('rate', 0.0)
-            amount = float(quantity) * float(rate)
+            invoice.save()
 
-            # Save or handle the data as needed
+            # Retrieve Invoice Item data from POST request
+            description = request.POST.get('description')
+            quantity = request.POST.get('quantity')
+            rate = request.POST.get('rate')
+
+            # Convert quantity and rate to appropriate types
+            try:
+                quantity = int(quantity)
+            except (TypeError, ValueError):
+                quantity = 0
+
+            try:
+                rate = float(rate)
+            except (TypeError, ValueError):
+                rate = 0.0
+
+            amount = quantity * rate
+
+            # Update or create the InvoiceItem
+            invoice_item, created = InvoiceItem.objects.update_or_create(
+                invoice=invoice,
+                defaults={
+                    'description': description,
+                    'quantity': quantity,
+                    'rate': rate,
+                    'amount': amount
+                }
+            )
+
+            # Update the total amount of the invoice
+            invoice.total_amount = amount
             invoice.save()
 
             messages.success(request, 'Invoice updated successfully.')
             return redirect('invoice_list')
+        else:
+            messages.error(request, 'There were errors in the form submission.')
     else:
         form = InvoiceForm(instance=invoice)
+        # Load existing InvoiceItem data to pre-fill the form
+        invoice_item = InvoiceItem.objects.filter(invoice=invoice).first()
+        if invoice_item:
+            invoice_item_data = {
+                'description': invoice_item.description,
+                'quantity': invoice_item.quantity,
+                'rate': invoice_item.rate,
+                'amount': invoice_item.amount
+            }
+        else:
+            invoice_item_data = {}
 
-    return render(request, 'billing/invoice_form.html', {'form': form, 'is_edit': True, 'invoice': invoice})
+    return render(request, 'billing/invoice_form.html', {
+        'form': form,
+        'is_edit': True,
+        'invoice': invoice,
+        'invoice_item_data': invoice_item_data
+    })
+
 
 
 def mark_invoice_paid(request, id):
@@ -211,11 +282,13 @@ def share_invoice(request, id):
     # Retrieve the invoice object
     invoice = get_object_or_404(Invoice, id=id)
 
-    # Logic for sharing the invoice goes here (e.g., sending an email, generating a shareable link)
-    messages.success(request, f'Invoice #{invoice.id} shared successfully.')
-    
-    # Redirect back to the invoice list or any relevant page
-    return redirect('invoice_list')  # Adjust as needed
+    # Pass the invoice object to the template context
+    context = {
+        'invoice': invoice
+    }
+
+    # Render the 'shareable_invoice.html' template
+    return render(request, 'billing/shareable_invoice.html', context)
 
 
 

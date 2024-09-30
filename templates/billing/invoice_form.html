@@ -68,21 +68,6 @@
           {% endif %}
         </div>
 
-        <!-- Or Enter Client Name -->
-        <div class="mb-4">
-          <label for="{{ form.client_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Or Enter Client Name</label>
-          <input 
-            type="text" 
-            name="{{ form.client_name.html_name }}" 
-            id="{{ form.client_name.id_for_label }}" 
-            value="{{ form.client_name.value }}" 
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {% if form.client_name.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.client_name.errors }}</p>
-          {% endif %}
-        </div>
-
         <!-- Client Address -->
         <div class="mb-4">
           <label for="{{ form.client_address.id_for_label }}" class="block text-sm font-medium text-gray-700">Client Address</label>
@@ -129,22 +114,6 @@
           {% endif %}
         </div>
 
-        <!-- Total Amount -->
-        <div class="mb-4">
-          <label for="{{ form.total_amount.id_for_label }}" class="block text-sm font-medium text-gray-700">Total Amount</label>
-          <input 
-            type="number" 
-            step="0.01"
-            name="{{ form.total_amount.html_name }}" 
-            id="{{ form.total_amount.id_for_label }}" 
-            value="{{ form.total_amount.value }}" 
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {% if form.total_amount.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.total_amount.errors }}</p>
-          {% endif %}
-        </div>
-
         <!-- Status -->
         <div class="mb-4">
           <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700">Status</label>
@@ -179,19 +148,6 @@
           {% endif %}
         </div>
 
-        <!-- Notes -->
-        <div class="mb-6">
-          <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">Notes</label>
-          <textarea 
-            name="{{ form.notes.html_name }}" 
-            id="{{ form.notes.id_for_label }}" 
-            rows="3"
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >{{ form.notes.value }}</textarea>
-          {% if form.notes.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.notes.errors }}</p>
-          {% endif %}
-        </div>
 
         <!-- Invoice Items -->
         <h3 class="text-xl font-semibold mb-4">Invoice Items</h3>
@@ -204,6 +160,7 @@
               id="id_description" 
               class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
               placeholder="Item Description"
+              value="{% if is_edit %}{{ invoice_item_data.description }}{% else %}{{ request.POST.description }}{% endif %}"
             >
           </div>
           <div class="mb-4">
@@ -215,6 +172,7 @@
               min="1" 
               class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
               placeholder="Quantity"
+              value="{% if is_edit %}{{ invoice_item_data.quantity }}{% else %}{{ request.POST.quantity }}{% endif %}"
             >
           </div>
           <div class="mb-4">
@@ -227,6 +185,7 @@
               step="0.01" 
               class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
               placeholder="Item Price"
+              value="{% if is_edit %}{{ invoice_item_data.rate }}{% else %}{{ request.POST.rate }}{% endif %}"
             >
           </div>
           <div class="mb-4">
@@ -237,10 +196,11 @@
               id="id_amount" 
               readonly 
               class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-gray-100" 
-              value="0.00"
+              value="{% if is_edit %}{{ invoice_item_data.amount }}{% else %}0.00{% endif %}"
             >
           </div>
         </div>
+
 
         <button 
           type="submit" 
