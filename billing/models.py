@@ -57,7 +57,8 @@ class Invoice(models.Model):
     notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"Invoice {self.id} - {self.client_name} - {self.total_amount} {self.currency}"
+        client_name = self.client.business_name if self.client else 'No Client'
+        return f"Invoice {self.invoice_number or self.id} - {client_name} - {self.total_amount} {self.currency}"
     
     # models.py
 
