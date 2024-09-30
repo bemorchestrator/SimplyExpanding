@@ -2,11 +2,32 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-100 p-10 flex flex-col items-center">
-    <!-- Payroll Dashboard Header -->
-    <h2 class="text-xl font-semibold text-gray-800 mb-6">Payroll Dashboard</h2>
+    <!-- Payroll Dashboard Header with Pay Period Inputs -->
+    <div class="flex justify-between items-center w-full max-w-7xl mb-6">
+        <!-- Align the header to the left -->
+        <h2 class="text-2xl font-semibold text-gray-800">Payroll Dashboard</h2>
+
+        <!-- Align the form to the right, using flex-grow to push it to the right edge -->
+        <form method="POST" class="flex space-x-4 items-center ml-auto">
+            {% csrf_token %}
+            <div>
+                <label for="pay_period_start" class="block text-sm font-medium text-gray-700">Pay Period Start:</label>
+                <input type="date" name="pay_period_start" id="pay_period_start" value="{{ pay_period_start }}" class="form-input block w-full">
+            </div>
+            <div>
+                <label for="pay_period_end" class="block text-sm font-medium text-gray-700">Pay Period End:</label>
+                <input type="date" name="pay_period_end" id="pay_period_end" value="{{ pay_period_end }}" class="form-input block w-full">
+            </div>
+            <div class="pt-6">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Update Pay Period
+                </button>
+            </div>
+        </form>
+    </div>
 
     <!-- Payroll Records Table -->
-    <div class="bg-white shadow-md rounded-lg p-8 w-full">
+    <div class="bg-white shadow-md rounded-lg p-8 w-full max-w-7xl mt-6">
         <div class="overflow-x-auto">
             <table class="min-w-full bg-white rounded-lg">
                 <thead>
@@ -15,7 +36,7 @@
                         <th class="py-3 px-4">Pay Period</th>
                         <th class="py-3 px-4">Total Income</th>
                         <th class="py-3 px-4">Status</th>
-                        <th class="py-3 px-4">Proof of Payment</th> <!-- New Column Header -->
+                        <th class="py-3 px-4">Proof of Payment</th>
                         <th class="py-3 px-4">Date Processed</th>
                         <th class="py-3 px-4">Action</th>
                     </tr>
@@ -38,10 +59,8 @@
                                 {% endif %}
                             </td>
                             
-                            <!-- Proof of Payment Column -->
                             <td class="py-3 px-4">
                                 {% if payroll.status == 'paid' and payroll.payment_proof %}
-                                    <!-- Thumbnail Image -->
                                     <img 
                                         src="{{ payroll.payment_proof }}" 
                                         alt="Proof of Payment" 
@@ -91,7 +110,6 @@
         <div class="bg-white rounded-lg overflow-hidden shadow-lg max-w-3xl w-full">
             <div class="flex justify-end p-2">
                 <button onclick="closeModal()" class="text-gray-700 hover:text-gray-900">
-                    <!-- Close Icon (SVG) -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -115,7 +133,6 @@
             document.getElementById('modalImage').src = '';
         }
 
-        // Optional: Close modal when clicking outside the modal content
         window.onclick = function(event) {
             const modal = document.getElementById('imageModal');
             if (event.target == modal) {

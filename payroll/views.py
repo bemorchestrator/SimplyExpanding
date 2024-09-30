@@ -7,24 +7,38 @@ from employees.models import Employee
 from billing.models import BillingRecord
 from django.utils.timezone import now
 from django.db.models import Sum
-from datetime import timedelta
+from datetime import timedelta, date
 from .models import PayrollRecord
 from decimal import Decimal
 from django.core.files.storage import FileSystemStorage
 from django.core.exceptions import ValidationError
 
+
+
+
 @login_required
 def payroll_dashboard(request):
     """
-    Display the Payroll Dashboard with all payroll records.
-    Includes a column for Proof of Payment with clickable thumbnails.
+    Display the Payroll Dashboard with payroll records and manually set pay periods.
     """
     today = now().date()
-    pay_period_start = today - timedelta(days=30)
-    pay_period_end = today
+
+    # Check if pay period start and end were submitted; otherwise, use default
+    if request.method == 'POST':
+        pay_period_start = request.POST.get('pay_period_start')
+        pay_period_end = request.POST.get('pay_period_end')
+    else:
+        # Use default pay period values (last 30 days)
+        pay_period_start = today - timedelta(days=30)
+        pay_period_end = today
+
+    # Parse date strings into proper date objects, but only if they are not already date objects
+    if isinstance(pay_period_start, str):
+        pay_period_start = date.fromisoformat(pay_period_start)
+    if isinstance(pay_period_end, str):
+        pay_period_end = date.fromisoformat(pay_period_end)
 
     payroll_data = []
-
     employees = Employee.objects.all()
 
     for employee in employees:
@@ -53,7 +67,7 @@ def payroll_dashboard(request):
                 status = 'no_income'
                 payroll_id = None
             date_processed = None
-            payment_proof = None  # No proof if no payroll record exists
+            payment_proof = None
 
         status_display = status.title() if status not in ['pending', 'paid', 'no_income'] else status.capitalize()
 
@@ -66,11 +80,13 @@ def payroll_dashboard(request):
             'status': status,
             'status_display': status_display,
             'date_processed': date_processed,
-            'payment_proof': payment_proof  # Added payment_proof to context
+            'payment_proof': payment_proof
         })
 
     context = {
-        'payroll_data': payroll_data
+        'payroll_data': payroll_data,
+        'pay_period_start': pay_period_start,
+        'pay_period_end': pay_period_end,
     }
 
     return render(request, 'payroll/payroll_dashboard.html', context)
