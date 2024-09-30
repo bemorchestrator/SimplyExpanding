@@ -1,29 +1,29 @@
 # billing/views.py
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
+from django.forms import inlineformset_factory
+from django.template.loader import get_template, render_to_string
+from weasyprint import HTML
+from django.core.mail import send_mail, EmailMessage
+from django.utils.html import strip_tags
+from django.conf import settings
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from decimal import Decimal
+import json
+from datetime import timedelta
+
 from employees.models import Employee
 from attendance.models import Attendance
 from holidays.models import Holiday
-from .models import BillingRecord
-from django.utils import timezone
-from datetime import timedelta
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
-import json
-from decimal import Decimal
-from django.shortcuts import render
-from .models import Invoice
+from .models import BillingRecord, Invoice, InvoiceItem
 from .forms import InvoiceForm
-from django.contrib import messages
-from django.shortcuts import get_object_or_404, HttpResponse
-from .models import Invoice
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from django.forms import inlineformset_factory
-from .models import Invoice, InvoiceItem
-from django.template.loader import get_template
-from weasyprint import HTML
+
 
 
 
@@ -150,7 +150,6 @@ def create_invoice(request):
         form = InvoiceForm(request.POST)
         if form.is_valid():
             invoice = form.save(commit=False)
-            invoice.save()  # Save the invoice to get an ID
 
             # Retrieve Invoice Item data from POST request
             description = request.POST.get('description')
@@ -170,18 +169,19 @@ def create_invoice(request):
 
             amount = quantity * rate
 
-            # Create an InvoiceItem instance
-            InvoiceItem.objects.create(
-                invoice=invoice,
-                description=description,
-                quantity=quantity,
-                rate=rate,
-                amount=amount
-            )
+            # Set the total_amount before saving
+            invoice.total_amount = amount if amount > 0 else Decimal('0.00')
+            invoice.save()  # Now save the invoice with the total_amount
 
-            # Update the total amount of the invoice
-            invoice.total_amount = amount
-            invoice.save()
+            # Create the InvoiceItem only if there's a valid quantity and rate
+            if quantity > 0 and rate > 0:
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    description=description,
+                    quantity=quantity,
+                    rate=rate,
+                    amount=amount
+                )
 
             messages.success(request, 'Invoice created successfully.')
             return redirect('invoice_list')  # Adjust the redirect URL as needed
@@ -195,6 +195,8 @@ def create_invoice(request):
         'is_edit': False,
         'invoice_item_data': {}  # Empty dict for consistency
     })
+
+
 
 
 # Create an inline formset for handling Invoice Items
@@ -322,6 +324,31 @@ def generate_invoice_pdf(request, id):
     HTML(string=html).write_pdf(response)
 
     return response
+
+
+
+def email_invoice(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id) 
+    subject = f'Invoice #{invoice.invoice_number} from {settings.DEFAULT_FROM_EMAIL}' 
+    html_message = render_to_string('billing/shareable_invoice.html', {'invoice': invoice})
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to_email = [invoice.client.email]  # Assuming 'client' is a field in the Invoice model
+    email = EmailMessage(
+        subject,            
+        html_message,       
+        from_email,         
+        to_email            
+    )
+    
+    email.content_subtype = "html"
+    
+    try:
+        email.send()
+        messages.success(request, f"Invoice #{invoice.invoice_number} has been sent to {invoice.client.email}")
+    except Exception as e:
+        messages.error(request, f"Error sending invoice: {str(e)}")
+    
+    return redirect('invoice_list')
 
 
 

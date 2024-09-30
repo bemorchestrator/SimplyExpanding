@@ -15,5 +15,6 @@ urlpatterns = [
     path('invoices/<int:id>/share/', share_invoice, name='share_invoice'),
     path('invoices/<int:id>/generate-pdf/', generate_invoice_pdf, name='generate_invoice_pdf'),
     path('invoices/<int:id>/delete/', delete_invoice, name='delete_invoice'),
+    path('email-invoice/<int:invoice_id>/', views.email_invoice, name='email_invoice'),
 
 ]
