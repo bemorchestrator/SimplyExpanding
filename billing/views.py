@@ -22,6 +22,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.forms import inlineformset_factory
 from .models import Invoice, InvoiceItem
+from django.template.loader import get_template
+from weasyprint import HTML
 
 
 
@@ -193,8 +195,13 @@ def create_invoice(request):
         'is_edit': False,
         'invoice_item_data': {}  # Empty dict for consistency
     })
+
+
 # Create an inline formset for handling Invoice Items
 InvoiceItemFormSet = inlineformset_factory(Invoice, InvoiceItem, fields=('description', 'quantity', 'rate'), extra=1, can_delete=True)
+
+
+
 
 def edit_invoice(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
@@ -296,43 +303,23 @@ def generate_invoice_pdf(request, id):
     # Retrieve the invoice object
     invoice = get_object_or_404(Invoice, id=id)
 
+    # Use the existing template path for generating the PDF
+    template_path = 'billing/shareable_invoice.html'
+    context = {'invoice': invoice}
+
+    # Render the HTML template with context
+    template = get_template(template_path)
+    html = template.render(context)
+
+    # Remove the '{% extends 'base.html' %}' dynamically, if needed
+    html = html.replace("{% extends 'base.html' %}", "")
+
     # Create a HttpResponse object with PDF headers
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="invoice_{invoice.id}.pdf"'
 
-    # Create the PDF object using ReportLab
-    pdf = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
-
-    # Set up the basic structure of the PDF
-    pdf.setTitle(f"Invoice {invoice.id}")
-    pdf.drawString(100, height - 50, f"Invoice #{invoice.invoice_number}")
-    pdf.drawString(100, height - 70, f"Client: {invoice.client_name or invoice.client.business_name}")
-    pdf.drawString(100, height - 90, f"Date: {invoice.invoice_date.strftime('%B %d, %Y')}")
-    pdf.drawString(100, height - 110, f"Due Date: {invoice.due_date.strftime('%B %d, %Y')}")
-
-    # Draw items header
-    pdf.drawString(100, height - 150, "Description")
-    pdf.drawString(300, height - 150, "Quantity")
-    pdf.drawString(400, height - 150, "Rate")
-    pdf.drawString(500, height - 150, "Amount")
-
-    # Draw each item line by line
-    y_position = height - 170
-    for item in invoice.items.all():
-        pdf.drawString(100, y_position, item.description)
-        pdf.drawString(300, y_position, str(item.quantity))
-        pdf.drawString(400, y_position, f"{item.rate:.2f}")
-        pdf.drawString(500, y_position, f"{item.amount:.2f}")
-        y_position -= 20
-
-    # Draw the total amount
-    pdf.drawString(400, y_position - 20, "Total:")
-    pdf.drawString(500, y_position - 20, f"{invoice.total_amount:.2f}")
-
-    # Finalize the PDF
-    pdf.showPage()
-    pdf.save()
+    # Convert HTML to PDF using WeasyPrint
+    HTML(string=html).write_pdf(response)
 
     return response
 

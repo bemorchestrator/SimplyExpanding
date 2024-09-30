@@ -1,108 +1,219 @@
-{% extends 'base.html' %}
-
-{% block content %}
-<div class="flex items-center justify-center min-h-screen bg-gray-100 py-12">
-    <div class="max-w-4xl w-full bg-white shadow-lg rounded-lg px-8 py-10">
-        <!-- Invoice Header -->
-        <div class="flex justify-between items-center border-b pb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Invoice #{{ invoice.invoice_number }}</h1>
-                <span class="block text-sm text-gray-600">Issued: {{ invoice.invoice_date|date:"M d, Y" }}</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{{ invoice.invoice_number }}</title>
+    <style>
+        /* Add some basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7fafc;
+            color: #2d3748;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f7fafc;
+            padding: 12px;
+        }
+        .invoice-wrapper {
+            max-width: 900px;
+            width: 100%;
+            background-color: #fff;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 40px;
+        }
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 16px;
+        }
+        .invoice-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        .invoice-header .right {
+            text-align: right;
+        }
+        .invoice-header .right span {
+            color: #718096;
+        }
+        .invoice-bill {
+            margin-top: 24px;
+        }
+        .invoice-bill h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .invoice-bill address {
+            color: #4a5568;
+            font-style: normal;
+        }
+        .invoice-table {
+            margin-top: 32px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .invoice-table th, .invoice-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .invoice-table th {
+            background-color: #edf2f7;
+            color: #718096;
+        }
+        .invoice-table tbody tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+        .invoice-notes {
+            margin-top: 24px;
+        }
+        .total-amount {
+            text-align: right;
+            margin-top: 24px;
+        }
+        .total-amount .total-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .total-amount .total-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .thank-you {
+            margin-top: 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .thank-you p {
+            color: #718096;
+        }
+        .buttons {
+            margin-top: 32px;
+            text-align: right;
+        }
+        .buttons a {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .download-btn {
+            border: 1px solid #e2e8f0;
+            background-color: #fff;
+            color: #2d3748;
+        }
+        .print-btn {
+            background-color: #3182ce;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="invoice-wrapper">
+            <!-- Invoice Header -->
+            <div class="invoice-header">
+                <div>
+                    <h1>Invoice #{{ invoice.invoice_number }}</h1>
+                    <span>Issued: {{ invoice.invoice_date|date:"M d, Y" }}</span>
+                </div>
+                <div class="right">
+                    <span>Due: {{ invoice.due_date|date:"M d, Y" }}</span>
+                </div>
             </div>
-            <div class="text-right">
-                <span class="block text-sm text-gray-600">Due: {{ invoice.due_date|date:"M d, Y" }}</span>
+
+            <!-- Billing Section -->
+            <div class="invoice-bill">
+                <h3>Bill to:</h3>
+                <address>
+                    {{ invoice.client.business_name }}<br>
+                    {{ invoice.client_address }}<br>
+                </address>
             </div>
-        </div>
 
-        <!-- Billing Section -->
-        <div class="mt-6">
-            <h3 class="text-lg font-semibold text-gray-900">Bill to:</h3>
-            <address class="text-sm text-gray-700 not-italic">
-                {{ invoice.client.business_name }}<br>
-                {{ invoice.client_address }}<br>
-            </address>
-        </div>
-
-        <!-- Items Table -->
-        <div class="mt-8">
-            <table class="w-full table-auto text-left border-collapse">
-                <thead class="bg-gray-200">
+            <!-- Items Table -->
+            <table class="invoice-table">
+                <thead>
                     <tr>
-                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Description</th>
-                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Quantity</th>
-                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Rate</th>
-                        <th class="px-4 py-2 text-sm font-medium text-gray-600">Amount</th>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Rate</th>
+                        <th>Amount</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody>
                     {% if invoice.items.all %}
                         {% for item in invoice.items.all %}
                         <tr>
-                            <td class="px-4 py-2 text-sm text-gray-700">{{ item.description }}</td>
-                            <td class="px-4 py-2 text-sm text-gray-700">{{ item.quantity }}</td>
-                            <td class="px-4 py-2 text-sm text-gray-700">{{ invoice.currency }} {{ item.rate|floatformat:2 }}</td>
-                            <td class="px-4 py-2 text-sm text-gray-700 text-right">{{ invoice.currency }} {{ item.amount|floatformat:2 }}</td>
+                            <td>{{ item.description }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ invoice.currency }} {{ item.rate|floatformat:2 }}</td>
+                            <td>{{ invoice.currency }} {{ item.amount|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
                     <tr>
-                        <td colspan="4" class="px-4 py-2 text-center text-sm text-gray-500">No items added.</td>
+                        <td colspan="4" class="text-center">No items added.</td>
                     </tr>
                     {% endif %}
                 </tbody>
             </table>
-        </div>
 
-        <!-- Total Amount Section -->
-        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Notes Section -->
-            {% if invoice.notes %}
-            <div>
-                <h3 class="text-lg font-semibold text-gray-900">Notes:</h3>
-                <p class="text-sm text-gray-700">{{ invoice.notes }}</p>
-            </div>
-            {% endif %}
-            
-            <!-- Total Amount -->
-            <div class="text-right">
-                <div class="flex justify-between py-2">
-                    <span class="text-sm font-medium text-gray-600">Total Amount:</span>
-                    <span class="text-sm text-gray-700">{{ invoice.currency }} {{ invoice.total_amount|floatformat:2 }}</span>
+            <!-- Total Amount Section -->
+            <div class="total-amount">
+                <div>
+                    <span class="total-label">Total Amount:</span>
+                    <span class="total-value">{{ invoice.currency }} {{ invoice.total_amount|floatformat:2 }}</span>
                 </div>
             </div>
-        </div>
 
-        <!-- Thank You Note -->
-        <div class="mt-8">
-            <h4 class="text-lg font-semibold text-gray-900">Thank you!</h4>
-            <p class="text-sm text-gray-600">If you have any questions concerning this invoice, contact:</p>
-            {# Contact information could go here, if available #}
-            <p class="mt-5 text-sm text-gray-500">© {{ current_year }} {{ company_name }}</p>
-        </div>
+            <!-- Notes Section -->
+            {% if invoice.notes %}
+            <div class="invoice-notes">
+                <h3>Notes:</h3>
+                <p>{{ invoice.notes }}</p>
+            </div>
+            {% endif %}
 
-        <!-- Buttons -->
-        <div class="mt-8 flex justify-end gap-3">
-            <a href="{% url 'generate_invoice_pdf' invoice.id %}" class="py-2 px-4 text-sm font-medium rounded-md border border-gray-200 bg-white text-gray-800 hover:bg-gray-50">
-                <svg class="w-4 h-4 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/>
-                </svg>
-                Download PDF
-            </a>
-            <a href="#" id="print-button" class="py-2 px-4 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700">
-                <svg class="w-4 h-4 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V3h12v6m0 4v7H6v-7m5 3h2"/>
-                </svg>
-                Print Invoice
-            </a>
+            <!-- Thank You Note -->
+            <div class="thank-you">
+                <h4>Thank you!</h4>
+                <p>If you have any questions concerning this invoice, contact:</p>
+                <p>© {{ current_year }} {{ company_name }}</p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="buttons">
+                <a href="{% url 'generate_invoice_pdf' invoice.id %}" class="download-btn">
+                    Download PDF
+                </a>
+                <a href="#" id="print-button" class="print-btn">
+                    Print Invoice
+                </a>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- JavaScript for Print Functionality -->
-<script>
-    document.getElementById('print-button').addEventListener('click', function(event) {
-        event.preventDefault();
-        window.print();
-    });
-</script>
-{% endblock %}
+    <!-- JavaScript for Print Functionality -->
+    <script>
+        document.getElementById('print-button').addEventListener('click', function(event) {
+            event.preventDefault();
+            window.print();
+        });
+    </script>
+</body>
+</html>
