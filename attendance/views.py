@@ -8,7 +8,7 @@ from django.contrib import messages
 from decimal import Decimal
 from billing.models import BillingRecord
 import logging
-
+from django.core.paginator import Paginator
 
 
 logger = logging.getLogger(__name__)
@@ -183,7 +183,7 @@ def clock_in_out_page(request):
     # Automatically clock out if it's past 5 PM
     check_for_auto_clock_out(employee)
 
-    # If it's a POST request, process the form submission (clock in/out/start/end break)
+    # Handle POST request (Clock in/out/start/end break)
     if request.method == 'POST':
         with transaction.atomic():
             # Clock in action
@@ -220,16 +220,12 @@ def clock_in_out_page(request):
                     attendance.status = 'clocked_out'
                     attendance.save()
 
-                    # Use the total_income from Attendance instead of recalculating
                     worked_income = attendance.total_income
-
-                    # Create a billing record for this clock-out
                     BillingRecord.objects.create(
                         employee=employee,
                         total_income=worked_income
                     )
                     logger.debug(f"Billing record created for employee {employee} with income {worked_income}")
-
                     messages.success(request, 'Successfully clocked out and billing record updated.')
                 else:
                     messages.warning(request, 'No active clock-in record found.')
@@ -268,7 +264,7 @@ def clock_in_out_page(request):
 
         return redirect('clock_in_out_page')
 
-    # Fetch attendance records for the employee, possibly filtered by date range
+    # Fetch attendance records for the employee
     attendance_records = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')
 
     # Handle date range filtering
@@ -290,6 +286,17 @@ def clock_in_out_page(request):
     else:
         selected_start_date = selected_end_date = None
 
+    # Pagination: handle rows per page selection
+    rows_per_page = request.GET.get('rows_per_page', 10)  # Default to 10 rows per page
+    if rows_per_page == 'all':
+        paginator = None  # No pagination if 'all' is selected
+        page_obj = attendance_records
+    else:
+        rows_per_page = int(rows_per_page)
+        paginator = Paginator(attendance_records, rows_per_page)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
     # Determine current status
     current_status = 'clocked_out'
     open_attendance = Attendance.objects.filter(employee=employee, clock_out_time__isnull=True).first()
@@ -305,6 +312,9 @@ def clock_in_out_page(request):
         'attendance_records': attendance_records,
         'selected_start_date': selected_start_date,
         'selected_end_date': selected_end_date,
+        'page_obj': page_obj,  # Pass paginated data or all data if 'all' is selected
+        'paginator': paginator,  # Pass paginator for pagination controls
+        'rows_per_page': rows_per_page,  # Pass the current rows per page
     })
 
 

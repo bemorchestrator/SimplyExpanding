@@ -10,11 +10,16 @@ from django.db.models import Sum
 from .forms import EmployeeProfileForm
 from datetime import timedelta
 from django.conf import settings
+from django.core.paginator import Paginator
+
+
+
+
 
 @login_required
 def employee_profile(request):
     """
-    Displays the employee's profile, including attendance statistics and 2FA status.
+    Displays the employee's profile, including attendance statistics, paginated attendance logs, and 2FA status.
     """
     user = request.user
     employee = get_object_or_404(Employee, user=user)
@@ -27,23 +32,24 @@ def employee_profile(request):
     ).aggregate(Sum('total_income'))['total_income__sum'] or 0
     absent_days = Attendance.objects.filter(employee=employee, status='absent').count()
 
-    # Fetch attendance logs
-    attendance_logs = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')[:10]
+    # Fetch attendance logs and order by clock-in time (most recent first)
+    attendance_logs = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')
 
-    # Note: lateness calculation is already handled by the Attendance model,
-    # so you just need to pass the logs with lateness already computed.
-    
+    # Paginate the attendance logs (10 logs per page)
+    paginator = Paginator(attendance_logs, 10)  # Show 10 logs per page
+    page_number = request.GET.get('page')  # Get the current page number from the request
+    page_obj = paginator.get_page(page_number)  # Get the logs for the current page
+
     context = {
         'user': user,
         'employee': employee,
         'total_attendance': total_attendance,
         'total_income_month': total_income_month,
         'absent_days': absent_days,
-        'attendance_logs': attendance_logs,
+        'page_obj': page_obj,  # Pass the paginated logs to the template
     }
 
     return render(request, 'employees/profile.html', context)
-
 
 @login_required
 def profile_settings(request):

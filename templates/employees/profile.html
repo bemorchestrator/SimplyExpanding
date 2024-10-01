@@ -108,39 +108,59 @@ Employee Profile - Simply Expanding
             <div class="flex justify-between mb-4">
                 <h3 class="text-xl font-bold text-blue-900">Attendance Log</h3>
             </div>
-            <table class="w-full table-auto text-left">
-                <thead class="bg-blue-100">
-                    <tr>
-                        <th class="px-4 py-2">Date</th>
-                        <th class="px-4 py-2">Time In</th>
-                        <th class="px-4 py-2">Time Out</th>
-                        <th class="px-4 py-2">Status</th>
-                        <th class="px-4 py-2">Lateness</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in attendance_logs %}
-                    <tr class="bg-white border-b">
-                        <td class="px-4 py-2">{{ log.clock_in_time|date:"M d, Y" }}</td>
-                        <td class="px-4 py-2">{{ log.clock_in_time|time:"H:i" }}</td>
-                        <td class="px-4 py-2">{{ log.clock_out_time|time:"H:i" }}</td>
-                        <td class="px-4 py-2">
-                            <!-- Check if lateness is greater than zero to determine the status -->
-                            {% if log.lateness and log.lateness.total_seconds > 0 %}
-                                <span class="text-red-500">Late</span>
-                            {% else %}
-                                <span class="text-green-500">On Time</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-4 py-2">{{ log.lateness_formatted }}</td> <!-- Display formatted lateness -->
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-gray-500">No attendance records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="overflow-x-auto w-full">
+                <table class="w-full table-auto text-left">
+                    <thead class="bg-blue-100">
+                        <tr>
+                            <th class="px-4 py-2">Date</th>
+                            <th class="px-4 py-2">Time In</th>
+                            <th class="px-4 py-2">Time Out</th>
+                            <th class="px-4 py-2">Status</th>
+                            <th class="px-4 py-2">Lateness</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in page_obj %}
+                        <tr class="bg-white border-b">
+                            <td class="px-4 py-2">{{ log.clock_in_time|date:"M d, Y" }}</td>
+                            <td class="px-4 py-2">{{ log.clock_in_time|time:"H:i" }}</td>
+                            <td class="px-4 py-2">{{ log.clock_out_time|time:"H:i" }}</td>
+                            <td class="px-4 py-2">
+                                {% if log.lateness and log.lateness.total_seconds > 0 %}
+                                    <span class="text-red-500">Late</span>
+                                {% else %}
+                                    <span class="text-green-500">On Time</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-2">{{ log.lateness_formatted }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-gray-500">No attendance records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination controls -->
+            <div class="mt-4">
+                <span class="text-gray-600">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+
+                <div class="inline-flex mt-2">
+                    <!-- Previous Page Link -->
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-blue-500 text-white rounded-md">Previous</a>
+                    {% endif %}
+
+                    <!-- Next Page Link -->
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded-md">Next</a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 </div>

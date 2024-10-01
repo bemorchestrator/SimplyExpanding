@@ -87,7 +87,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for record in attendance_records %}
+                    {% for record in page_obj %}
                         <tr class="border-t">
                             <td class="py-3 px-4">{{ record.clock_in_time|date:"Y-m-d" }}</td>
                             <td class="py-3 px-4">
@@ -160,6 +160,34 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Rows Per Page Selection -->
+        <form method="get" class="mt-4">
+            <label for="rows_per_page" class="text-gray-700">Rows per page:</label>
+            <select name="rows_per_page" id="rows_per_page" onchange="this.form.submit()" class="bg-white text-gray-800 py-2 px-4 rounded-lg border border-gray-300">
+                <option value="10" {% if rows_per_page == 10 %}selected{% endif %}>10</option>
+                <option value="25" {% if rows_per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if rows_per_page == 50 %}selected{% endif %}>50</option>
+                <option value="all" {% if rows_per_page == 'all' %}selected{% endif %}>All</option>
+            </select>
+        </form>
+
+        <!-- Pagination Controls -->
+        {% if paginator and paginator.num_pages > 1 %}
+            <div class="mt-4">
+                <span class="text-gray-600">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+                <div class="inline-flex mt-2">
+                    <!-- Previous Page Link -->
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}&rows_per_page={{ rows_per_page }}" class="px-3 py-2 bg-blue-500 text-white rounded-md">Previous</a>
+                    {% endif %}
+                    <!-- Next Page Link -->
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}&rows_per_page={{ rows_per_page }}" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded-md">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
     </div>
 </div>
 
