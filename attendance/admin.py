@@ -1,3 +1,5 @@
+# attendance/admin.py
+
 from django.contrib import admin
 from django import forms
 from .models import Attendance, LatenessRule, LatenessDeduction, GlobalSettings
@@ -11,7 +13,7 @@ class AttendanceForm(forms.ModelForm):
         fields = '__all__'
         help_texts = {
             'employee': 'Select the employee for this attendance record.',
-            'clock_in_time': 'Date and time when the employee clocked in. Example: 2023-01-01 19:47:19',
+            'clock_in_time': 'Date and time when the employee clocked in. Example: 2023-01-01 09:00:00',
             'clock_out_time': 'Date and time when the employee clocked out. Example: 2023-01-01 17:00:00',
             'break_start_time': 'Date and time when the employee started their break.',
             'break_end_time': 'Date and time when the employee ended their break.',
@@ -37,13 +39,16 @@ class AttendanceAdmin(admin.ModelAdmin):
         'holiday',
         'get_formatted_total_hours',  # Use the formatted total hours
         'lateness_formatted',
-        'lateness_deduction_amount',
+        'lateness_deduction_amount_formatted',  # Updated from 'lateness_deduction_amount'
         'total_income',
         'lateness_calculated',
         'is_primary_clock_in'
     )
 
     def get_formatted_total_hours(self, obj):
+        """
+        Returns the total hours worked in HH:MM:SS format.
+        """
         if obj.total_hours:
             total_seconds = obj.total_hours * 3600  # Convert total hours to seconds
             hours = int(total_seconds // 3600)
@@ -56,8 +61,8 @@ class AttendanceAdmin(admin.ModelAdmin):
 
     search_fields = (
         'employee__user__username',
-        'employee__first_name',
-        'employee__last_name',
+        'employee__user__first_name',
+        'employee__user__last_name',
         'holiday__name'
     )
     list_filter = (
@@ -68,10 +73,11 @@ class AttendanceAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         'lateness',
-        'lateness_deduction',
-        'total_hours',
         'lateness_formatted',
-        'lateness_deduction_amount',
+        'lateness_deduction',
+        'lateness_deduction_amount_formatted',  # Updated from 'lateness_deduction_amount'
+        'total_hours',
+        'total_time_formatted',
         'total_income',
         'lateness_calculated',
         'is_primary_clock_in'
@@ -90,14 +96,14 @@ class AttendanceAdmin(admin.ModelAdmin):
                 'lateness',
                 'lateness_formatted',
                 'lateness_deduction',
-                'lateness_deduction_amount',
+                'lateness_deduction_amount_formatted',  # Updated from 'lateness_deduction_amount'
                 'lateness_calculated',
                 'is_primary_clock_in'
             ),
             'description': 'These fields are calculated automatically based on clock-in time, lateness rules, and holiday status.',
         }),
         ('Income Information', {
-            'fields': ('total_hours', 'total_income'),
+            'fields': ('total_hours', 'total_time_formatted', 'total_income'),
             'description': 'Total hours worked and income calculated for this attendance record.'
         }),
     )
@@ -195,7 +201,7 @@ class GlobalSettingsForm(forms.ModelForm):
         model = GlobalSettings
         fields = '__all__'
         help_texts = {
-            'scheduled_start_time': 'Global scheduled start time for all employees. Example: 19:30 (24-hour format)',
+            'scheduled_start_time': 'Global scheduled start time for all employees. Example: 09:00 (24-hour format)',
         }
 
 

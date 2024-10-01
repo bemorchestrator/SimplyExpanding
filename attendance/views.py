@@ -1,3 +1,5 @@
+# attendance/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from employees.models import Employee
@@ -9,7 +11,7 @@ from decimal import Decimal
 from billing.models import BillingRecord
 import logging
 from django.core.paginator import Paginator
-
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,6 @@ def clock_in(request):
 
     return redirect('clock_in_out_page')
 
-
 @login_required
 def clock_out(request):
     # Get the Employee instance for the logged-in user
@@ -53,42 +54,52 @@ def clock_out(request):
     # Automatically clock out if it's past 5 PM
     check_for_auto_clock_out(employee)
 
-    # Find the most recent open attendance record
+    # Find the most recent open attendance record where clock_out_time is null
     attendance = Attendance.objects.filter(
         employee=employee,
         clock_out_time__isnull=True
     ).order_by('-clock_in_time').first()
 
-    # Raise a ValueError if no clock-in was found
     if not attendance:
-        raise ValueError('Cannot clock out without clocking in first.')
+        messages.error(request, 'Cannot clock out without clocking in first.')
+        return redirect('clock_in_out_page')
 
-    # Clock out by setting the clock-out time and updating status
     with transaction.atomic():
+        # Set clock_out_time to the current time
         attendance.clock_out_time = timezone.now()
         attendance.status = 'clocked_out'
-        attendance.save()
 
-        # Use the total_income from Attendance instead of recalculating
-        worked_income = attendance.total_income
-        worked_hours = attendance.total_hours  # Get the hours worked from Attendance
+        # Ensure calculations are done correctly by triggering the save method
+        try:
+            # Trigger save to calculate total hours and income
+            attendance.save()
 
-        # Determine the payment type based on whether there is a holiday in the attendance record
-        payment_type = 'holiday' if attendance.holiday else 'regular'
+            # Log calculated values for debugging
+            logger.debug(f"Employee: {employee}, Total Hours Worked: {attendance.total_hours}, Total Income: {attendance.total_income}")
 
-        # Create a billing record for this clock-out
-        BillingRecord.objects.create(
-            employee=employee,
-            total_income=worked_income,
-            hours_worked=Decimal(worked_hours) if worked_hours else None,  # Pass hours worked to the billing record
-            payment_type=payment_type  # Set payment_type based on holiday
-        )
-        logger.debug(f"Billing record created for employee {employee} with income {worked_income}, hours worked {worked_hours}, and payment type {payment_type}")
+            worked_income = attendance.total_income
+            worked_hours = attendance.total_hours  # This is a DecimalField
 
-        messages.success(request, 'Successfully clocked out and billing record updated.')
+            payment_type = 'holiday' if attendance.holiday else 'regular'
+
+            # Create a billing record for the worked income and hours
+            BillingRecord.objects.create(
+                employee=employee,
+                total_income=worked_income,
+                hours_worked=worked_hours if worked_hours else None,
+                payment_type=payment_type
+            )
+            logger.debug(f"Billing record created for employee {employee} with income {worked_income}, hours worked {worked_hours}, and payment type {payment_type}")
+
+            # Display success message
+            messages.success(request, 'Successfully clocked out and billing record updated.')
+
+        except Exception as e:
+            # Log error for troubleshooting
+            logger.error(f"Error during clock out: {e}")
+            messages.error(request, 'An error occurred during the clock-out process.')
 
     return redirect('clock_in_out_page')
-
 
 @login_required
 def start_break(request):
@@ -105,11 +116,10 @@ def start_break(request):
         break_start_time__isnull=True
     ).order_by('-clock_in_time').first()
 
-    if not attendance or attendance.is_on_break_method():
+    if not attendance or attendance.status != 'clocked_in':
         messages.warning(request, 'You cannot start a break at this time.')
         return redirect('clock_in_out_page')
 
-    # Start the break by setting break_start_time and updating status
     with transaction.atomic():
         attendance.break_start_time = timezone.now()
         attendance.status = 'on_break'
@@ -117,7 +127,6 @@ def start_break(request):
         messages.success(request, 'Break started.')
 
     return redirect('clock_in_out_page')
-
 
 @login_required
 def end_break(request):
@@ -134,19 +143,19 @@ def end_break(request):
         break_end_time__isnull=True
     ).order_by('-clock_in_time').first()
 
-    if not attendance or not attendance.is_on_break_method():
+    if not attendance or attendance.status != 'on_break':
         messages.warning(request, 'You are not on a break.')
         return redirect('clock_in_out_page')
 
-    # End the break by setting break_end_time and updating status
     with transaction.atomic():
         attendance.break_end_time = timezone.now()
         attendance.status = 'clocked_in'
+        attendance.calculate_total_hours()
+        attendance.calculate_income()
         attendance.save()
         messages.success(request, 'Break ended.')
 
     return redirect('clock_in_out_page')
-
 
 @login_required
 def attendance_dashboard(request):
@@ -175,6 +184,7 @@ def attendance_dashboard(request):
     })
 
 
+
 @login_required
 def clock_in_out_page(request):
     # Get the Employee instance for the logged-in user
@@ -185,9 +195,18 @@ def clock_in_out_page(request):
 
     # Handle POST request (Clock in/out/start/end break)
     if request.method == 'POST':
+        action = None
+        if 'clock_in' in request.POST:
+            action = 'clock_in'
+        elif 'clock_out' in request.POST:
+            action = 'clock_out'
+        elif 'start_break' in request.POST:
+            action = 'start_break'
+        elif 'end_break' in request.POST:
+            action = 'end_break'
+
         with transaction.atomic():
-            # Clock in action
-            if 'clock_in' in request.POST:
+            if action == 'clock_in':
                 now = timezone.now()
                 is_primary = not Attendance.objects.filter(
                     employee=employee,
@@ -204,12 +223,14 @@ def clock_in_out_page(request):
 
                 if is_primary:
                     attendance.calculate_lateness_and_deduction()
+                    attendance.calculate_total_hours()
+                    attendance.calculate_income()
+                    attendance.save()
                     messages.success(request, 'Successfully clocked in with lateness calculation applied.')
                 else:
                     messages.success(request, 'Successfully clocked in without lateness calculation.')
 
-            # Clock out action
-            elif 'clock_out' in request.POST:
+            elif action == 'clock_out':
                 attendance = Attendance.objects.filter(
                     employee=employee,
                     clock_out_time__isnull=True
@@ -218,27 +239,33 @@ def clock_in_out_page(request):
                 if attendance:
                     attendance.clock_out_time = timezone.now()
                     attendance.status = 'clocked_out'
-                    attendance.save()
+                    attendance.save()  # This will trigger calculations via the overridden save method
 
-                    worked_income = attendance.total_income
-                    BillingRecord.objects.create(
-                        employee=employee,
-                        total_income=worked_income
-                    )
-                    logger.debug(f"Billing record created for employee {employee} with income {worked_income}")
-                    messages.success(request, 'Successfully clocked out and billing record updated.')
+                    # Create a billing record for the worked income and hours
+                    try:
+                        BillingRecord.objects.create(
+                            employee=employee,
+                            total_income=attendance.total_income,
+                            hours_worked=attendance.total_hours if attendance.total_hours else Decimal('0.00'),
+                            payment_type='holiday' if attendance.holiday else 'regular'
+                        )
+                        logger.debug(f"Billing record created for employee {employee} with income {attendance.total_income}, hours worked {attendance.total_hours}, and payment type {attendance.holiday.holiday_type if attendance.holiday else 'regular'}")
+                        messages.success(request, 'Successfully clocked out and billing record updated.')
+                    except Exception as e:
+                        logger.error(f"Error creating billing record: {e}")
+                        messages.error(request, 'Successfully clocked out, but failed to create billing record.')
+
                 else:
                     messages.warning(request, 'No active clock-in record found.')
 
-            # Start break action
-            elif 'start_break' in request.POST:
+            elif action == 'start_break':
                 attendance = Attendance.objects.filter(
                     employee=employee,
                     clock_out_time__isnull=True,
                     break_start_time__isnull=True
                 ).order_by('-clock_in_time').first()
 
-                if attendance and attendance.is_clocked_in_method():
+                if attendance and attendance.status == 'clocked_in':
                     attendance.break_start_time = timezone.now()
                     attendance.status = 'on_break'
                     attendance.save()
@@ -246,17 +273,18 @@ def clock_in_out_page(request):
                 else:
                     messages.warning(request, 'Cannot start break at this time.')
 
-            # End break action
-            elif 'end_break' in request.POST:
+            elif action == 'end_break':
                 attendance = Attendance.objects.filter(
                     employee=employee,
                     break_start_time__isnull=False,
                     break_end_time__isnull=True
                 ).order_by('-clock_in_time').first()
 
-                if attendance and attendance.is_on_break_method():
+                if attendance and attendance.status == 'on_break':
                     attendance.break_end_time = timezone.now()
                     attendance.status = 'clocked_in'
+                    attendance.calculate_total_hours()
+                    attendance.calculate_income()
                     attendance.save()
                     messages.success(request, 'Break ended.')
                 else:
@@ -292,7 +320,10 @@ def clock_in_out_page(request):
         paginator = None  # No pagination if 'all' is selected
         page_obj = attendance_records
     else:
-        rows_per_page = int(rows_per_page)
+        try:
+            rows_per_page = int(rows_per_page)
+        except ValueError:
+            rows_per_page = 10  # Fallback to default if invalid
         paginator = Paginator(attendance_records, rows_per_page)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
@@ -307,6 +338,20 @@ def clock_in_out_page(request):
         else:
             current_status = 'clocked_in'
 
+        # Define standard_hours_per_day as a constant (e.g., 8.0)
+        standard_hours_per_day = 8.0
+
+        # Prepare data for JavaScript
+        js_data = {
+            'clock_in_time': open_attendance.clock_in_time.isoformat() if open_attendance.clock_in_time else None,
+            'per_day_rate': float(open_attendance.employee.per_day_rate),
+            'standard_hours_per_day': standard_hours_per_day,  # Use fixed value
+            'is_on_break': current_status == 'on_break',
+            'deductions_applied': float(open_attendance.lateness_deduction) if open_attendance.lateness_deduction else 0  # New field for deductions
+        }
+    else:
+        js_data = {}
+
     return render(request, 'attendance/clock_in_out.html', {
         'current_status': current_status,
         'attendance_records': attendance_records,
@@ -315,8 +360,13 @@ def clock_in_out_page(request):
         'page_obj': page_obj,  # Pass paginated data or all data if 'all' is selected
         'paginator': paginator,  # Pass paginator for pagination controls
         'rows_per_page': rows_per_page,  # Pass the current rows per page
+        'js_data': json.dumps(js_data),  # Pass js_data to template
     })
 
+@login_required
+def attendance_dashboard(request):
+    # Redirect to the main clock in/out page
+    return redirect('clock_in_out_page')
 
 def check_for_auto_clock_out(employee):
     """
@@ -324,8 +374,8 @@ def check_for_auto_clock_out(employee):
     """
     now = timezone.now()
 
-    # Check if it's past 5 PM
-    if now.hour >= 17:  # 5 PM
+    # Check if it's past 5 PM and before midnight
+    if now.hour >= 17 and now.hour < 24:
         # Find the most recent open attendance record
         attendance = Attendance.objects.filter(
             employee=employee,
@@ -339,10 +389,14 @@ def check_for_auto_clock_out(employee):
                 attendance.status = 'clocked_out'
                 attendance.save()
 
-                # Create a billing record
-                worked_income = attendance.total_income
-                BillingRecord.objects.create(
-                    employee=employee,
-                    total_income=worked_income
-                )
-                logger.debug(f"Auto clock-out applied for employee {employee} at 5 PM.")
+                # Create a billing record for the worked income and hours
+                try:
+                    BillingRecord.objects.create(
+                        employee=employee,
+                        total_income=attendance.total_income,
+                        hours_worked=attendance.total_hours if attendance.total_hours else Decimal('0.00'),
+                        payment_type='holiday' if attendance.holiday else 'regular'
+                    )
+                    logger.debug(f"Auto clock-out applied for employee {employee} at 5 PM.")
+                except Exception as e:
+                    logger.error(f"Error creating billing record during auto clock-out: {e}")

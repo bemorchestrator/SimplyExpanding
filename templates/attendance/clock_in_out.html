@@ -1,3 +1,5 @@
+<!-- attendance/templates/attendance/clock_in_out.html -->
+
 {% extends 'base.html' %}
 {% load static %}
 
@@ -17,20 +19,20 @@
     {% endif %}
 
     <!-- Clock In/Out Buttons -->
-    <div class="w-full mb-4 flex items-center justify-start space-x-4">
+    <div class="w-full mb-4 flex flex-col sm:flex-row items-center justify-start space-y-4 sm:space-y-0 sm:space-x-4">
         <!-- Dynamic Clock In/Out Button -->
-        <form method="post">
+        <form method="post" class="w-full sm:w-auto">
             {% csrf_token %}
             {% if current_status == 'clocked_out' %}
-                <button type="submit" name="clock_in" class="bg-blue-500 text-white py-3 px-8 rounded-lg hover:bg-blue-600 transition duration-200 w-48">
+                <button type="submit" name="clock_in" class="bg-blue-500 text-white py-3 px-8 rounded-lg hover:bg-blue-600 transition duration-200 w-full sm:w-48">
                     Clock In
                 </button>
             {% elif current_status == 'clocked_in' %}
-                <button type="submit" name="clock_out" class="bg-red-500 text-white py-3 px-8 rounded-lg hover:bg-red-600 transition duration-200 w-48">
+                <button type="submit" name="clock_out" class="bg-red-500 text-white py-3 px-8 rounded-lg hover:bg-red-600 transition duration-200 w-full sm:w-48">
                     Clock Out
                 </button>
             {% elif current_status == 'on_break' %}
-                <button type="submit" name="end_break" class="bg-green-500 text-white py-3 px-8 rounded-lg hover:bg-green-600 transition duration-200 w-48">
+                <button type="submit" name="end_break" class="bg-green-500 text-white py-3 px-8 rounded-lg hover:bg-green-600 transition duration-200 w-full sm:w-48">
                     End Break
                 </button>
             {% endif %}
@@ -38,32 +40,41 @@
 
         <!-- Start Break Button -->
         {% if current_status == 'clocked_in' %}
-            <form method="post">
+            <form method="post" class="w-full sm:w-auto">
                 {% csrf_token %}
-                <button type="submit" name="start_break" class="bg-yellow-500 text-white py-3 px-8 rounded-lg hover:bg-yellow-600 transition duration-200 w-48">
+                <button type="submit" name="start_break" class="bg-yellow-500 text-white py-3 px-8 rounded-lg hover:bg-yellow-600 transition duration-200 w-full sm:w-48">
                     Start Break
                 </button>
             </form>
         {% endif %}
 
         <!-- Date Range Filter -->
-        <div class="relative">
+        <div class="relative w-full sm:w-auto">
             <!-- Date Range Button -->
-            <form method="get" class="flex items-center">
-                <input type="text" id="date_range" name="date_range" class="bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200 cursor-pointer" placeholder="Select Date Range" readonly value="{{ request.GET.date_range }}">
-                <button type="submit" class="ml-2 bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition duration-200">
+            <form method="get" class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-2">
+                <input type="text" id="date_range" name="date_range" class="bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200 cursor-pointer w-full sm:w-auto" placeholder="Select Date Range" readonly value="{{ request.GET.date_range }}">
+                <button type="submit" class="bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition duration-200 w-full sm:w-auto">
                     Apply
                 </button>
             </form>
         </div>
 
         <!-- Today Button -->
-        <form method="get" class="ml-4">
-            <button type="submit" name="today" value="1" class="bg-white text-gray-800 py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-100 transition duration-200">
+        <form method="get" class="w-full sm:w-auto">
+            <button type="submit" name="today" value="1" class="bg-white text-gray-800 py-3 px-4 rounded-lg border border-gray-300 hover:bg-gray-100 transition duration-200 w-full sm:w-auto">
                 Today
             </button>
         </form>
     </div>
+
+    <!-- Current Income Display -->
+    {% if current_status == 'clocked_in' %}
+        <div class="w-full mb-4">
+            <p class="text-xl font-semibold">
+                Current Income: <span id="current-income">Calculating...</span>
+            </p>
+        </div>
+    {% endif %}
 
     <!-- Attendance Records Dashboard -->
     <div class="bg-white shadow-md rounded-lg p-8 w-full">
@@ -72,89 +83,109 @@
             <table class="min-w-full bg-white rounded-lg">
                 <thead>
                     <tr class="text-left text-gray-600">
-                        <th class="py-3 px-4">Date</th>
-                        <th class="py-3 px-4">Clock In</th>
-                        <th class="py-3 px-4">Clock Out</th>
-                        <th class="py-3 px-4">Break Start</th>
-                        <th class="py-3 px-4">Break End</th>
-                        <th class="py-3 px-4">Total Time</th>
-                        <th class="py-3 px-4">Time Late</th>
-                        <th class="py-3 px-4">Deduction</th>
-                        <th class="py-3 px-4">Primary Clock In</th>
-                        <th class="py-3 px-4">Lateness Calculated</th>
-                        <th class="py-3 px-4">Holiday Type</th>
-                        <th class="py-3 px-4">Total Income</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Date</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Clock In</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Clock Out</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Break Start</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Break End</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Actual Break Duration</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Total Time</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Total Hours Worked</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Time Late</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Deduction</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Primary Clock In</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Lateness Calculated</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Holiday Type</th>
+                        <th class="py-3 px-4 text-sm" nowrap>Total Income</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for record in page_obj %}
                         <tr class="border-t">
-                            <td class="py-3 px-4">{{ record.clock_in_time|date:"Y-m-d" }}</td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>{{ record.clock_in_time|date:"Y-m-d" }}</td>
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.clock_in_time %}
-                                    {{ record.clock_in_time|time:"H:i:s" }}
+                                    {{ record.clock_in_time|time:"h:i A" }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.clock_out_time %}
-                                    {{ record.clock_out_time|time:"H:i:s" }}
+                                    {{ record.clock_out_time|time:"h:i A" }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.break_start_time %}
-                                    {{ record.break_start_time|time:"H:i:s" }}
+                                    {{ record.break_start_time|time:"h:i A" }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.break_end_time %}
-                                    {{ record.break_end_time|time:"H:i:s" }}
+                                    {{ record.break_end_time|time:"h:i A" }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4">
-                                {% if record.total_time_formatted %}
-                                    {{ record.total_time_formatted }}
+                            <td class="py-3 px-4 text-sm" nowrap>
+                                {% if record.break_start_time and record.break_end_time %}
+                                    {{ record.break_duration_formatted }} hours
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>
+                                {{ record.total_time_formatted }}
+                            </td>
+                            <td class="py-3 px-4 text-sm" nowrap>
+                                {% if record.total_hours %}
+                                    {{ record.total_hours }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {{ record.lateness_formatted }}
                             </td>
-                            <td class="py-3 px-4">
-                                {{ record.lateness_deduction_amount }}
+                            <td class="py-3 px-4 text-sm" nowrap>
+                                {% if record.lateness_deduction > 0 %}
+                                    Php{{ record.lateness_deduction|floatformat:2 }}
+                                {% else %}
+                                    Php0.00
+                                {% endif %}
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.is_primary_clock_in %}
                                     Yes
                                 {% else %}
                                     No
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {{ record.lateness_calculated|yesno:"Yes,No" }}
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.holiday %}
                                     {{ record.holiday.get_holiday_type_display }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4">
-                                Php{{ record.total_income|floatformat:2 }}
+                            <td class="py-3 px-4 text-sm" nowrap>
+                                {% if record.total_income < 0 %}
+                                    <span class="text-red-500">Php{{ record.total_income|floatformat:2 }}</span>
+                                {% else %}
+                                    Php{{ record.total_income|floatformat:2 }}
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="12" class="text-center py-6 text-gray-500">No records found.</td>
+                            <td colspan="14" class="text-center py-6 text-gray-500">No records found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -203,8 +234,9 @@
 
         var clockInTime = new Date(data.clock_in_time);
         var perDayRate = data.per_day_rate;
-        var standardHoursPerDay = data.standard_hours_per_day;
+        var standardHoursPerDay = data.standard_hours_per_day;  // Now 8.0
         var isOnBreak = data.is_on_break;
+        var deductionsApplied = data.deductions_applied || 0; // Deductions already applied (e.g., lateness)
 
         if (isOnBreak) {
             document.getElementById('current-income').innerText = 'On Break';
@@ -215,9 +247,17 @@
             var now = new Date();
             var elapsedMilliseconds = now - clockInTime;
             var elapsedHours = elapsedMilliseconds / (1000 * 3600);
+            // Deduct allocated break time (1 hour) only if a break was taken
             var income = (perDayRate / standardHoursPerDay) * elapsedHours;
+            // Subtract any applied deductions
+            income -= deductionsApplied;
             var incomeFormatted = income.toFixed(2);
-            document.getElementById('current-income').innerText = 'Php' + incomeFormatted;
+            // Display income in red if negative
+            if (income < 0) {
+                document.getElementById('current-income').innerHTML = '<span class="text-red-500">Php' + incomeFormatted + '</span>';
+            } else {
+                document.getElementById('current-income').innerText = 'Php' + incomeFormatted;
+            }
         }
 
         updateIncome();

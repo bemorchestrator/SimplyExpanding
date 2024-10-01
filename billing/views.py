@@ -31,7 +31,7 @@ from .forms import InvoiceForm
 @login_required
 def billing_dashboard(request):
     # Get the Employee instance for the logged-in user
-    employee = Employee.objects.get(user=request.user)
+    employee = get_object_or_404(Employee, user=request.user)
     per_day_rate = employee.per_day_rate or Decimal('0.00')
     standard_hours_per_day = Decimal('8.0')  # Standard 8-hour workday assumption
 
@@ -79,10 +79,20 @@ def billing_dashboard(request):
 
     current_session_income = Decimal('0.00')
     if is_clocked_in and clock_in_time:
-        # Calculate the income for the current session
-        elapsed_seconds = (timezone.now() - clock_in_time).total_seconds()
-        elapsed_hours = Decimal(elapsed_seconds / 3600).quantize(Decimal('0.0001'))
-        current_session_income = (per_day_rate / standard_hours_per_day) * elapsed_hours
+        # Calculate the income for the current session based on total_hours so far
+        now = timezone.now()
+        elapsed_duration = now - clock_in_time
+
+        # Calculate total hours worked so far, considering allocated break
+        total_seconds = elapsed_duration.total_seconds()
+        total_hours = Decimal(total_seconds / 3600).quantize(Decimal('0.0001'))
+
+        # Deduct allocated break time (1 hour) from total_hours
+        adjusted_hours = total_hours - Decimal('1.0')
+        if adjusted_hours < 0:
+            adjusted_hours = Decimal('0.0')
+
+        current_session_income = (per_day_rate / standard_hours_per_day) * adjusted_hours
         current_session_income = current_session_income.quantize(Decimal('0.01'))
 
     # Income per day for the last 30 days
