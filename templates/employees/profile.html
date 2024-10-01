@@ -115,6 +115,7 @@ Employee Profile - Simply Expanding
                         <th class="px-4 py-2">Time In</th>
                         <th class="px-4 py-2">Time Out</th>
                         <th class="px-4 py-2">Status</th>
+                        <th class="px-4 py-2">Lateness</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -124,16 +125,18 @@ Employee Profile - Simply Expanding
                         <td class="px-4 py-2">{{ log.clock_in_time|time:"H:i" }}</td>
                         <td class="px-4 py-2">{{ log.clock_out_time|time:"H:i" }}</td>
                         <td class="px-4 py-2">
-                            {% if log.is_late %}
+                            <!-- Check if lateness is greater than zero to determine the status -->
+                            {% if log.lateness and log.lateness.total_seconds > 0 %}
                                 <span class="text-red-500">Late</span>
                             {% else %}
                                 <span class="text-green-500">On Time</span>
                             {% endif %}
                         </td>
+                        <td class="px-4 py-2">{{ log.lateness_formatted }}</td> <!-- Display formatted lateness -->
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center py-4 text-gray-500">No attendance records found.</td>
+                        <td colspan="5" class="text-center py-4 text-gray-500">No attendance records found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

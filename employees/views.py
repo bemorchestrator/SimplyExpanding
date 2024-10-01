@@ -8,6 +8,8 @@ from attendance.models import Attendance
 from datetime import date
 from django.db.models import Sum
 from .forms import EmployeeProfileForm
+from datetime import timedelta
+from django.conf import settings
 
 @login_required
 def employee_profile(request):
@@ -24,8 +26,13 @@ def employee_profile(request):
         clock_in_time__month=date.today().month
     ).aggregate(Sum('total_income'))['total_income__sum'] or 0
     absent_days = Attendance.objects.filter(employee=employee, status='absent').count()
-    attendance_logs = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')[:10]  # Limit to 10
 
+    # Fetch attendance logs
+    attendance_logs = Attendance.objects.filter(employee=employee).order_by('-clock_in_time')[:10]
+
+    # Note: lateness calculation is already handled by the Attendance model,
+    # so you just need to pass the logs with lateness already computed.
+    
     context = {
         'user': user,
         'employee': employee,
