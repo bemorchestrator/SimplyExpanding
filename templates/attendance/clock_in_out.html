@@ -153,9 +153,9 @@
                             </td>
                             <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.lateness_deduction > 0 %}
-                                    Php{{ record.lateness_deduction|floatformat:2 }}
+                                    Php {{ record.lateness_deduction|floatformat:2 }}
                                 {% else %}
-                                    Php0.00
+                                    Php 0.00
                                 {% endif %}
                             </td>
                             <td class="py-3 px-4 text-sm" nowrap>
@@ -177,9 +177,9 @@
                             </td>
                             <td class="py-3 px-4 text-sm" nowrap>
                                 {% if record.total_income < 0 %}
-                                    <span class="text-red-500">Php{{ record.total_income|floatformat:2 }}</span>
+                                    <span class="text-red-500">Php {{ record.total_income|floatformat:2 }}</span>
                                 {% else %}
-                                    Php{{ record.total_income|floatformat:2 }}
+                                    Php {{ record.total_income|floatformat:2 }}
                                 {% endif %}
                             </td>
                         </tr>
