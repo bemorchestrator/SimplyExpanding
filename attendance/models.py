@@ -1,5 +1,3 @@
-# attendance/models.py
-
 from django.db import models, transaction
 from employees.models import Employee
 from holidays.models import Holiday
@@ -53,7 +51,7 @@ class LatenessRule(models.Model):
 
 class GlobalSettings(models.Model):
     scheduled_start_time = models.TimeField(
-        default=time(9, 0),  # Changed default to a more typical start time
+        default=time(9, 0),
         help_text="Global scheduled start time for all employees. Example: 09:00 (24-hour format)"
     )
 
@@ -81,16 +79,6 @@ class Attendance(models.Model):
         null=True,
         blank=True,
         help_text="Date and time when the employee clocked out. Example: 2023-01-01 17:00:00"
-    )
-    break_start_time = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Date and time when the employee started their break."
-    )
-    break_end_time = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Date and time when the employee ended their break."
     )
     status = models.CharField(
         max_length=20,
@@ -146,10 +134,12 @@ class Attendance(models.Model):
 
     @property
     def break_duration(self):
-        """Calculate the actual break duration."""
-        if self.break_start_time and self.break_end_time:
-            return self.break_end_time - self.break_start_time
-        return timedelta(0)
+        """Calculate the total break duration from all breaks."""
+        total_duration = timedelta(0)
+        for brk in self.breaks.all():
+            if brk.break_start_time and brk.break_end_time:
+                total_duration += brk.break_end_time - brk.break_start_time
+        return total_duration
 
     @property
     def break_duration_formatted(self):
@@ -165,18 +155,16 @@ class Attendance(models.Model):
     def total_time(self):
         """
         Calculate total working time excluding break duration.
-        If a break was taken, deduct actual break duration.
-        If no break was taken, do not deduct anything.
+        If breaks were taken, deduct total break duration.
         """
         if self.clock_in_time and self.clock_out_time:
             total_duration = self.clock_out_time - self.clock_in_time
 
-            # Get actual break duration
-            actual_break_duration = self.break_duration
+            # Get total break duration
+            total_break_duration = self.break_duration
 
-            # If break was taken, deduct actual break time
-            if self.break_start_time and self.break_end_time:
-                total_duration -= actual_break_duration
+            # Deduct total break time
+            total_duration -= total_break_duration
 
             # Ensure that total duration does not go negative
             if total_duration < timedelta(0):
@@ -279,7 +267,7 @@ class Attendance(models.Model):
         if global_settings:
             return timezone.make_aware(datetime.combine(self.clock_in_time.date(), global_settings.scheduled_start_time))
         # Default scheduled time if not set
-        return timezone.make_aware(datetime.combine(self.clock_in_time.date(), time(9, 0)))  # Changed to 09:00
+        return timezone.make_aware(datetime.combine(self.clock_in_time.date(), time(9, 0)))
 
     def apply_lateness_deduction(self, lateness):
         """
@@ -434,3 +422,11 @@ class Attendance(models.Model):
 
             # Save the model
             super().save(*args, **kwargs)
+
+class Break(models.Model):
+    attendance = models.ForeignKey(Attendance, on_delete=models.CASCADE, related_name='breaks')
+    break_start_time = models.DateTimeField()
+    break_end_time = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Break from {self.break_start_time} to {self.break_end_time}"
