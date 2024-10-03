@@ -8,17 +8,45 @@
 
 <div class="w-full py-6 px-4 lg:px-8">
     <div class="py-6">
+        <!-- Tabs -->
+        <div class="mb-6">
+            <div class="flex border-b border-gray-200">
+                <a href="?tab=url" class="py-2 px-4 text-gray-700 {% if tab == 'url' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
+                    URL to Keywords
+                </a>
+                <a href="?tab=keyword" class="ml-4 py-2 px-4 text-gray-700 {% if tab == 'keyword' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
+                    Keyword to Pages
+                </a>
+            </div>
+        </div>
+
         <!-- Form to input URL or keyword, date range, and row limit -->
         <div class="bg-white shadow rounded-lg p-6 mb-6">
-            <form method="POST" novalidate class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+            <form method="POST" novalidate class="grid grid-cols-12 gap-4">
                 {% csrf_token %}
-                
+                <input type="hidden" name="tab" value="{{ tab }}">
+
                 <!-- Input Field -->
                 <div class="col-span-3">
-                    <label for="input_value" class="block text-sm font-medium text-gray-700">URL or Keyword:</label>
-                    <input type="text" id="input_value" name="input_value" value="{{ input_value|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="Enter a URL or keyword">
+                    <label for="input_value" class="block text-sm font-medium text-gray-700">
+                        {% if tab == 'url' %}Enter URL:{% else %}Enter Keyword:{% endif %}
+                    </label>
+                    <input type="text" id="input_value" name="input_value" value="{{ input_value|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="{% if tab == 'url' %}Enter a URL{% else %}Enter a keyword{% endif %}">
                 </div>
-                
+
+                <!-- Site Selection Dropdown (only for keyword tab) -->
+                {% if tab == 'keyword' %}
+                <div class="col-span-3">
+                    <label for="selected_site" class="block text-sm font-medium text-gray-700">Select Site:</label>
+                    <select id="selected_site" name="selected_site" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                        <option value="">-- Select Site --</option>
+                        {% for site in available_sites %}
+                            <option value="{{ site }}" {% if site == selected_site %}selected{% endif %}>{{ site }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
                 <!-- Start Date Input -->
                 <div class="col-span-2">
                     <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date:</label>
@@ -30,24 +58,38 @@
                     <label for="end_date" class="block text-sm font-medium text-gray-700">End Date:</label>
                     <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
-                
+
                 <!-- Row Limit Input -->
                 <div class="col-span-2">
                     <label for="row_limit" class="block text-sm font-medium text-gray-700">Number of Rows:</label>
                     <input type="number" id="row_limit" name="row_limit" value="{{ row_limit|default:10 }}" min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
 
-                <!-- Buttons -->
+                <!-- Buttons for URL to Keywords Tab -->
+                {% if tab == 'url' %}
                 <div class="col-span-3 flex space-x-4 mt-6">
-                    <button type="submit" class="flex-1 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button type="submit" name="fetch_data" value="1" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" style="height: 38px;">
                         Fetch Data
                     </button>
                     {% if request.session.credentials %}
-                    <a href="{% url 'authenticate_user' %}" class="flex-1 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 text-center">
+                    <a href="{% url 'authenticate_user' %}" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500" style="height: 38px;">
                         Change Account
                     </a>
                     {% endif %}
                 </div>
+                {% elif tab == 'keyword' %}
+                <!-- Buttons for Keyword to Pages Tab -->
+                <div class="col-span-12 flex justify-end space-x-4">
+                    <button type="submit" name="fetch_data" value="1" class="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Fetch Data
+                    </button>
+                    {% if request.session.credentials %}
+                    <a href="{% url 'authenticate_user' %}" class="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                        Change Account
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
             </form>
         </div>
 
@@ -61,7 +103,7 @@
                             Compare
                         </button>
                         <!-- Export CSV Icon -->
-                        <a href="?export_csv=1&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&display_all={% if display_all %}on{% endif %}" title="Export CSV" class="text-gray-600 hover:text-gray-800">
+                        <a href="?export_csv=1&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&selected_site={{ selected_site|urlencode }}&tab={{ tab }}&display_all={% if display_all %}on{% endif %}" title="Export CSV" class="text-gray-600 hover:text-gray-800">
                             <i class="bi bi-file-earmark-spreadsheet-fill h-6 w-6"></i>
                         </a>
                         <!-- Print Icon -->
@@ -77,7 +119,7 @@
                         <tr>
                             {% for header in headers %}
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider {% if '_change' in header.field %}comparison-column{% endif %}">
-                                <a href="?sort={{ header.field }}&order={% if sort == header.field and order == 'asc' %}desc{% else %}asc{% endif %}&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&display_all={% if display_all %}on{% endif %}">
+                                <a href="?sort={{ header.field }}&order={% if sort == header.field and order == 'asc' %}desc{% else %}asc{% endif %}&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&selected_site={{ selected_site|urlencode }}&tab={{ tab }}&display_all={% if display_all %}on{% endif %}">
                                     {{ header.name }} {% if sort == header.field %}
                                         {% if order == 'asc' %}▲{% else %}▼{% endif %}
                                     {% endif %}
@@ -98,13 +140,15 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
                                         {{ row|get_item:header.field|default:0|floatformat:2 }}
                                     </td>
-                                {% elif header.field == 'query' or header.field == 'page' %}
+                                {% elif header.field == 'query' %}
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {% if header.field == 'page' %}
-                                            <a href="{{ row|get_item:header.field }}" target="_blank" class="text-blue-600 hover:underline">{{ row|get_item:header.field }}</a>
-                                        {% else %}
-                                            {{ row|get_item:header.field }}
-                                        {% endif %}
+                                        {{ row|get_item:header.field }}
+                                    </td>
+                                {% elif header.field == 'page' %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <a href="{{ row|get_item:header.field }}" target="_blank" class="text-blue-600 hover:underline" title="{{ row|get_item:header.field }}">
+                                            {{ row|get_item:header.field|truncatechars:50 }}
+                                        </a>
                                     </td>
                                 {% elif header.field == 'index' %}
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -133,29 +177,6 @@
 <!-- JavaScript for Real-Time Table Filtering and Form Validation -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Real-Time Table Filtering
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            const table = document.getElementById('resultsTable');
-            const tbody = table.getElementsByTagName('tbody')[0];
-            const rows = tbody.getElementsByTagName('tr');
-
-            searchInput.addEventListener('keyup', function() {
-                const filter = searchInput.value.toLowerCase();
-                for (let i = 0; i < rows.length; i++) {
-                    const queryCell = rows[i].getElementsByTagName('td')[1]; // Adjusted index due to new column
-                    if (queryCell) {
-                        const queryText = queryCell.textContent || queryCell.innerText;
-                        if (queryText.toLowerCase().indexOf(filter) > -1) {
-                            rows[i].style.display = "";
-                        } else {
-                            rows[i].style.display = "none";
-                        }
-                    }
-                }
-            });
-        }
-
         // Custom Form Validation
         const form = document.querySelector('form');
         form.addEventListener('submit', function(event) {
@@ -163,6 +184,7 @@
             const startDate = document.getElementById('start_date');
             const endDate = document.getElementById('end_date');
             const rowLimit = document.getElementById('row_limit');
+            const selectedSite = document.getElementById('selected_site');
 
             let valid = true;
             let messages = [];
@@ -170,6 +192,13 @@
             // Validate Input Value
             if (!inputValue.value.trim()) {
                 messages.push('Please enter a URL or keyword.');
+                valid = false;
+            }
+
+            // Validate Selected Site (only for keyword tab)
+            const tabValue = '{{ tab }}';
+            if (tabValue === 'keyword' && (!selectedSite || !selectedSite.value.trim())) {
+                messages.push('Please select a site.');
                 valid = false;
             }
 
@@ -197,28 +226,56 @@
             }
         });
 
+        // Real-Time Table Filtering and Toggle Comparison only if data is available
+        {% if data %}
+        // Real-Time Table Filtering
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            const table = document.getElementById('resultsTable');
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = tbody.getElementsByTagName('tr');
+
+            searchInput.addEventListener('keyup', function() {
+                const filter = searchInput.value.toLowerCase();
+                for (let i = 0; i < rows.length; i++) {
+                    const queryCell = rows[i].getElementsByTagName('td')[1];
+                    if (queryCell) {
+                        const queryText = queryCell.textContent || queryCell.innerText;
+                        if (queryText.toLowerCase().indexOf(filter) > -1) {
+                            rows[i].style.display = "";
+                        } else {
+                            rows[i].style.display = "none";
+                        }
+                    }
+                }
+            });
+        }
+
         // Toggle Comparison Columns
         const toggleCompareButton = document.getElementById('toggleCompareButton');
         const comparisonColumns = document.querySelectorAll('.comparison-column');
 
-        let comparisonVisible = false;  // Keep track of comparison columns visibility
+        if (toggleCompareButton) {
+            let comparisonVisible = false;
 
-        toggleCompareButton.addEventListener('click', function() {
-            comparisonColumns.forEach(function(column) {
-                if (comparisonVisible) {
-                    column.style.display = 'none';
-                } else {
-                    column.style.display = '';
-                }
+            toggleCompareButton.addEventListener('click', function() {
+                comparisonColumns.forEach(function(column) {
+                    if (comparisonVisible) {
+                        column.style.display = 'none';
+                    } else {
+                        column.style.display = '';
+                    }
+                });
+                comparisonVisible = !comparisonVisible;
+                toggleCompareButton.textContent = comparisonVisible ? 'Hide Comparison' : 'Compare';
             });
-            comparisonVisible = !comparisonVisible;
-            toggleCompareButton.textContent = comparisonVisible ? 'Hide Comparison' : 'Compare';
-        });
 
-        // Initially hide the comparison columns
-        comparisonColumns.forEach(function(column) {
-            column.style.display = 'none';
-        });
+            // Initially hide the comparison columns
+            comparisonColumns.forEach(function(column) {
+                column.style.display = 'none';
+            });
+        }
+        {% endif %}
     });
 </script>
 {% endblock %}
