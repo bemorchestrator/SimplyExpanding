@@ -78,13 +78,14 @@
                     {% endif %}
                 </div>
                 {% elif tab == 'keyword' %}
+
                 <!-- Buttons for Keyword to Pages Tab -->
                 <div class="col-span-12 flex justify-end space-x-4">
-                    <button type="submit" name="fetch_data" value="1" class="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button type="submit" name="fetch_data" value="1" class="py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Fetch Data
                     </button>
                     {% if request.session.credentials %}
-                    <a href="{% url 'authenticate_user' %}" class="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                    <a href="{% url 'authenticate_user' %}" class="py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
                         Change Account
                     </a>
                     {% endif %}
