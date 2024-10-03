@@ -1,8 +1,5 @@
-# views.py
-
 import logging
 from urllib.parse import urlparse
-
 from django.http import HttpResponseBadRequest, HttpResponseRedirect, HttpResponseServerError
 from django.shortcuts import redirect, render
 from googleapiclient.discovery import build
@@ -14,43 +11,65 @@ logger = logging.getLogger(__name__)
 def find_matching_site_url(input_url, available_sites):
     """
     Find the site URL from available_sites that best matches the input_url.
+    Handles both domain properties (e.g., 'sc-domain:example.com') and URL-prefix properties (e.g., 'https://www.example.com/').
+    Returns the matched site URL or None if no match is found.
     """
     parsed_input_url = urlparse(input_url)
     input_scheme = parsed_input_url.scheme
-    input_netloc = parsed_input_url.netloc
-    input_root_url = f"{input_scheme}://{input_netloc}/"
+    input_netloc = parsed_input_url.netloc.lower()
+    input_path = parsed_input_url.path.rstrip('/') + '/'
 
+    # If scheme is missing, set it to 'https'
+    if not input_scheme:
+        input_scheme = 'https'
+        logger.debug(f"No scheme found in input URL. Normalized input URL to: {input_scheme}://{input_netloc}{parsed_input_url.path}")
+
+    logger.debug(f"Parsed input URL: scheme={input_scheme}, netloc={input_netloc}, path={parsed_input_url.path}")
+
+    # Reconstruct the normalized input URL
+    normalized_input_url = f"{input_scheme}://{input_netloc}{input_path}"
+
+    # First, check for exact matches with available_sites
+    input_root_url = f"{input_scheme}://{input_netloc}/"
     if input_root_url in available_sites:
+        logger.debug(f"Exact match found: {input_root_url}")
         return input_root_url
 
-    # Try with 'www.' prefix
-    if input_netloc.startswith('www.'):
-        netloc_without_www = input_netloc[4:]
-        alternative_url = f"{input_scheme}://{netloc_without_www}/"
-    else:
-        alternative_url = f"{input_scheme}://www.{input_netloc}/"
+    # Prepare a list to store potential matches with their specificity
+    potential_matches = []
 
-    if alternative_url in available_sites:
-        return alternative_url
+    for site in available_sites:
+        if site.startswith('sc-domain:'):
+            # Handle domain properties
+            domain = site.split(':', 1)[1].lower()
+            if input_netloc == domain or input_netloc.endswith('.' + domain):
+                logger.debug(f"Domain property match: {site} matches input domain {input_netloc}")
+                # Assign higher specificity to exact domain matches
+                potential_matches.append((site, 2))
+        else:
+            # Handle URL-prefix properties
+            site_parsed = urlparse(site)
+            site_scheme = site_parsed.scheme
+            site_netloc = site_parsed.netloc.lower()
+            site_path = site_parsed.path.rstrip('/') + '/'
 
-    # Try other schemes
-    alternative_scheme = 'https' if input_scheme == 'http' else 'http'
-    alternative_url = f"{alternative_scheme}://{input_netloc}/"
-    if alternative_url in available_sites:
-        return alternative_url
+            # Normalize paths for comparison
+            normalized_site_url = f"{site_scheme}://{site_netloc}{site_path}"
 
-    # Try with 'www.' prefix and alternative scheme
-    if input_netloc.startswith('www.'):
-        netloc_without_www = input_netloc[4:]
-        alternative_url = f"{alternative_scheme}://{netloc_without_www}/"
-    else:
-        alternative_url = f"{alternative_scheme}://www.{input_netloc}/"
+            if normalized_input_url.startswith(normalized_site_url):
+                logger.debug(f"URL-prefix property match: {site} is a prefix of input URL {input_url}")
+                # Assign higher specificity to longer matching prefixes
+                potential_matches.append((site, len(normalized_site_url)))
 
-    if alternative_url in available_sites:
-        return alternative_url
+    if not potential_matches:
+        logger.warning("No matching site URL found for the input URL.")
+        return None
 
-    # If no match found, return None
-    return None
+    # Select the most specific match (highest specificity value)
+    potential_matches.sort(key=lambda x: x[1], reverse=True)
+    best_match = potential_matches[0][0]
+    logger.debug(f"Best match selected: {best_match}")
+    return best_match
 
 def search_console_data(request):
     try:
@@ -88,6 +107,9 @@ def search_console_data(request):
         available_sites = [site['siteUrl'] for site in site_entries]
         logger.debug(f"Available sites: {available_sites}")
 
+        # Log available sites for debugging
+        logger.info(f"User has access to the following sites in Search Console: {available_sites}")
+
         # Define headers for the table
         headers = [
             {'name': 'Query', 'field': 'query'},
@@ -105,21 +127,29 @@ def search_console_data(request):
         sort = ''
         order = ''
 
-        if request.method == 'POST' or (request.method == 'GET' and 'input_url' in request.GET and 'start_date' in request.GET and 'end_date' in request.GET and 'row_limit' in request.GET):
+        if request.method == 'POST' or (
+            request.method == 'GET' and 
+            all(param in request.GET for param in ['input_url', 'start_date', 'end_date', 'row_limit'])
+        ):
             if request.method == 'POST':
-                input_url = request.POST.get('input_url')
+                input_url = request.POST.get('input_url').strip()
                 start_date = request.POST.get('start_date')
                 end_date = request.POST.get('end_date')
                 row_limit = request.POST.get('row_limit')
                 sort = request.POST.get('sort', '')
                 order = request.POST.get('order', '')
             else:
-                input_url = request.GET.get('input_url')
+                input_url = request.GET.get('input_url').strip()
                 start_date = request.GET.get('start_date')
                 end_date = request.GET.get('end_date')
                 row_limit = request.GET.get('row_limit')
                 sort = request.GET.get('sort', '')
                 order = request.GET.get('order', '')
+
+            # Normalize the input URL by adding scheme if missing
+            if not input_url.startswith(('http://', 'https://')):
+                input_url = 'https://' + input_url
+                logger.debug(f"No scheme found in input URL. Normalized input URL to: {input_url}")
 
             # Add logging to capture submitted data
             logger.debug(f"Received data: input_url={input_url}, start_date={start_date}, end_date={end_date}, row_limit={row_limit}, sort={sort}, order={order}")
@@ -143,22 +173,42 @@ def search_console_data(request):
             logger.debug(f"Matched site URL: {matched_site_url}")
 
             # Determine if the input URL is the root domain or a specific page
-            input_path = parsed_input_url.path
-            if input_path in ['', '/']:
+            parsed_matched_site = urlparse(matched_site_url)
+            matched_scheme = parsed_matched_site.scheme
+            matched_netloc = parsed_matched_site.netloc.lower()
+            matched_path = parsed_matched_site.path.rstrip('/') + '/'
+
+            # Reconstruct the matched site URL for comparison
+            reconstructed_matched_site_url = f"{matched_scheme}://{matched_netloc}{matched_path}"
+
+            # Normalize input URL for comparison
+            normalized_input_url = f"{parsed_input_url.scheme}://{parsed_input_url.netloc}{parsed_input_url.path.rstrip('/')}/"
+
+            if normalized_input_url == reconstructed_matched_site_url:
                 # Input is the root domain; no page_url filter
                 page_url = None
                 logger.debug("Input URL is the root domain. No page_url filter will be applied.")
             else:
                 # Input URL is a specific page; set page_url filter
-                page_url = f"{matched_site_url.rstrip('/')}{input_path}"
+                # Ensure the path starts with '/'
+                input_path = parsed_input_url.path
+                if not input_path.startswith('/'):
+                    input_path = '/' + input_path
+                page_url = f"{reconstructed_matched_site_url.rstrip('/')}{input_path}"
                 logger.debug(f"Input URL is a specific page. page_url set to: {page_url}")
 
             # Create request body
+            try:
+                row_limit_int = int(row_limit)
+            except ValueError:
+                logger.warning("Row limit must be an integer.")
+                return HttpResponseBadRequest("Row limit must be an integer.")
+
             request_body = {
                 'startDate': start_date,
                 'endDate': end_date,
                 'dimensions': ['query'],
-                'rowLimit': int(row_limit)
+                'rowLimit': row_limit_int
             }
 
             # If page_url is specified, add a filter for it
@@ -193,7 +243,7 @@ def search_console_data(request):
                     'input_url': input_url,
                     'start_date': start_date,
                     'end_date': end_date,
-                    'row_limit': row_limit,
+                    'row_limit': row_limit_int,
                     'headers': headers,
                     'sort': sort,
                     'order': order,
