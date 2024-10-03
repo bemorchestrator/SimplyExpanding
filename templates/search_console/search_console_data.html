@@ -27,7 +27,7 @@
                 <input type="hidden" name="tab" value="{{ tab }}">
 
                 <!-- Input Field -->
-                <div class="col-span-3">
+                <div class="col-span-12 sm:col-span-3">
                     <label for="input_value" class="block text-sm font-medium text-gray-700">
                         {% if tab == 'url' %}Enter URL:{% else %}Enter Keyword:{% endif %}
                     </label>
@@ -36,7 +36,7 @@
 
                 <!-- Site Selection Dropdown (only for keyword tab) -->
                 {% if tab == 'keyword' %}
-                <div class="col-span-3">
+                <div class="col-span-12 sm:col-span-3">
                     <label for="selected_site" class="block text-sm font-medium text-gray-700">Select Site:</label>
                     <select id="selected_site" name="selected_site" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white">
                         <option value="">-- Select Site --</option>
@@ -48,31 +48,31 @@
                 {% endif %}
 
                 <!-- Start Date Input -->
-                <div class="col-span-2">
+                <div class="col-span-12 sm:col-span-2">
                     <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date:</label>
                     <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
 
                 <!-- End Date Input -->
-                <div class="col-span-2">
+                <div class="col-span-12 sm:col-span-2">
                     <label for="end_date" class="block text-sm font-medium text-gray-700">End Date:</label>
                     <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
 
                 <!-- Row Limit Input -->
-                <div class="col-span-2">
+                <div class="col-span-12 sm:col-span-2">
                     <label for="row_limit" class="block text-sm font-medium text-gray-700">Number of Rows:</label>
                     <input type="number" id="row_limit" name="row_limit" value="{{ row_limit|default:10 }}" min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
 
                 <!-- Buttons for URL to Keywords Tab -->
                 {% if tab == 'url' %}
-                <div class="col-span-3 flex space-x-4 mt-6">
-                    <button type="submit" name="fetch_data" value="1" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" style="height: 38px;">
+                <div class="col-span-12 sm:col-span-3 flex space-x-4 mt-6 sm:mt-0">
+                    <button type="submit" name="fetch_data" value="1" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mt-6" style="height: 38px;">
                         Fetch Data
                     </button>
                     {% if request.session.credentials %}
-                    <a href="{% url 'authenticate_user' %}" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500" style="height: 38px;">
+                    <a href="{% url 'authenticate_user' %}" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 mt-6" style="height: 38px;">
                         Change Account
                     </a>
                     {% endif %}
@@ -80,7 +80,7 @@
                 {% elif tab == 'keyword' %}
 
                 <!-- Buttons for Keyword to Pages Tab -->
-                <div class="col-span-12 flex justify-end space-x-4">
+                <div class="col-span-12 sm:col-span-12 flex justify-end space-x-4 mt-4 sm:mt-0">
                     <button type="submit" name="fetch_data" value="1" class="py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Fetch Data
                     </button>
@@ -98,8 +98,8 @@
         {% if data %}
         <div class="bg-white shadow rounded-lg p-6">
             <div class="overflow-x-auto">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-4">
+                <div class="flex items-center justify-between mb-4 flex-wrap">
+                    <div class="flex items-center space-x-4 mb-4 sm:mb-0">
                         <button id="toggleCompareButton" class="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
                             Compare
                         </button>
@@ -113,7 +113,9 @@
                         </a>
                     </div>
                     <!-- Search Bar for Filtering Results -->
-                    <input type="text" id="searchInput" placeholder="Search results..." class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md shadow-sm">
+                    <div class="w-full sm:w-1/3">
+                        <input type="text" id="searchInput" placeholder="Search results..." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
                 </div>
                 <table class="min-w-full divide-y divide-gray-200" id="resultsTable">
                     <thead class="bg-gray-50">
