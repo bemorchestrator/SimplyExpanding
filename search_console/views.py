@@ -1,9 +1,11 @@
 import logging
 from urllib.parse import urlparse
-from django.http import HttpResponseBadRequest, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponseBadRequest, HttpResponseRedirect, HttpResponseServerError, HttpResponse
 from django.shortcuts import redirect, render
 from googleapiclient.discovery import build
 from google_auth import authenticate_user, get_credentials, oauth2_callback
+from datetime import datetime, timedelta
+import csv
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -107,162 +109,467 @@ def search_console_data(request):
         available_sites = [site['siteUrl'] for site in site_entries]
         logger.debug(f"Available sites: {available_sites}")
 
-        # Log available sites for debugging
-        logger.info(f"User has access to the following sites in Search Console: {available_sites}")
-
-        # Define headers for the table
-        headers = [
-            {'name': 'Query', 'field': 'query'},
-            {'name': 'Clicks', 'field': 'clicks'},
-            {'name': 'Impressions', 'field': 'impressions'},
-            {'name': 'CTR', 'field': 'ctr'},
-            {'name': 'Position', 'field': 'position'},
-        ]
-
         data = None
-        input_url = ''
+        input_value = ''
         start_date = ''
         end_date = ''
         row_limit = 10
         sort = ''
         order = ''
+        display_all = False  # Flag to control table display
 
         if request.method == 'POST' or (
             request.method == 'GET' and 
-            all(param in request.GET for param in ['input_url', 'start_date', 'end_date', 'row_limit'])
+            all(param in request.GET for param in ['input_value', 'start_date', 'end_date', 'row_limit'])
         ):
             if request.method == 'POST':
-                input_url = request.POST.get('input_url').strip()
+                input_value = request.POST.get('input_value').strip()
                 start_date = request.POST.get('start_date')
                 end_date = request.POST.get('end_date')
                 row_limit = request.POST.get('row_limit')
                 sort = request.POST.get('sort', '')
                 order = request.POST.get('order', '')
+                display_all = request.POST.get('display_all') == 'on'
             else:
-                input_url = request.GET.get('input_url').strip()
+                input_value = request.GET.get('input_value').strip()
                 start_date = request.GET.get('start_date')
                 end_date = request.GET.get('end_date')
                 row_limit = request.GET.get('row_limit')
                 sort = request.GET.get('sort', '')
                 order = request.GET.get('order', '')
-
-            # Normalize the input URL by adding scheme if missing
-            if not input_url.startswith(('http://', 'https://')):
-                input_url = 'https://' + input_url
-                logger.debug(f"No scheme found in input URL. Normalized input URL to: {input_url}")
+                display_all = request.GET.get('display_all') == 'on'
 
             # Add logging to capture submitted data
-            logger.debug(f"Received data: input_url={input_url}, start_date={start_date}, end_date={end_date}, row_limit={row_limit}, sort={sort}, order={order}")
+            logger.debug(f"Received data: input_value={input_value}, start_date={start_date}, end_date={end_date}, row_limit={row_limit}, sort={sort}, order={order}, display_all={display_all}")
 
             # Validate inputs
-            if not input_url or not start_date or not end_date or not row_limit:
+            if not input_value or not start_date or not end_date or not row_limit:
                 logger.warning("Invalid input received: one or more fields are missing.")
                 return HttpResponseBadRequest("Please provide valid inputs.")
 
-            # Parse the input URL
-            parsed_input_url = urlparse(input_url)
-            if not all([parsed_input_url.scheme, parsed_input_url.netloc]):
-                logger.warning("Invalid input_url format.")
-                return HttpResponseBadRequest("Please provide a valid URL.")
-
-            # Find the matching site URL
-            matched_site_url = find_matching_site_url(input_url, available_sites)
-            if not matched_site_url:
-                logger.warning("Input URL does not match any sites in Search Console.")
-                return HttpResponseBadRequest("Input URL does not match any sites in your Search Console account.")
-            logger.debug(f"Matched site URL: {matched_site_url}")
-
-            # Determine if the input URL is the root domain or a specific page
-            parsed_matched_site = urlparse(matched_site_url)
-            matched_scheme = parsed_matched_site.scheme
-            matched_netloc = parsed_matched_site.netloc.lower()
-            matched_path = parsed_matched_site.path.rstrip('/') + '/'
-
-            # Reconstruct the matched site URL for comparison
-            reconstructed_matched_site_url = f"{matched_scheme}://{matched_netloc}{matched_path}"
-
-            # Normalize input URL for comparison
-            normalized_input_url = f"{parsed_input_url.scheme}://{parsed_input_url.netloc}{parsed_input_url.path.rstrip('/')}/"
-
-            if normalized_input_url == reconstructed_matched_site_url:
-                # Input is the root domain; no page_url filter
-                page_url = None
-                logger.debug("Input URL is the root domain. No page_url filter will be applied.")
-            else:
-                # Input URL is a specific page; set page_url filter
-                # Ensure the path starts with '/'
-                input_path = parsed_input_url.path
-                if not input_path.startswith('/'):
-                    input_path = '/' + input_path
-                page_url = f"{reconstructed_matched_site_url.rstrip('/')}{input_path}"
-                logger.debug(f"Input URL is a specific page. page_url set to: {page_url}")
-
-            # Create request body
+            # Try to parse input_value as URL
             try:
-                row_limit_int = int(row_limit)
-            except ValueError:
-                logger.warning("Row limit must be an integer.")
-                return HttpResponseBadRequest("Row limit must be an integer.")
+                parsed_input_url = urlparse(input_value)
+                if all([parsed_input_url.scheme, parsed_input_url.netloc]):
+                    input_is_url = True
+                else:
+                    input_is_url = False
+            except Exception:
+                input_is_url = False
 
-            request_body = {
-                'startDate': start_date,
-                'endDate': end_date,
-                'dimensions': ['query'],
-                'rowLimit': row_limit_int
-            }
+            request.session['input_is_keyword'] = not input_is_url
 
-            # If page_url is specified, add a filter for it
-            if page_url:
-                request_body['dimensionFilterGroups'] = [{
-                    'filters': [{
+            if input_is_url:
+                # Process as URL
+                logger.debug("Input is detected as a URL.")
+                # Normalize the input URL by adding scheme if missing
+                if not input_value.startswith(('http://', 'https://')):
+                    input_value = 'https://' + input_value
+                    logger.debug(f"No scheme found in input URL. Normalized input URL to: {input_value}")
+
+                # Find the matching site URL
+                matched_site_url = find_matching_site_url(input_value, available_sites)
+                if not matched_site_url:
+                    logger.warning("Input URL does not match any sites in Search Console.")
+                    return HttpResponseBadRequest("Input URL does not match any sites in your Search Console account.")
+                logger.debug(f"Matched site URL: {matched_site_url}")
+
+                # Determine if the input URL is the root domain or a specific page
+                parsed_matched_site = urlparse(matched_site_url)
+                matched_scheme = parsed_matched_site.scheme
+                matched_netloc = parsed_matched_site.netloc.lower()
+                matched_path = parsed_matched_site.path.rstrip('/') + '/'
+
+                # Reconstruct the matched site URL for comparison
+                reconstructed_matched_site_url = f"{matched_scheme}://{matched_netloc}{matched_path}"
+
+                # Normalize input URL for comparison
+                normalized_input_url = f"{parsed_input_url.scheme}://{parsed_input_url.netloc}{parsed_input_url.path.rstrip('/')}/"
+
+                if normalized_input_url == reconstructed_matched_site_url:
+                    # Input is the root domain; no page_url filter
+                    page_url = None
+                    logger.debug("Input URL is the root domain. No page_url filter will be applied.")
+                else:
+                    # Input URL is a specific page; set page_url filter
+                    # Ensure the path starts with '/'
+                    input_path = parsed_input_url.path
+                    if not input_path.startswith('/'):
+                        input_path = '/' + input_path
+                    page_url = f"{reconstructed_matched_site_url.rstrip('/')}{input_path}"
+                    logger.debug(f"Input URL is a specific page. page_url set to: {page_url}")
+
+                dimensions = ['query']
+                dimension_filter = None
+                if page_url:
+                    dimension_filter = {
                         'dimension': 'page',
                         'operator': 'equals',
                         'expression': page_url
+                    }
+                headers = [
+                    {'name': '#', 'field': 'index'},
+                    {'name': 'Query', 'field': 'query'},
+                    {'name': 'Clicks', 'field': 'clicks'},
+                    {'name': 'Clicks Δ', 'field': 'clicks_change'},
+                    {'name': 'Impressions', 'field': 'impressions'},
+                    {'name': 'Impressions Δ', 'field': 'impressions_change'},
+                    {'name': 'CTR', 'field': 'ctr'},
+                    {'name': 'CTR Δ', 'field': 'ctr_change'},
+                    {'name': 'Position', 'field': 'position'},
+                    {'name': 'Position Δ', 'field': 'position_change'},
+                ]
+
+                # Create request body
+                try:
+                    row_limit_int = int(row_limit)
+                except ValueError:
+                    logger.warning("Row limit must be an integer.")
+                    return HttpResponseBadRequest("Row limit must be an integer.")
+
+                request_body = {
+                    'startDate': start_date,
+                    'endDate': end_date,
+                    'dimensions': dimensions,
+                    'rowLimit': row_limit_int
+                }
+
+                # If dimension filter is specified, add it
+                if dimension_filter:
+                    request_body['dimensionFilterGroups'] = [{
+                        'filters': [dimension_filter]
                     }]
-                }]
-                logger.debug(f"Request body with page_url filter: {request_body}")
+                    logger.debug(f"Request body with dimension filter: {request_body}")
+                else:
+                    logger.debug(f"Request body without dimension filter: {request_body}")
+
+                try:
+                    # Fetch Search Analytics data for the selected period
+                    response = service.searchanalytics().query(siteUrl=matched_site_url, body=request_body).execute()
+                    logger.debug("Search Analytics data fetched successfully for the selected period.")
+                    data = response.get('rows', [])
+
+                    # Convert start_date and end_date to datetime.date objects
+                    start_date_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    end_date_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                    delta = end_date_dt - start_date_dt
+
+                    # Compute previous period dates
+                    prev_end_date_dt = start_date_dt - timedelta(days=1)
+                    prev_start_date_dt = prev_end_date_dt - delta
+
+                    prev_start_date = prev_start_date_dt.strftime('%Y-%m-%d')
+                    prev_end_date = prev_end_date_dt.strftime('%Y-%m-%d')
+
+                    # Create request body for previous period
+                    prev_request_body = request_body.copy()
+                    prev_request_body['startDate'] = prev_start_date
+                    prev_request_body['endDate'] = prev_end_date
+
+                    # Fetch Search Analytics data for the previous period
+                    prev_response = service.searchanalytics().query(siteUrl=matched_site_url, body=prev_request_body).execute()
+                    logger.debug("Search Analytics data fetched successfully for the previous period.")
+                    prev_data = prev_response.get('rows', [])
+
+                    # Create a mapping from key to previous data
+                    prev_data_dict = {tuple(row['keys']): row for row in prev_data}
+
+                    # Add index and compute deltas
+                    for index, row in enumerate(data, start=1):
+                        # Add 'query' field and index
+                        row['query'] = row['keys'][0]
+                        row['index'] = index
+                        key = tuple(row['keys'])
+                        prev_row = prev_data_dict.get(key)
+                        if prev_row:
+                            # Compute deltas
+                            row['clicks_change'] = row['clicks'] - prev_row['clicks']
+                            row['impressions_change'] = row['impressions'] - prev_row['impressions']
+                            row['ctr_change'] = row['ctr'] - prev_row['ctr']
+                            row['position_change'] = row['position'] - prev_row['position']
+                        else:
+                            # No data in previous period
+                            row['clicks_change'] = 0
+                            row['impressions_change'] = 0
+                            row['ctr_change'] = 0
+                            row['position_change'] = 0
+
+                    # Apply sorting if necessary
+                    if data and sort in [header['field'] for header in headers]:
+                        reverse = True if order == 'desc' else False
+                        if sort == 'query':
+                            data.sort(key=lambda x: x.get(sort, ''), reverse=reverse)
+                        elif sort == 'index':
+                            data.sort(key=lambda x: x['index'], reverse=reverse)
+                        else:
+                            data.sort(key=lambda x: x.get(sort, 0) or 0, reverse=reverse)
+
+                    # Handle CSV export
+                    if 'export_csv' in request.GET:
+                        response = HttpResponse(content_type='text/csv')
+                        response['Content-Disposition'] = 'attachment; filename="search_console_data.csv"'
+
+                        writer = csv.writer(response)
+                        writer.writerow([header['name'] for header in headers])
+                        for row in data:
+                            writer.writerow([
+                                row.get('index', ''),
+                                row.get('query', ''),
+                                row.get('clicks', ''),
+                                row.get('clicks_change', ''),
+                                row.get('impressions', ''),
+                                row.get('impressions_change', ''),
+                                f"{row.get('ctr', 0)*100:.2f}%",
+                                f"{row.get('ctr_change', 0)*100:.2f}%",
+                                f"{row.get('position', 0):.2f}",
+                                f"{row.get('position_change', 0):.2f}",
+                            ])
+                        return response
+
+                    return render(request, 'search_console/search_console_data.html', {
+                        'data': data,
+                        'input_value': input_value,
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'row_limit': row_limit_int,
+                        'headers': headers,
+                        'sort': sort,
+                        'order': order,
+                        'display_all': display_all,
+                    })
+                except Exception as e:
+                    logger.error("Error fetching Search Console data:", exc_info=True)
+                    return HttpResponseServerError(f"Error fetching Search Console data: {str(e)}")
+
             else:
-                logger.debug(f"Request body without page_url filter: {request_body}")
+                # Process as keyword
+                logger.debug("Input is detected as a keyword.")
+                # For simplicity, we'll assume the first available site is the one to use
+                matched_site_url = available_sites[0] if available_sites else None
+                if not matched_site_url:
+                    logger.warning("No suitable site URL found for keyword search.")
+                    return HttpResponseBadRequest("No suitable site URL found in your Search Console account.")
 
-            try:
-                # Fetch Search Analytics data
-                response = service.searchanalytics().query(siteUrl=matched_site_url, body=request_body).execute()
-                logger.debug("Search Analytics data fetched successfully.")
-                data = response.get('rows', [])
+                dimensions = ['query', 'page']
+                dimension_filter = {
+                    'dimension': 'query',
+                    'operator': 'contains',
+                    'expression': input_value
+                }
+                headers = [
+                    {'name': '#', 'field': 'index'},
+                    {'name': 'Page', 'field': 'page'},
+                    {'name': 'Clicks', 'field': 'clicks'},
+                    {'name': 'Clicks Δ', 'field': 'clicks_change'},
+                    {'name': 'Impressions', 'field': 'impressions'},
+                    {'name': 'Impressions Δ', 'field': 'impressions_change'},
+                    {'name': 'CTR', 'field': 'ctr'},
+                    {'name': 'CTR Δ', 'field': 'ctr_change'},
+                    {'name': 'Position', 'field': 'position'},
+                    {'name': 'Position Δ', 'field': 'position_change'},
+                ]
 
-                # Apply sorting if necessary
-                if data and sort in ['query', 'clicks', 'impressions', 'ctr', 'position']:
-                    reverse = True if order == 'desc' else False
-                    if sort == 'query':
-                        data.sort(key=lambda x: x['keys'][0], reverse=reverse)
-                    else:
-                        data.sort(key=lambda x: x.get(sort, 0), reverse=reverse)
+                # Create request body
+                request_body = {
+                    'startDate': start_date,
+                    'endDate': end_date,
+                    'dimensions': dimensions,
+                    'rowLimit': 25000  # Set high to get all data
+                }
 
-                return render(request, 'search_console/search_console_data.html', {
-                    'data': data,
-                    'input_url': input_url,
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'row_limit': row_limit_int,
-                    'headers': headers,
-                    'sort': sort,
-                    'order': order,
-                })
-            except Exception as e:
-                logger.error("Error fetching Search Console data:", exc_info=True)
-                return HttpResponseServerError(f"Error fetching Search Console data: {str(e)}")
+                # If dimension filter is specified, add it
+                if dimension_filter:
+                    request_body['dimensionFilterGroups'] = [{
+                        'filters': [dimension_filter]
+                    }]
+                    logger.debug(f"Request body with dimension filter: {request_body}")
+                else:
+                    logger.debug(f"Request body without dimension filter: {request_body}")
+
+                try:
+                    # Fetch Search Analytics data for the selected period
+                    response = service.searchanalytics().query(siteUrl=matched_site_url, body=request_body).execute()
+                    logger.debug("Search Analytics data fetched successfully for the selected period.")
+                    data_rows = response.get('rows', [])
+
+                    if not data_rows:
+                        logger.warning("No data returned from Search Console for the specified keyword.")
+                        return render(request, 'search_console/search_console_data.html', {
+                            'data': None,
+                            'input_value': input_value,
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'row_limit': row_limit,
+                            'headers': headers,
+                            'sort': sort,
+                            'order': order,
+                            'display_all': display_all,
+                            'no_data_message': "No search data available for the specified input."
+                        })
+
+                    # Convert start_date and end_date to datetime.date objects
+                    start_date_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    end_date_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                    delta = end_date_dt - start_date_dt
+
+                    # Compute previous period dates
+                    prev_end_date_dt = start_date_dt - timedelta(days=1)
+                    prev_start_date_dt = prev_end_date_dt - delta
+
+                    prev_start_date = prev_start_date_dt.strftime('%Y-%m-%d')
+                    prev_end_date = prev_end_date_dt.strftime('%Y-%m-%d')
+
+                    # Create request body for previous period
+                    prev_request_body = request_body.copy()
+                    prev_request_body['startDate'] = prev_start_date
+                    prev_request_body['endDate'] = prev_end_date
+
+                    # Fetch Search Analytics data for the previous period
+                    prev_response = service.searchanalytics().query(siteUrl=matched_site_url, body=prev_request_body).execute()
+                    logger.debug("Search Analytics data fetched successfully for the previous period.")
+                    prev_data_rows = prev_response.get('rows', [])
+
+                    # Process data to aggregate metrics per page
+                    page_data = {}
+                    for row in data_rows:
+                        keys = row['keys']  # keys[0] = 'query', keys[1] = 'page'
+                        page = keys[1]
+                        clicks = row.get('clicks', 0)
+                        impressions = row.get('impressions', 0)
+                        ctr = row.get('ctr', 0)
+                        position = row.get('position', 0)
+                        if page in page_data:
+                            page_data[page]['clicks'] += clicks
+                            page_data[page]['impressions'] += impressions
+                            total_impressions = page_data[page]['impressions']
+                            page_data[page]['ctr'] = page_data[page]['clicks'] / total_impressions if total_impressions else 0
+                            page_data[page]['position'] = ((page_data[page]['position'] * (total_impressions - impressions)) + (position * impressions)) / total_impressions if total_impressions else 0
+                        else:
+                            page_data[page] = {
+                                'clicks': clicks,
+                                'impressions': impressions,
+                                'ctr': ctr,
+                                'position': position,
+                            }
+
+                    # Process previous data to aggregate metrics per page
+                    prev_page_data = {}
+                    for row in prev_data_rows:
+                        keys = row['keys']  # keys[0] = 'query', keys[1] = 'page'
+                        page = keys[1]
+                        clicks = row.get('clicks', 0)
+                        impressions = row.get('impressions', 0)
+                        ctr = row.get('ctr', 0)
+                        position = row.get('position', 0)
+                        if page in prev_page_data:
+                            prev_page_data[page]['clicks'] += clicks
+                            prev_page_data[page]['impressions'] += impressions
+                            total_impressions = prev_page_data[page]['impressions']
+                            prev_page_data[page]['ctr'] = prev_page_data[page]['clicks'] / total_impressions if total_impressions else 0
+                            prev_page_data[page]['position'] = ((prev_page_data[page]['position'] * (total_impressions - impressions)) + (position * impressions)) / total_impressions if total_impressions else 0
+                        else:
+                            prev_page_data[page] = {
+                                'clicks': clicks,
+                                'impressions': impressions,
+                                'ctr': ctr,
+                                'position': position,
+                            }
+
+                    # Prepare data for rendering
+                    data = []
+                    for index, (page, metrics) in enumerate(page_data.items(), start=1):
+                        row = {
+                            'index': index,
+                            'page': page,
+                            'clicks': metrics['clicks'],
+                            'impressions': metrics['impressions'],
+                            'ctr': metrics['ctr'],
+                            'position': metrics['position'],
+                        }
+                        prev_metrics = prev_page_data.get(page)
+                        if prev_metrics:
+                            row['clicks_change'] = metrics['clicks'] - prev_metrics['clicks']
+                            row['impressions_change'] = metrics['impressions'] - prev_metrics['impressions']
+                            row['ctr_change'] = metrics['ctr'] - prev_metrics['ctr']
+                            row['position_change'] = metrics['position'] - prev_metrics['position']
+                        else:
+                            row['clicks_change'] = 0
+                            row['impressions_change'] = 0
+                            row['ctr_change'] = 0
+                            row['position_change'] = 0
+                        data.append(row)
+
+                    # Apply sorting if necessary
+                    if data and sort in [header['field'] for header in headers]:
+                        reverse = True if order == 'desc' else False
+                        if sort == 'page':
+                            data.sort(key=lambda x: x.get(sort, ''), reverse=reverse)
+                        elif sort == 'index':
+                            data.sort(key=lambda x: x['index'], reverse=reverse)
+                        else:
+                            data.sort(key=lambda x: x.get(sort, 0) or 0, reverse=reverse)
+
+                    # Limit data to row_limit_int
+                    try:
+                        row_limit_int = int(row_limit)
+                    except ValueError:
+                        logger.warning("Row limit must be an integer.")
+                        return HttpResponseBadRequest("Row limit must be an integer.")
+
+                    data = data[:row_limit_int]
+
+                    # Handle CSV export
+                    if 'export_csv' in request.GET:
+                        response = HttpResponse(content_type='text/csv')
+                        response['Content-Disposition'] = 'attachment; filename="search_console_data.csv"'
+
+                        writer = csv.writer(response)
+                        writer.writerow([header['name'] for header in headers])
+                        for row in data:
+                            writer.writerow([
+                                row.get('index', ''),
+                                row.get('page', ''),
+                                row.get('clicks', ''),
+                                row.get('clicks_change', ''),
+                                row.get('impressions', ''),
+                                row.get('impressions_change', ''),
+                                f"{row.get('ctr', 0)*100:.2f}%",
+                                f"{row.get('ctr_change', 0)*100:.2f}%",
+                                f"{row.get('position', 0):.2f}",
+                                f"{row.get('position_change', 0):.2f}",
+                            ])
+                        return response
+
+                    return render(request, 'search_console/search_console_data.html', {
+                        'data': data,
+                        'input_value': input_value,
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'row_limit': row_limit_int,
+                        'headers': headers,
+                        'sort': sort,
+                        'order': order,
+                        'display_all': display_all,
+                    })
+
+                except Exception as e:
+                    logger.error("Error fetching Search Console data:", exc_info=True)
+                    return HttpResponseServerError(f"Error fetching Search Console data: {str(e)}")
 
         # On GET request without parameters, show the form
         logger.debug("Rendering search_console_data form.")
         return render(request, 'search_console/search_console_data.html', {
             'data': None,
-            'headers': headers,
-            'input_url': input_url,
+            'headers': [],
+            'input_value': input_value,
             'start_date': start_date,
             'end_date': end_date,
             'row_limit': row_limit,
             'sort': sort,
             'order': order,
+            'display_all': display_all,
         })
 
     except Exception as e:

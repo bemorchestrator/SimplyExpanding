@@ -1,21 +1,22 @@
 {% extends 'base.html' %}
 
+{% load custom_tags %}
+
 {% block content %}
+<!-- Include Bootstrap Icons CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+
 <div class="w-full py-6 px-4 lg:px-8">
     <div class="py-6">
-        <div class="flex items-center justify-between mb-4">
-            <h1 class="text-3xl font-bold text-blue-500;">Google Search Console Data</h1>
-        </div>
-
-        <!-- Form to input URL, date range, and row limit -->
+        <!-- Form to input URL or keyword, date range, and row limit -->
         <div class="bg-white shadow rounded-lg p-6 mb-6">
             <form method="POST" novalidate class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                 {% csrf_token %}
                 
-                <!-- URL Input -->
+                <!-- Input Field -->
                 <div class="col-span-3">
-                    <label for="input_url" class="block text-sm font-medium text-gray-700">URL:</label>
-                    <input type="text" id="input_url" name="input_url" value="{{ input_url|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="example.com or www.example.com/page">
+                    <label for="input_value" class="block text-sm font-medium text-gray-700">URL or Keyword:</label>
+                    <input type="text" id="input_value" name="input_value" value="{{ input_value|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="Enter a URL or keyword">
                 </div>
                 
                 <!-- Start Date Input -->
@@ -35,7 +36,7 @@
                     <label for="row_limit" class="block text-sm font-medium text-gray-700">Number of Rows:</label>
                     <input type="number" id="row_limit" name="row_limit" value="{{ row_limit|default:10 }}" min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
-                
+
                 <!-- Buttons -->
                 <div class="col-span-3 flex space-x-4 mt-6">
                     <button type="submit" class="flex-1 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -53,18 +54,30 @@
         <!-- Display search console data -->
         {% if data %}
         <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">Search Results</h2>
-                <!-- Search Bar for Filtering Results -->
-                <input type="text" id="searchInput" placeholder="Search results..." class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md shadow-sm">
-            </div>
             <div class="overflow-x-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-4">
+                        <button id="toggleCompareButton" class="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+                            Compare
+                        </button>
+                        <!-- Export CSV Icon -->
+                        <a href="?export_csv=1&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&display_all={% if display_all %}on{% endif %}" title="Export CSV" class="text-gray-600 hover:text-gray-800">
+                            <i class="bi bi-file-earmark-spreadsheet-fill h-6 w-6"></i>
+                        </a>
+                        <!-- Print Icon -->
+                        <a href="#" onclick="window.print();" title="Print" class="text-gray-600 hover:text-gray-800">
+                            <i class="bi bi-printer-fill h-6 w-6"></i>
+                        </a>
+                    </div>
+                    <!-- Search Bar for Filtering Results -->
+                    <input type="text" id="searchInput" placeholder="Search results..." class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
                 <table class="min-w-full divide-y divide-gray-200" id="resultsTable">
                     <thead class="bg-gray-50">
                         <tr>
                             {% for header in headers %}
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <a href="?sort={{ header.field }}&order={% if sort == header.field and order == 'asc' %}desc{% else %}asc{% endif %}&input_url={{ input_url|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}">
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider {% if '_change' in header.field %}comparison-column{% endif %}">
+                                <a href="?sort={{ header.field }}&order={% if sort == header.field and order == 'asc' %}desc{% else %}asc{% endif %}&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&display_all={% if display_all %}on{% endif %}">
                                     {{ header.name }} {% if sort == header.field %}
                                         {% if order == 'asc' %}▲{% else %}▼{% endif %}
                                     {% endif %}
@@ -73,23 +86,45 @@
                             {% endfor %}
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white divide-y divide-gray-200 {% if not display_all and data|length > 25 %}max-h-96 overflow-y-scroll{% endif %}">
                         {% for row in data %}
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ row.keys.0 }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.clicks }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.impressions }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.ctr|floatformat:2 }}%</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.position|floatformat:2 }}</td>
+                            {% for header in headers %}
+                                {% if header.field == 'ctr' or header.field == 'ctr_change' %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
+                                        {{ row|get_item:header.field|default:0|floatformat:2 }}%
+                                    </td>
+                                {% elif header.field == 'position' or header.field == 'position_change' %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
+                                        {{ row|get_item:header.field|default:0|floatformat:2 }}
+                                    </td>
+                                {% elif header.field == 'query' or header.field == 'page' %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {% if header.field == 'page' %}
+                                            <a href="{{ row|get_item:header.field }}" target="_blank" class="text-blue-600 hover:underline">{{ row|get_item:header.field }}</a>
+                                        {% else %}
+                                            {{ row|get_item:header.field }}
+                                        {% endif %}
+                                    </td>
+                                {% elif header.field == 'index' %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ row|get_item:header.field }}
+                                    </td>
+                                {% else %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
+                                        {{ row|get_item:header.field|default:0 }}
+                                    </td>
+                                {% endif %}
+                            {% endfor %}
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-        {% elif input_url %}
+        {% elif input_value %}
         <div class="bg-white shadow rounded-lg p-6">
-            <p class="text-gray-700">No search data available for the specified URL.</p>
+            <p class="text-gray-700">{{ no_data_message|default:"No search data available for the specified input." }}</p>
         </div>
         {% endif %}
     </div>
@@ -108,7 +143,7 @@
             searchInput.addEventListener('keyup', function() {
                 const filter = searchInput.value.toLowerCase();
                 for (let i = 0; i < rows.length; i++) {
-                    const queryCell = rows[i].getElementsByTagName('td')[0];
+                    const queryCell = rows[i].getElementsByTagName('td')[1]; // Adjusted index due to new column
                     if (queryCell) {
                         const queryText = queryCell.textContent || queryCell.innerText;
                         if (queryText.toLowerCase().indexOf(filter) > -1) {
@@ -124,7 +159,7 @@
         // Custom Form Validation
         const form = document.querySelector('form');
         form.addEventListener('submit', function(event) {
-            const inputUrl = document.getElementById('input_url');
+            const inputValue = document.getElementById('input_value');
             const startDate = document.getElementById('start_date');
             const endDate = document.getElementById('end_date');
             const rowLimit = document.getElementById('row_limit');
@@ -132,9 +167,9 @@
             let valid = true;
             let messages = [];
 
-            // Validate URL
-            if (!inputUrl.value.trim()) {
-                messages.push('Please enter a URL.');
+            // Validate Input Value
+            if (!inputValue.value.trim()) {
+                messages.push('Please enter a URL or keyword.');
                 valid = false;
             }
 
@@ -160,6 +195,29 @@
                 alert(messages.join('\n'));
                 event.preventDefault();
             }
+        });
+
+        // Toggle Comparison Columns
+        const toggleCompareButton = document.getElementById('toggleCompareButton');
+        const comparisonColumns = document.querySelectorAll('.comparison-column');
+
+        let comparisonVisible = false;  // Keep track of comparison columns visibility
+
+        toggleCompareButton.addEventListener('click', function() {
+            comparisonColumns.forEach(function(column) {
+                if (comparisonVisible) {
+                    column.style.display = 'none';
+                } else {
+                    column.style.display = '';
+                }
+            });
+            comparisonVisible = !comparisonVisible;
+            toggleCompareButton.textContent = comparisonVisible ? 'Hide Comparison' : 'Compare';
+        });
+
+        // Initially hide the comparison columns
+        comparisonColumns.forEach(function(column) {
+            column.style.display = 'none';
         });
     });
 </script>
