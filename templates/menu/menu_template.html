@@ -4,19 +4,19 @@
     {% if menus %}
         <!-- Loop through menus -->
         {% for menu_data in menus %}
-            <!-- Menu Name -->
+            <!-- Menu Name (Only shown in expanded state) -->
             <div class="mb-4 pb-4 border-b border-gray-300 mt-6">
-                <h3 class="font-bold text-base mb-4">{{ menu_data.menu.name }}</h3>
+                <h3 class="font-bold text-base mb-4 menu-text">{{ menu_data.menu.name }}</h3>
                 
                 <!-- Menu Items -->
                 <ul class="pl-6">
                     {% for item_data in menu_data.items %}
                         <!-- Menu Item -->
                         <li class="mb-3 text-sm">
-                            <a href="{{ item_data.item.url }}" class="flex items-center p-2 rounded-md mr-4 hover:bg-gray-200 {% if request.path == item_data.item.url %}bg-blue-400 text-white{% endif %}">
+                            <a href="{{ item_data.item.url }}" class="flex items-center p-2 rounded-md hover:bg-gray-200 {% if request.path == item_data.item.url %}bg-blue-400 text-white{% endif %}">
                                 <!-- Dynamic Icon for each menu item -->
                                 <i class="{{ item_data.item.icon }} mr-2"></i>
-                                {{ item_data.item.name }}
+                                <span class="menu-text">{{ item_data.item.name }}</span> <!-- Hide this text in collapsed state -->
                             </a>
                             
                             <!-- Submenu (Child Items) -->
@@ -26,7 +26,7 @@
                                         <li class="mb-1 text-sm">
                                             <a href="{{ child_data.item.url }}" class="flex items-center p-2 rounded-md hover:bg-gray-200 {% if request.path == child_data.item.url %}bg-blue-400 text-white{% endif %}">
                                                 <i class="bi bi-file-earmark-text-fill mr-2"></i>
-                                                {{ child_data.item.name }}
+                                                <span class="menu-text">{{ child_data.item.name }}</span> <!-- Hide this text in collapsed state -->
                                             </a>
                                         </li>
                                     {% endfor %}
@@ -38,6 +38,6 @@
             </div>
         {% endfor %}
     {% else %}
-        <p>No menu available.</p>
+        <p class="menu-text">No menu available.</p> <!-- This text should also hide in collapsed state -->
     {% endif %}
 </nav>

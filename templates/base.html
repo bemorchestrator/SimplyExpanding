@@ -19,12 +19,14 @@
         <div id="sidebar" class="bg-white flex flex-col fixed top-0 left-0 h-screen transition-transform duration-300 ease-in-out z-40 overflow-y-auto w-60 transform -translate-x-full md:translate-x-0">
             <div class="flex items-center justify-between py-4 px-4">
                 <div class="flex items-center">
+                    <!-- Full Logo (Shown in expanded state) -->
                     <span class="text-blue-400 text-xl font-bold whitespace-nowrap logo-full">Simply</span>
                     <span class="text-gray-600 text-xl font-bold ml-1 logo-full">Expanding</span>
+                    <!-- Short Logo (Shown in collapsed state) -->
                     <span class="text-blue-400 text-xl font-bold hidden logo-short">A</span>
                     <span class="text-white text-xl font-bold hidden logo-short">H</span>
                 </div>
-                <!-- Toggle button is only for desktop -->
+                <!-- Toggle button for sidebar (only for desktop) -->
                 <i id="toggle-btn" class="bi bi-chevron-left text-gray-600 cursor-pointer hidden md:inline"></i>
             </div>
 
@@ -33,11 +35,18 @@
             {% load static %}
             <nav class="mt-4 space-y-4 text-gray-800 pl-6">
                 {% load_menu %}
+                <!-- Example Menu Items (Ensure 'menu-text' class is applied to text spans) -->
+                <!--
+                <div class="menu-item flex items-center">
+                    <i class="bi bi-house icon text-xl"></i>
+                    <span class="menu-text ml-4">Home</span>
+                </div>
+                -->
             </nav>
             <!-- Dynamic Menu End -->
 
             <!-- Logout inside Sidebar -->
-            <div class="mt-auto p-4">
+            <div class="mt-auto p-4 logout-section">
                 <div class="flex items-center space-x-4">
                     <!-- User Profile Picture (Avatar) -->
                     <div class="w-10 h-10 rounded-full overflow-hidden">
@@ -46,12 +55,12 @@
                             alt="{{ request.user.get_full_name }}">
                     </div>
                     <!-- Logout Button -->
-                    <a href="{% url 'home:logout' %}" class="text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
+                    <a href="{% url 'home:logout' %}" class="logout-text text-indigo-600 hover:text-indigo-500 text-sm">Logout</a>
                 </div>
             </div>
         </div>
 
-        <!-- Overlay -->
+        <!-- Overlay (for mobile) -->
         <div id="overlay" class="fixed inset-0 bg-black opacity-50 hidden z-30"></div>
 
         <!-- Content -->
@@ -60,7 +69,7 @@
             <div class="flex justify-between items-center mb-4">
                 <!-- Left Side -->
                 <div class="flex items-center space-x-4">
-                    <!-- Hamburger Menu Icon -->
+                    <!-- Hamburger Menu Icon for mobile -->
                     <div class="md:hidden">
                         <button id="hamburger-btn" class="text-gray-600 focus:outline-none">
                             <i class="bi bi-list text-2xl"></i>
@@ -120,24 +129,40 @@
                 });
             }
 
-            // Hamburger menu functionality
+            // Hamburger menu functionality for mobile
             if (hamburgerBtn) {
                 hamburgerBtn.addEventListener('click', () => {
+                    // Ensure sidebar is in expanded state on mobile
+                    sidebar.classList.remove('collapsed');
+                    toggleBtn.classList.replace('bi-chevron-right', 'bi-chevron-left'); // Ensure toggle button shows correct icon
+                    menuTexts.forEach(menuText => menuText.classList.remove('hidden'));
+                    isCollapsed = false;
+
                     // Show the sidebar
                     sidebar.classList.remove('-translate-x-full');
-                    // Show the overlay
                     overlay.classList.remove('hidden');
                 });
             }
 
+            // Overlay functionality to hide the sidebar on mobile
             if (overlay) {
                 overlay.addEventListener('click', () => {
-                    // Hide the sidebar
                     sidebar.classList.add('-translate-x-full');
-                    // Hide the overlay
                     overlay.classList.add('hidden');
                 });
             }
+
+            // Optional: Reset sidebar state when resizing the window
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768) { // md breakpoint in Tailwind
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.add('hidden');
+                } else {
+                    if (!isCollapsed) {
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                }
+            });
         });
     </script>
 
@@ -156,21 +181,72 @@
             display: inline;
         }
 
-        /* Adjust submenu alignment in collapsed state */
-        #sidebar.collapsed #clerk-submenu {
-            margin-left: 0 !important; /* Remove left margin for submenu in collapsed state */
+        /* Center the icons and give them more space from the edges */
+        #sidebar.collapsed nav {
+            padding-left: 0; /* Remove existing padding */
+            padding-right: 0; /* Remove existing right padding */
         }
 
-        /* Align the submenu chevron icon properly in collapsed state */
-        #sidebar.collapsed .bi-chevron-right,
-        #sidebar.collapsed .bi-chevron-down {
-            margin-left: 0;
+        #sidebar.collapsed nav .menu-item {
+            justify-content: center; /* Center the icon horizontally */
+            padding-left: 0; /* Remove left padding */
+            padding-right: 0; /* Remove right padding */
+            width: 100%; /* Ensure full width for centering */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #sidebar.collapsed nav .menu-item .icon {
+            margin: 0 auto; /* Center the icon within its container */
+            padding: 0.5rem 0; /* Add vertical padding for spacing */
+        }
+
+        /* Hide Logout text when sidebar is collapsed */
+        #sidebar.collapsed .logout-text {
+            display: none;
+        }
+
+        /* Center the logout avatar when sidebar is collapsed */
+        #sidebar.collapsed .logout-section .flex {
+            justify-content: center;
         }
 
         /* Ensure content area is scrollable and takes full height */
         #content {
             height: 100vh;
             overflow-y: auto;
+        }
+
+        /* Prevent 'collapsed' styles from applying on mobile */
+        @media (max-width: 767px) {
+            #sidebar.collapsed {
+                width: 15rem !important; /* Override collapsed width on mobile to match expanded */
+            }
+
+            /* Ensure menu texts are visible on mobile */
+            #sidebar.collapsed .menu-text {
+                display: block !important;
+            }
+
+            /* Ensure logout text is visible on mobile */
+            #sidebar.collapsed .logout-text {
+                display: block !important;
+            }
+
+            /* Hide toggle button on mobile */
+            #toggle-btn {
+                display: none; /* Hide toggle button on mobile */
+            }
+
+            /* Adjust menu items to align text and icons */
+            #sidebar.collapsed nav .menu-item {
+                justify-content: flex-start !important;
+            }
+
+            #sidebar.collapsed nav .menu-item .icon {
+                margin: 0 !important;
+            }
         }
     </style>
 
