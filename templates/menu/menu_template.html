@@ -5,14 +5,14 @@
         <!-- Loop through menus -->
         {% for menu_data in menus %}
             <!-- Menu Name (Only shown in expanded state) -->
-            <div class="mb-4 pb-4 border-b border-gray-300 mt-6">
-                <h3 class="font-bold text-base mb-4 menu-text">{{ menu_data.menu.name }}</h3>
+            <div class="mb-2 pb-2 border-b border-gray-300 mt-4">
+                <h3 class="font-bold text-base mb-2 menu-text">{{ menu_data.menu.name }}</h3>
                 
                 <!-- Menu Items -->
                 <ul class="pl-6">
                     {% for item_data in menu_data.items %}
                         <!-- Menu Item -->
-                        <li class="mb-3 text-sm">
+                        <li class="mb-1 text-sm">
                             <a href="{{ item_data.item.url }}" class="flex items-center p-2 rounded-md hover:bg-gray-200 {% if request.path == item_data.item.url %}bg-blue-400 text-white{% endif %}">
                                 <!-- Dynamic Icon for each menu item -->
                                 <i class="{{ item_data.item.icon }} mr-2"></i>
@@ -21,9 +21,9 @@
                             
                             <!-- Submenu (Child Items) -->
                             {% if item_data.children %}
-                                <ul class="pl-6 mt-2">
+                                <ul class="pl-6 mt-1">
                                     {% for child_data in item_data.children %}
-                                        <li class="mb-1 text-sm">
+                                        <li class="mb-0.5 text-sm">
                                             <a href="{{ child_data.item.url }}" class="flex items-center p-2 rounded-md hover:bg-gray-200 {% if request.path == child_data.item.url %}bg-blue-400 text-white{% endif %}">
                                                 <i class="bi bi-file-earmark-text-fill mr-2"></i>
                                                 <span class="menu-text">{{ child_data.item.name }}</span> <!-- Hide this text in collapsed state -->
