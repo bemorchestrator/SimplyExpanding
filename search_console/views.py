@@ -120,22 +120,30 @@ def search_console_data(request):
         selected_site = ''
         tab = request.GET.get('tab', 'url')  # Default tab is 'url'
 
+        # Prepare request_data based on request method and 'fetch_data' parameter
         if request.method == 'POST':
-            tab = request.POST.get('tab', tab)
-            input_value = request.POST.get('input_value', '').strip()
-            selected_site = request.POST.get('selected_site', '')
-            start_date = request.POST.get('start_date')
-            end_date = request.POST.get('end_date')
-            row_limit = request.POST.get('row_limit')
-            sort = request.POST.get('sort', '')
-            order = request.POST.get('order', '')
-            display_all = request.POST.get('display_all') == 'on'
+            request_data = request.POST
+        elif request.method == 'GET' and 'fetch_data' in request.GET:
+            request_data = request.GET
+        else:
+            request_data = {}
+
+        if request_data:
+            tab = request_data.get('tab', tab)
+            input_value = request_data.get('input_value', '').strip()
+            selected_site = request_data.get('selected_site', '')
+            start_date = request_data.get('start_date')
+            end_date = request_data.get('end_date')
+            row_limit = request_data.get('row_limit')
+            sort = request_data.get('sort', '')
+            order = request_data.get('order', '')
+            display_all = request_data.get('display_all') == 'on'
 
             # Add logging to capture submitted data
             logger.debug(f"Received data: tab={tab}, input_value={input_value}, selected_site={selected_site}, start_date={start_date}, end_date={end_date}, row_limit={row_limit}, sort={sort}, order={order}, display_all={display_all}")
 
             # Check if the form has been submitted to fetch data
-            if 'fetch_data' in request.POST:
+            if 'fetch_data' in request_data:
                 # Validate inputs
                 if not input_value or not start_date or not end_date or not row_limit:
                     logger.warning("Invalid input received: one or more fields are missing.")
@@ -575,9 +583,8 @@ def search_console_data(request):
                     'selected_site': selected_site,
                     'tab': tab,
                 })
-
         else:
-            # On GET request, show the form
+            # On GET request without 'fetch_data', show the form
             logger.debug("Rendering search_console_data form.")
             return render(request, 'search_console/search_console_data.html', {
                 'data': None,
