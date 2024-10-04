@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'client',
     'search_console',
     'payroll',
+    'audit',
 ]
 
 MIDDLEWARE = [

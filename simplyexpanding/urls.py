@@ -25,6 +25,7 @@ urlpatterns = [
     path('search_console/', include('search_console.urls')),
     path('analytics/', include('analytics.urls')),
     path('payroll/', include('payroll.urls')),
+    path('audit/', include('audit.urls')),
 ]
 
 if settings.DEBUG:
