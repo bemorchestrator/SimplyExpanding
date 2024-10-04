@@ -1,8 +1,6 @@
-# attendance/admin.py
-
 from django.contrib import admin
 from django import forms
-from .models import Attendance, LatenessRule, LatenessDeduction, GlobalSettings
+from .models import Attendance, LatenessRule, LatenessDeduction, GlobalSettings, Break
 from holidays.models import Holiday  # Import Holiday model
 
 
@@ -28,6 +26,12 @@ class AttendanceForm(forms.ModelForm):
         }
 
 
+class BreakInline(admin.TabularInline):
+    model = Break
+    fields = ('break_start_time', 'break_end_time')
+    extra = 1  # Number of extra blank forms
+
+
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
     form = AttendanceForm
@@ -44,6 +48,7 @@ class AttendanceAdmin(admin.ModelAdmin):
         'lateness_calculated',
         'is_primary_clock_in'
     )
+    inlines = [BreakInline]  # Include the BreakInline here
 
     def get_formatted_total_hours(self, obj):
         """
@@ -88,7 +93,7 @@ class AttendanceAdmin(admin.ModelAdmin):
             'description': 'Assign the employee, current status, and associate with a holiday if applicable.'
         }),
         ('Time Information', {
-            'fields': ('clock_in_time', 'clock_out_time', 'break_start_time', 'break_end_time'),
+            'fields': ('clock_in_time', 'clock_out_time'),
             'description': 'Manage clock-in/out and break times.'
         }),
         ('Lateness and Deductions', {
