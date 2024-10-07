@@ -1,6 +1,20 @@
+# models.py
+
 from django.db import models
 
 class UploadedFile(models.Model):
+    ACTION_CHOICES = [
+        ('leave', 'Leave As Is'),
+        ('update_on_page', 'Update On Page'),
+        ('target_with_links', 'Target w/ Links'),
+        ('301', '301'),
+        ('canonicalize', 'Canonicalize'),
+        ('block_crawl', 'Block Crawl'),
+        ('no_index', 'No Index'),
+        ('content_audit', 'Content Audit'),
+        ('merge', 'Merge'),
+    ]
+
     file_name = models.CharField(max_length=255, default='unknown_file')
     drive_file_id = models.CharField(max_length=255, default='unknown_id')
     drive_file_link = models.URLField(max_length=500, null=True, blank=True)
@@ -19,6 +33,7 @@ class UploadedFile(models.Model):
     outlinks = models.IntegerField(null=True, blank=True)
     page_path = models.CharField(max_length=255, null=True, blank=True)  
     crawl_depth = models.IntegerField(null=True, blank=True)
+    action_choice = models.CharField(max_length=50, choices=ACTION_CHOICES, default='leave')
 
     def __str__(self):
         return self.file_name

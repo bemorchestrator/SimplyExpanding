@@ -1,9 +1,11 @@
+# views.py
+
 import os
 import csv
 import re
 import requests
 import logging
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
 import xml.etree.ElementTree as ET
@@ -17,7 +19,7 @@ from google_auth import get_credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import tempfile
-
+import json
 
 # Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
 file_handler = logging.FileHandler('audit_log.log', mode='a')
@@ -56,12 +58,39 @@ RELEVANT_COLUMNS = {
     'crawl_depth': 43
 }
 
-
-
 def audit_result(request):
-    uploaded_files = UploadedFile.objects.all()
-    logging.info(f"Audit data retrieved for dashboard: {len(uploaded_files)} files.")
-    return render(request, 'audit/audit_dashboard.html', {'audit_data': uploaded_files})
+    audit_data = UploadedFile.objects.all()
+    logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files.")
+
+    # Pagination Logic
+    page_number = request.GET.get('page', 1)
+    rows_per_page = request.GET.get('rows', 25)  # Default to 25 rows per page
+
+    # Ensure rows_per_page is an integer
+    try:
+        rows_per_page = int(rows_per_page)
+        if rows_per_page <= 0:
+            rows_per_page = 25
+    except ValueError:
+        rows_per_page = 25
+
+    paginator = Paginator(audit_data, rows_per_page)
+
+    try:
+        page_obj = paginator.get_page(page_number)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page
+        page_obj = paginator.get_page(1)
+    except EmptyPage:
+        # If page is out of range, deliver the last page of results
+        page_obj = paginator.get_page(paginator.num_pages)
+
+    return render(request, 'audit/audit_dashboard.html', {
+        'audit_data': page_obj,
+        'paginator': paginator,
+        'page_obj': page_obj,
+        'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
+    })
 
 def upload_file(request):
     if request.method == 'POST':
@@ -137,7 +166,7 @@ def upload_file(request):
                 except Exception as e:
                     logging.error(f"Google Drive upload error: {e}")
                     messages.error(request, f"An error occurred while uploading the file to Google Drive: {e}")
-                    return redirect('audit_result')
+                    return redirect('audit_dashboard')
 
             except Exception as e:
                 logging.error(f"An error occurred during file processing: {e}")
@@ -152,7 +181,7 @@ def upload_file(request):
                     except PermissionError:
                         logging.debug(f"Retry failed to delete temp file. File may still be in use: {temp_file_path}")
 
-            return redirect('audit_result')
+            return redirect('audit_dashboard')
     else:
         form = FileUploadForm()
 
@@ -201,7 +230,6 @@ def crawl_sitemaps(request):
                         logging.warning(f"Failed to crawl sitemap: {sitemap_url}")
 
     return render(request, 'audit/sitemap_dashboard.html', {'form': form, 'crawled_results': crawled_results})
-
 
 # Extracts the page path from the URL
 def get_page_path(url):
@@ -261,25 +289,38 @@ def process_csv_file(file):
         logging.error(f"Error while processing CSV file: {e}")
         return []
 
-
 def audit_dashboard(request):
     audit_data = UploadedFile.objects.all()
 
-    # Handle pagination, get page number from request
+    # Get page number and rows per page from the request
     page_number = request.GET.get('page', 1)
     rows_per_page = request.GET.get('rows', 25)  # Default to 25 rows per page
 
-    paginator = Paginator(audit_data, rows_per_page)
-    page_obj = paginator.get_page(page_number)
+    # Ensure rows_per_page is an integer
+    try:
+        rows_per_page = int(rows_per_page)
+        if rows_per_page <= 0:
+            rows_per_page = 25
+    except ValueError:
+        rows_per_page = 25
 
-    logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files, displaying page {page_number}.")
+    paginator = Paginator(audit_data, rows_per_page)
+
+    try:
+        page_obj = paginator.get_page(page_number)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page
+        page_obj = paginator.get_page(1)
+    except EmptyPage:
+        # If page is out of range, deliver the last page of results
+        page_obj = paginator.get_page(paginator.num_pages)
 
     return render(request, 'audit/audit_dashboard.html', {
-        'audit_data': page_obj,  # Pass paginated data
+        'audit_data': page_obj,
         'paginator': paginator,
-        'page_obj': page_obj,  # Add this to provide page-related information in the template
+        'page_obj': page_obj,
+        'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
     })
-
 
 @csrf_protect
 def delete_uploaded_files(request):
@@ -295,4 +336,34 @@ def delete_uploaded_files(request):
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
     else:
         logging.warning("Received non-POST request to delete_uploaded_files.")
+        return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+
+@csrf_protect
+def update_action_choice(request):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            data = json.loads(request.body)
+            audit_id = data.get('id')
+            action = data.get('action_choice')
+
+            if not audit_id or not action:
+                return JsonResponse({'success': False, 'error': 'Invalid data.'}, status=400)
+
+            if action not in dict(UploadedFile.ACTION_CHOICES).keys():
+                return JsonResponse({'success': False, 'error': 'Invalid action choice.'}, status=400)
+
+            try:
+                audit_entry = UploadedFile.objects.get(id=audit_id)
+                audit_entry.action_choice = action
+                audit_entry.save()
+                logging.info(f"Action choice updated for UploadedFile id {audit_id} to {action}.")
+                return JsonResponse({'success': True})
+            except UploadedFile.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+        except Exception as e:
+            logging.error(f"Error updating action choice: {e}")
+            return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
+    else:
         return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
