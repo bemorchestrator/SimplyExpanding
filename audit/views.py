@@ -1,9 +1,12 @@
 import os
 import csv
+import re
 import requests
 import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_protect
 import xml.etree.ElementTree as ET
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.exceptions import ValidationError
 from django.contrib import messages
 from .forms import FileUploadForm, SitemapForm
@@ -40,16 +43,18 @@ RELEVANT_COLUMNS = {
     'url': 0,
     'type': 2,
     'current_title': 7,
-    'meta': 12,
-    'h1': 16,
-    'word_count': 14,
-    'canonical_link': 21,
+    'meta': 10,
+    'h1': 15,
+    'word_count': 37,
+    'canonical_link': 26,
     'status_code': 3,
     'index_status': 5,
-    'last_modified': 18,
-    'inlinks': 26,
-    'outlinks': 27
+    'inlinks': 46,
+    'outlinks': 50,
+    'crawl_depth': 43
 }
+
+
 
 def audit_result(request):
     uploaded_files = UploadedFile.objects.all()
@@ -195,6 +200,15 @@ def crawl_sitemaps(request):
 
     return render(request, 'audit/sitemap_dashboard.html', {'form': form, 'crawled_results': crawled_results})
 
+
+# Extracts the page path from the URL
+def get_page_path(url):
+    # This regex extracts the part of the URL after the domain
+    pattern = r'https?://[^/]+(/.*)'
+    match = re.match(pattern, url)
+    return match.group(1) if match else '/'
+
+# Processes the CSV file and returns the audit data
 def process_csv_file(file):
     try:
         decoded_file = file.read().decode('utf-8').splitlines()
@@ -206,20 +220,32 @@ def process_csv_file(file):
         for row in reader:
             logging.debug(f"Processing row: {row}")
             try:
+                # Extract page path from the URL
+                page_path = get_page_path(row[RELEVANT_COLUMNS['url']])
+
+                # Handle crawl depth, ensuring it's a valid number or default to 0
+                crawl_depth = row[RELEVANT_COLUMNS['crawl_depth']].strip()
+                crawl_depth = int(crawl_depth) if crawl_depth.isdigit() else 0
+
+                # Handle inlinks and outlinks, ensuring numeric conversion
+                inlinks = int(row[RELEVANT_COLUMNS['inlinks']]) if row[RELEVANT_COLUMNS['inlinks']].isdigit() else 0
+                outlinks = int(row[RELEVANT_COLUMNS['outlinks']]) if row[RELEVANT_COLUMNS['outlinks']].isdigit() else 0
+
+                # Append the processed data to the audit_data list
                 audit_data.append({
                     'url': row[RELEVANT_COLUMNS['url']],
                     'type': row[RELEVANT_COLUMNS['type']],
                     'current_title': row[RELEVANT_COLUMNS['current_title']],
                     'meta': row[RELEVANT_COLUMNS['meta']],
                     'h1': row[RELEVANT_COLUMNS['h1']],
-                    'word_count': row[RELEVANT_COLUMNS['word_count']],
+                    'word_count': int(row[RELEVANT_COLUMNS['word_count']]) if row[RELEVANT_COLUMNS['word_count']].isdigit() else 0,
                     'canonical_link': row[RELEVANT_COLUMNS['canonical_link']],
                     'status_code': row[RELEVANT_COLUMNS['status_code']],
                     'index_status': row[RELEVANT_COLUMNS['index_status']],
-                    'last_modified': row[RELEVANT_COLUMNS['last_modified']],
-                    # Ensure 'inlinks' and 'outlinks' are numbers, defaulting to 0 if empty or non-numeric
-                    'inlinks': int(row[RELEVANT_COLUMNS['inlinks']]) if row[RELEVANT_COLUMNS['inlinks']].isdigit() else 0,
-                    'outlinks': int(row[RELEVANT_COLUMNS['outlinks']]) if row[RELEVANT_COLUMNS['outlinks']].isdigit() else 0,
+                    'inlinks': inlinks,
+                    'outlinks': outlinks,
+                    'page_path': page_path,
+                    'crawl_depth': crawl_depth,  # Validated crawl depth
                 })
             except IndexError as e:
                 logging.error(f"IndexError while processing row: {row} - {e}")
@@ -233,7 +259,25 @@ def process_csv_file(file):
         logging.error(f"Error while processing CSV file: {e}")
         return []
 
+
 def audit_dashboard(request):
     audit_data = UploadedFile.objects.all()
     logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files.")
     return render(request, 'audit/audit_dashboard.html', {'audit_data': audit_data})
+
+
+@csrf_protect
+def delete_uploaded_files(request):
+    if request.method == 'POST':
+        logging.info("Received POST request to delete uploaded files.")
+        try:
+            # Delete all UploadedFile records
+            count, _ = UploadedFile.objects.all().delete()
+            logging.info(f"Deleted {count} UploadedFile records.")
+            return JsonResponse({'success': True})
+        except Exception as e:
+            logging.error(f"Error deleting UploadedFile records: {e}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    else:
+        logging.warning("Received non-POST request to delete_uploaded_files.")
+        return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)

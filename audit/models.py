@@ -17,6 +17,8 @@ class UploadedFile(models.Model):
     last_modified = models.CharField(max_length=100, null=True, blank=True)
     inlinks = models.IntegerField(null=True, blank=True)
     outlinks = models.IntegerField(null=True, blank=True)
+    page_path = models.CharField(max_length=255, null=True, blank=True)  
+    crawl_depth = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.file_name

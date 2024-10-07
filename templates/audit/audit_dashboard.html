@@ -1,20 +1,24 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="mt-10 px-8">
-    <div class="bg-white shadow-md rounded px-8 py-6">
-        <h2 class="text-xl font-semibold mb-4">Website Audit Dashboard</h2>
+<div class="mt-10 px-8" style="height: 100vh; display: flex; flex-direction: column; margin-top: 0;">
+    <div class="bg-white shadow-md rounded px-8 py-6" style="flex: 1; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 class="text-xl font-semibold mb-4">Website Audit Dashboard</h2>
+            <button id="delete-all-btn" class="btn btn-danger">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
 
-        <div class="overflow-x-auto">
+        <div class="table-container" style="flex: 1; overflow-x: scroll; overflow-y: scroll;">
             <table class="min-w-full bg-white">
                 <thead>
                     <tr class="text-gray-700 uppercase text-sm leading-normal">
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Actions</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">URL</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Final URL</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Page Path</th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap sticky-header sticky-col-1">Actions</th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap sticky-header sticky-col-2">URL</th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap page-path">Page Path</th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">Crawl Depth</th>
                         <th class="py-1 px-2 text-left whitespace-nowrap">Category</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Page Depth</th>
                         <th class="py-1 px-2 text-left whitespace-nowrap">In Sitemap</th>
 
                         <!-- Keyword Performance -->
@@ -44,7 +48,6 @@
                         <th class="py-1 px-2 text-left whitespace-nowrap">Canonical Link</th>
                         <th class="py-1 px-2 text-left whitespace-nowrap">Status Code</th>
                         <th class="py-1 px-2 text-left whitespace-nowrap">Index/No Index</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Last Modified</th>
                         <th class="py-1 px-2 text-left whitespace-nowrap">Inlinks</th>
                         <th class="py-1 px-2 text-left whitespace-nowrap">Outlinks</th>
                     </tr>
@@ -52,7 +55,7 @@
                 <tbody class="text-gray-600 text-sm font-light">
                     {% for row in audit_data %}
                     <tr class="border-b border-gray-200 hover:bg-gray-100">
-                        <td class="py-1 px-2 text-left whitespace-nowrap">
+                        <td class="py-1 px-2 text-left whitespace-nowrap sticky-col-1">
                             <!-- Actions dropdown -->
                             <select class="shadow border rounded w-32 py-1 px-2 text-gray-700 whitespace-nowrap">
                                 <option value="Leave As Is" class="text-blue-500">1. Leave As Is</option>
@@ -66,11 +69,20 @@
                                 <option value="Merge" class="text-orange-500">9. Merge</option>
                             </select>
                         </td>
-                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.url }}</td>
-                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.final_url }}</td>
-                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.page_path }}</td>
+
+                        <td class="py-1 px-2 text-left whitespace-nowrap sticky-col-2" style="max-width: 400px;">
+                            <span style="display: block; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ row.url }}">
+                                {{ row.url }}
+                            </span>
+                        </td>
+
+                        <td class="py-1 px-2 text-left whitespace-nowrap page-path" style="max-width: 400px;">
+                            <span style="display: block; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ row.page_path }}">
+                                {{ row.page_path }}
+                            </span>
+                        </td>
+                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.crawl_depth }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.category }}</td>
-                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.page_depth }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">
                             {% if row.in_sitemap == 'Yes' %}
                                 <span class="text-green-500 font-semibold">{{ row.in_sitemap }}</span>
@@ -79,15 +91,13 @@
                             {% endif %}
                         </td>
 
-                        <!-- Keyword Performance -->
+                        <!-- Keyword Performance and Page Performance are retained for future use -->
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.main_kw }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.kw_volume }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.kw_ranking }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.best_kw }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.best_kw_volume }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.best_kw_ranking }}</td>
-
-                        <!-- Page Performance -->
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.impressions }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.sessions }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.percent_change_sessions }}</td>
@@ -103,11 +113,12 @@
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.meta }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.h1 }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.word_count }}</td>
-                        <td class="py-1 px-2 text-left whitespace-nowrap"><a href="{{ row.canonical_link }}" target="_blank">{{ row.canonical_link }}</a></td>
+                        <td class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="{{ row.canonical_link }}" target="_blank">{{ row.canonical_link }}</a>
+                        </td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.status_code }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.index_status }}</td>
-                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.last_modified }}</td>
-                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.inlinks|default:"0" }}</td> <!-- Default to 0 if empty -->
+                        <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.inlinks|default:"0" }}</td>
                         <td class="py-1 px-2 text-left whitespace-nowrap">{{ row.outlinks }}</td>
                     </tr>
                     {% endfor %}
@@ -116,9 +127,41 @@
         </div>
     </div>
 </div>
-{% endblock %}
+
 
 <style>
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+
+    .truncate-url {
+        max-width: 400px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mt-10 {
+        margin-top: 0; /* Remove top margin to prevent overflow */
+    }
+    .mt-10.px-8 {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .bg-white.shadow-md.rounded.px-8.py-6 {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Prevent content from overflowing */
+    }
+    .table-container {
+        flex: 1;
+        overflow-x: scroll;
+        overflow-y: scroll;
+        position: relative; /* Ensure positioning context for sticky elements */
+    }
     select {
         background-color: white;
         color: inherit;
@@ -153,4 +196,161 @@
     select option[value="Merge"] {
         color: orange;
     }
+
+    /* Sticky Columns Styles */
+    /* First Column (Actions) */
+    .sticky-col-1 {
+        position: -webkit-sticky; /* For Safari */
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 5;
+        min-width: 128px; /* Adjust based on actual width */
+        max-width: 128px; /* Adjust based on actual width */
+        box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); /* Optional: adds a subtle shadow */
+    }
+
+    /* Second Column (URL) with 16px gap */
+    .sticky-col-2 {
+        position: -webkit-sticky; /* For Safari */
+        position: sticky;
+        left: 144px; /* 128px (Actions) + 16px (gap) */
+        background: white;
+        z-index: 4;
+        min-width: 400px; /* Adjust based on actual width */
+        max-width: 400px; /* Adjust based on actual width */
+        box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); /* Optional: adds a subtle shadow */
+    }
+
+    /* Optional: Sticky Header */
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        background: #f9f9f9;
+        z-index: 6;
+    }
+
+    /* Ensure that the sticky columns are above other cells */
+    th.sticky-col-1, td.sticky-col-1 {
+        z-index: 5;
+    }
+
+    th.sticky-col-2, td.sticky-col-2 {
+        z-index: 4;
+    }
+
+    /* Additional styling to create a gap between sticky columns */
+    .sticky-col-1::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 16px; /* Gap size */
+        height: 100%;
+        background: transparent; /* Can set to match table background if needed */
+        z-index: 3; /* Below the sticky-col-2 */
+    }
+
+    /* Adjust table padding to accommodate the gap */
+    table {
+        border-collapse: separate;
+        border-spacing: 0 0;
+    }
+
+    /* Gap between URL and Page Path columns */
+    .page-path {
+        padding-left: 36px; /* Creates a 16px gap */
+    }
 </style>
+
+<!-- SweetAlert2 script -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteBtn = document.getElementById('delete-all-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function(event) {
+                event.preventDefault();
+                console.log("Delete button clicked."); // Debugging statement
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "This action will delete all uploaded data!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        console.log("User confirmed deletion."); // Debugging statement
+
+                        // Get CSRF token from cookies
+                        function getCookie(name) {
+                            let cookieValue = null;
+                            if (document.cookie && document.cookie !== '') {
+                                const cookies = document.cookie.split(';');
+                                for (let i = 0; i < cookies.length; i++) {
+                                    const cookie = cookies[i].trim();
+                                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                        break;
+                                    }
+                                }
+                            }
+                            return cookieValue;
+                        }
+                        const csrftoken = getCookie('csrftoken');
+                        console.log("CSRF Token:", csrftoken); // Debugging statement
+
+                        // Make an AJAX request to delete data
+                        fetch("{% url 'delete_uploaded_files' %}", {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrftoken,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({})
+                        })
+                        .then(response => {
+                            console.log("Response received:", response); // Debugging statement
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log("Data parsed:", data); // Debugging statement
+                            if (data.success) {
+                                Swal.fire(
+                                    'Deleted!',
+                                    'All data has been deleted.',
+                                    'success'
+                                ).then(() => {
+                                    window.location.reload(); // Refresh page after successful deletion
+                                });
+                            } else {
+                                Swal.fire(
+                                    'Error!',
+                                    data.error || 'There was an issue deleting the data.',
+                                    'error'
+                                );
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            Swal.fire(
+                                'Error!',
+                                'There was an issue deleting the data.',
+                                'error'
+                            );
+                        });
+                    }
+                });
+            });
+        } else {
+            console.error("Delete button with ID 'delete-all-btn' not found.");
+        }
+    });
+</script>
+{% endblock %}
