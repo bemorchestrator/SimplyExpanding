@@ -6,17 +6,29 @@
 <div class="mt-10 px-8" style="height: 100vh; display: flex; flex-direction: column; margin-top: 0;">
     <div class="bg-gray-800 rounded px-8 py-6" style="flex: 1; display: flex; flex-direction: column;">
         <!-- Header Section -->
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2 class="text-xl font-semibold mb-4" style="color: #ffffff;">Website Audit Dashboard</h2>
-            <div style="display: flex; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 class="text-xl font-semibold" style="color: #ffffff;">Website Audit Dashboard</h2>
+            
+            <!-- Search Bar and Action Buttons -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <!-- Search Bar -->
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Search..."
+                    value="{{ search_query }}"
+                    class="px-4 py-2 rounded border border-gray-300"
+                    style="padding: 8px; border-radius: 4px; color: black;"
+                />
+
                 <!-- Upload Button -->
                 <button id="upload-btn" class="btn" style="background-color: #4CAF50; color: white; padding: 10px; border-radius: 8px;">
-                    <i class="bi bi-upload"></i>
+                    <i class="bi bi-upload"></i> Upload
                 </button>
         
                 <!-- Delete Button -->
                 <button id="delete-all-btn" class="btn" style="background-color: #dc3545; color: white; padding: 10px; border-radius: 8px;">
-                    <i class="bi bi-trash"></i>
+                    <i class="bi bi-trash"></i> Delete All
                 </button>
             </div>
         </div>
@@ -26,45 +38,381 @@
             <table class="min-w-full text-white" id="audit-table">
                 <thead>
                     <tr class="text-gray-400 uppercase text-sm leading-normal">
+                        <!-- Define a helper template for sortable headers -->
+                        {% comment %}
+                            Each sortable header will toggle between ascending and descending.
+                            The current sort field and direction are indicated with an arrow.
+                        {% endcomment %}
+                        
+                        <!-- Actions Column (Non-sortable) -->
                         <th class="py-1 px-2 text-left whitespace-nowrap sticky-header sticky-col-1">Actions</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap sticky-header sticky-col-2">URL</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap page-path">Page Path</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Crawl Depth</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Category</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">In Sitemap</th>
+                        
+                        <!-- URL Column (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap sticky-header sticky-col-2">
+                            <a href="#" class="sortable-header" data-sort="url">
+                                URL
+                                {% if current_sort == 'url' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650; <!-- Up Arrow -->
+                                    {% else %}
+                                        &#9660; <!-- Down Arrow -->
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
 
-                        <!-- Keyword Performance -->
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Main KW</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Volume</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Ranking</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Best KW</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Volume</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Ranking</th>
+                        <!-- Page Path Column (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="page_path">
+                                Page Path
+                                {% if current_sort == 'page_path' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
 
-                        <!-- Page Performance -->
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Impressions</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Sessions</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">% Change Sessions</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Bounce Rate</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Avg Time on Page</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Losing Traffic?</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Links</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">SERP CTR</th>
+                        <!-- Crawl Depth Column (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="crawl_depth">
+                                Crawl Depth
+                                {% if current_sort == 'crawl_depth' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
 
-                        <!-- Screaming Frog On-Page -->
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Type</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Current Title</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Meta</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">H1</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Word Count</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Canonical Link</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Status Code</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Index/No Index</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Inlinks</th>
-                        <th class="py-1 px-2 text-left whitespace-nowrap">Outlinks</th>
+                        <!-- Category Column (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="category">
+                                Category
+                                {% if current_sort == 'category' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        <!-- In Sitemap Column (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="in_sitemap">
+                                In Sitemap
+                                {% if current_sort == 'in_sitemap' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        <!-- Keyword Performance Columns (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="main_kw">
+                                Main KW
+                                {% if current_sort == 'main_kw' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="kw_volume">
+                                Volume
+                                {% if current_sort == 'kw_volume' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="kw_ranking">
+                                Ranking
+                                {% if current_sort == 'kw_ranking' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="best_kw">
+                                Best KW
+                                {% if current_sort == 'best_kw' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="best_kw_volume">
+                                Volume
+                                {% if current_sort == 'best_kw_volume' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="best_kw_ranking">
+                                Ranking
+                                {% if current_sort == 'best_kw_ranking' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        <!-- Page Performance Columns (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="impressions">
+                                Impressions
+                                {% if current_sort == 'impressions' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="sessions">
+                                Sessions
+                                {% if current_sort == 'sessions' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="percent_change_sessions">
+                                % Change Sessions
+                                {% if current_sort == 'percent_change_sessions' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="bounce_rate">
+                                Bounce Rate
+                                {% if current_sort == 'bounce_rate' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="avg_time_on_page">
+                                Avg Time on Page
+                                {% if current_sort == 'avg_time_on_page' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="losing_traffic">
+                                Losing Traffic?
+                                {% if current_sort == 'losing_traffic' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="links">
+                                Links
+                                {% if current_sort == 'links' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="serp_ctr">
+                                SERP CTR
+                                {% if current_sort == 'serp_ctr' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        <!-- Screaming Frog On-Page Columns (Sortable) -->
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="type">
+                                Type
+                                {% if current_sort == 'type' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="current_title">
+                                Current Title
+                                {% if current_sort == 'current_title' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="meta">
+                                Meta
+                                {% if current_sort == 'meta' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="h1">
+                                H1
+                                {% if current_sort == 'h1' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="word_count">
+                                Word Count
+                                {% if current_sort == 'word_count' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="canonical_link">
+                                Canonical Link
+                                {% if current_sort == 'canonical_link' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="status_code">
+                                Status Code
+                                {% if current_sort == 'status_code' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="index_status">
+                                Index/No Index
+                                {% if current_sort == 'index_status' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="inlinks">
+                                Inlinks
+                                {% if current_sort == 'inlinks' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="py-1 px-2 text-left whitespace-nowrap">
+                            <a href="#" class="sortable-header" data-sort="outlinks">
+                                Outlinks
+                                {% if current_sort == 'outlinks' %}
+                                    {% if current_direction == 'asc' %}
+                                        &#9650;
+                                    {% else %}
+                                        &#9660;
+                                    {% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
                     </tr>
                 </thead>
-                <tbody class="text-gray-300 text-sm font-light">
+                <tbody class="text-gray-300 text-sm font-light" id="audit-table-body">
                     {% for row in audit_data %}
                     <tr class="border-b border-gray-700 hover:bg-gray-700">
                         <!-- Actions Dropdown -->
@@ -155,7 +503,7 @@
             
             <!-- First Page Button -->
             <button
-                onclick="{% if page_obj.has_previous %}window.location.href='?page=1'{% endif %}"
+                onclick="{% if page_obj.has_previous %}window.location.href='?page=1&search={{ search_query }}&sort={{ current_sort }}&direction={{ current_direction }}'{% endif %}"
                 class="btn bg-blue-500 text-white"
                 {% if page_obj.number == 1 %}disabled{% endif %}
             >
@@ -164,7 +512,7 @@
             
             <!-- Previous Page Button -->
             <button
-                onclick="{% if page_obj.has_previous %}window.location.href='?page={{ page_obj.previous_page_number }}'{% endif %}"
+                onclick="{% if page_obj.has_previous %}window.location.href='?page={{ page_obj.previous_page_number }}&search={{ search_query }}&sort={{ current_sort }}&direction={{ current_direction }}'{% endif %}"
                 class="btn bg-blue-500 text-white"
                 {% if not page_obj.has_previous %}disabled{% endif %}
             >
@@ -173,7 +521,7 @@
             
             <!-- Next Page Button -->
             <button
-                onclick="{% if page_obj.has_next %}window.location.href='?page={{ page_obj.next_page_number }}'{% endif %}"
+                onclick="{% if page_obj.has_next %}window.location.href='?page={{ page_obj.next_page_number }}&search={{ search_query }}&sort={{ current_sort }}&direction={{ current_direction }}'{% endif %}"
                 class="btn bg-blue-500 text-white"
                 {% if not page_obj.has_next %}disabled{% endif %}
             >
@@ -182,7 +530,7 @@
             
             <!-- Last Page Button -->
             <button
-                onclick="{% if page_obj.has_next %}window.location.href='?page={{ page_obj.paginator.num_pages }}'{% endif %}"
+                onclick="{% if page_obj.has_next %}window.location.href='?page={{ page_obj.paginator.num_pages }}&search={{ search_query }}&sort={{ current_sort }}&direction={{ current_direction }}'{% endif %}"
                 class="btn bg-blue-500 text-white"
                 {% if page_obj.number == page_obj.paginator.num_pages %}disabled{% endif %}
             >
@@ -362,6 +710,23 @@
     .pagination-controls span#pagination-info-bottom {
         font-weight: 500;
     }
+
+    /* Sortable Header Styling */
+    .sortable-header {
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    .sortable-header:hover {
+        text-decoration: underline;
+    }
+
+    .sortable-header .sort-arrow {
+        margin-left: 5px;
+        font-size: 0.8em;
+    }
+
 </style>
 
 <!-- SweetAlert2 script -->
@@ -576,7 +941,499 @@
             console.error("Upload button with ID 'upload-btn' not found.");
         }
 
-        // Note: Removed client-side pagination as server-side is being used
+        // Search Functionality
+        const searchInput = document.getElementById('search-input');
+        let searchTimeout = null;
+
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+
+            // Debounce the search to wait for user to stop typing
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 300); // 300ms delay
+        });
+
+        // Function to perform AJAX search
+        function performSearch(query) {
+            console.log("Performing search with query:", query);
+
+            // Get current sort and direction
+            const currentSort = "{{ current_sort }}";
+            const currentDirection = "{{ current_direction }}";
+
+            // Construct the query parameters
+            const params = new URLSearchParams({
+                search: query,
+                sort: currentSort,
+                direction: currentDirection,
+            });
+
+            fetch(`?${params.toString()}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Search data received:", data);
+                updateTable(data.audit_data);
+                updatePagination(data.current_page, data.num_pages, data.has_previous, data.has_next);
+            })
+            .catch(error => {
+                console.error('Error during search:', error);
+            });
+        }
+
+        // Function to update the table body with new data
+        function updateTable(auditData) {
+            const tableBody = document.getElementById('audit-table-body');
+            tableBody.innerHTML = ''; // Clear existing table data
+
+            auditData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.classList.add('border-b', 'border-gray-700', 'hover:bg-gray-700');
+
+                // Actions Dropdown
+                const actionsTd = document.createElement('td');
+                actionsTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap', 'sticky-col-1');
+                actionsTd.style.backgroundColor = '#253140';
+                actionsTd.style.left = '0';
+
+                const select = document.createElement('select');
+                select.classList.add('shadow', 'border', 'rounded', 'w-32', 'py-1', 'text-white', 'action-dropdown');
+                select.setAttribute('data-id', row.id);
+
+                const actionChoices = [
+                    { value: 'leave', text: '1. Leave As Is', class: 'text-blue-500' },
+                    { value: 'update_on_page', text: '2. Update "On Page"', class: 'text-green-500' },
+                    { value: 'target_with_links', text: '3. Target w/ Links', class: 'text-yellow-500' },
+                    { value: '301', text: '4. 301', class: 'text-red-500' },
+                    { value: 'canonicalize', text: '5. Canonicalize', class: 'text-purple-500' },
+                    { value: 'block_crawl', text: '6. Block Crawl', class: 'text-pink-500' },
+                    { value: 'no_index', text: '7. No Index', class: 'text-indigo-500' },
+                    { value: 'content_audit', text: '8. Content Audit', class: 'text-teal-500' },
+                    { value: 'merge', text: '9. Merge', class: 'text-orange-500' },
+                ];
+
+                actionChoices.forEach(choice => {
+                    const option = document.createElement('option');
+                    option.value = choice.value;
+                    option.textContent = choice.text;
+                    option.classList.add(choice.class);
+                    if (row.action_choice === choice.value) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                actionsTd.appendChild(select);
+                tr.appendChild(actionsTd);
+
+                // URL Column
+                const urlTd = document.createElement('td');
+                urlTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap', 'sticky-col-2');
+                urlTd.style.backgroundColor = '#253140';
+                urlTd.style.left = '180px';
+                urlTd.style.maxWidth = '400px';
+
+                const urlSpan = document.createElement('span');
+                urlSpan.style.display = 'block';
+                urlSpan.style.maxWidth = '400px';
+                urlSpan.style.overflow = 'hidden';
+                urlSpan.style.textOverflow = 'ellipsis';
+                urlSpan.style.whiteSpace = 'nowrap';
+                urlSpan.title = row.url;
+                urlSpan.textContent = row.url;
+
+                urlTd.appendChild(urlSpan);
+                tr.appendChild(urlTd);
+
+                // Page Path Column
+                const pagePathTd = document.createElement('td');
+                pagePathTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap', 'page-path');
+                pagePathTd.style.maxWidth = '400px';
+
+                const pagePathSpan = document.createElement('span');
+                pagePathSpan.style.display = 'block';
+                pagePathSpan.style.maxWidth = '400px';
+                pagePathSpan.style.overflow = 'hidden';
+                pagePathSpan.style.textOverflow = 'ellipsis';
+                pagePathSpan.style.whiteSpace = 'nowrap';
+                pagePathSpan.title = row.page_path;
+                pagePathSpan.textContent = row.page_path;
+
+                pagePathTd.appendChild(pagePathSpan);
+                tr.appendChild(pagePathTd);
+
+                // Crawl Depth Column
+                const crawlDepthTd = document.createElement('td');
+                crawlDepthTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                crawlDepthTd.textContent = row.crawl_depth;
+                tr.appendChild(crawlDepthTd);
+
+                // Category Column
+                const categoryTd = document.createElement('td');
+                categoryTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                categoryTd.textContent = row.category;
+                tr.appendChild(categoryTd);
+
+                // In Sitemap Column
+                const inSitemapTd = document.createElement('td');
+                inSitemapTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+
+                const inSitemapSpan = document.createElement('span');
+                inSitemapSpan.classList.add(row.in_sitemap === 'Yes' ? 'text-green-500' : 'text-red-500', 'font-semibold');
+                inSitemapSpan.textContent = row.in_sitemap;
+
+                inSitemapTd.appendChild(inSitemapSpan);
+                tr.appendChild(inSitemapTd);
+
+                // Keyword Performance Columns
+                const mainKwTd = document.createElement('td');
+                mainKwTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                mainKwTd.textContent = row.main_kw;
+                tr.appendChild(mainKwTd);
+
+                const kwVolumeTd = document.createElement('td');
+                kwVolumeTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                kwVolumeTd.textContent = row.kw_volume;
+                tr.appendChild(kwVolumeTd);
+
+                const kwRankingTd = document.createElement('td');
+                kwRankingTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                kwRankingTd.textContent = row.kw_ranking;
+                tr.appendChild(kwRankingTd);
+
+                const bestKwTd = document.createElement('td');
+                bestKwTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                bestKwTd.textContent = row.best_kw;
+                tr.appendChild(bestKwTd);
+
+                const bestKwVolumeTd = document.createElement('td');
+                bestKwVolumeTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                bestKwVolumeTd.textContent = row.best_kw_volume;
+                tr.appendChild(bestKwVolumeTd);
+
+                const bestKwRankingTd = document.createElement('td');
+                bestKwRankingTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                bestKwRankingTd.textContent = row.best_kw_ranking;
+                tr.appendChild(bestKwRankingTd);
+
+                // Page Performance Columns
+                const impressionsTd = document.createElement('td');
+                impressionsTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                impressionsTd.textContent = row.impressions;
+                tr.appendChild(impressionsTd);
+
+                const sessionsTd = document.createElement('td');
+                sessionsTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                sessionsTd.textContent = row.sessions;
+                tr.appendChild(sessionsTd);
+
+                const percentChangeSessionsTd = document.createElement('td');
+                percentChangeSessionsTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                percentChangeSessionsTd.textContent = row.percent_change_sessions;
+                tr.appendChild(percentChangeSessionsTd);
+
+                const bounceRateTd = document.createElement('td');
+                bounceRateTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                bounceRateTd.textContent = row.bounce_rate;
+                tr.appendChild(bounceRateTd);
+
+                const avgTimeOnPageTd = document.createElement('td');
+                avgTimeOnPageTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                avgTimeOnPageTd.textContent = row.avg_time_on_page;
+                tr.appendChild(avgTimeOnPageTd);
+
+                const losingTrafficTd = document.createElement('td');
+                losingTrafficTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                losingTrafficTd.textContent = row.losing_traffic;
+                tr.appendChild(losingTrafficTd);
+
+                const linksTd = document.createElement('td');
+                linksTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                linksTd.textContent = row.links;
+                tr.appendChild(linksTd);
+
+                const serpCtrTd = document.createElement('td');
+                serpCtrTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                serpCtrTd.textContent = row.serp_ctr;
+                tr.appendChild(serpCtrTd);
+
+                // Screaming Frog On-Page Columns
+                const typeTd = document.createElement('td');
+                typeTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                typeTd.textContent = row.type;
+                tr.appendChild(typeTd);
+
+                const currentTitleTd = document.createElement('td');
+                currentTitleTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                currentTitleTd.textContent = row.current_title;
+                tr.appendChild(currentTitleTd);
+
+                const metaTd = document.createElement('td');
+                metaTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                metaTd.textContent = row.meta;
+                tr.appendChild(metaTd);
+
+                const h1Td = document.createElement('td');
+                h1Td.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                h1Td.textContent = row.h1;
+                tr.appendChild(h1Td);
+
+                const wordCountTd = document.createElement('td');
+                wordCountTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                wordCountTd.textContent = row.word_count;
+                tr.appendChild(wordCountTd);
+
+                const canonicalLinkTd = document.createElement('td');
+                canonicalLinkTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                const canonicalLinkA = document.createElement('a');
+                canonicalLinkA.href = row.canonical_link;
+                canonicalLinkA.target = '_blank';
+                canonicalLinkA.textContent = row.canonical_link;
+                canonicalLinkTd.appendChild(canonicalLinkA);
+                tr.appendChild(canonicalLinkTd);
+
+                const statusCodeTd = document.createElement('td');
+                statusCodeTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                statusCodeTd.textContent = row.status_code;
+                tr.appendChild(statusCodeTd);
+
+                const indexStatusTd = document.createElement('td');
+                indexStatusTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                indexStatusTd.textContent = row.index_status;
+                tr.appendChild(indexStatusTd);
+
+                const inlinksTd = document.createElement('td');
+                inlinksTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                inlinksTd.textContent = row.inlinks || "0";
+                tr.appendChild(inlinksTd);
+
+                const outlinksTd = document.createElement('td');
+                outlinksTd.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
+                outlinksTd.textContent = row.outlinks;
+                tr.appendChild(outlinksTd);
+
+                tableBody.appendChild(tr);
+            });
+
+            // Re-attach event listeners to new dropdowns
+            attachDropdownListeners();
+        }
+
+        // Function to update pagination controls
+        function updatePagination(currentPage, numPages, hasPrevious, hasNext) {
+            const paginationInfo = document.getElementById('pagination-info-bottom');
+            paginationInfo.textContent = `Page ${currentPage} of ${numPages}`;
+
+            // Update buttons' disabled state
+            const firstBtn = document.querySelector('button[onclick*="page=1"]');
+            const prevBtn = document.querySelector('button[onclick*="previous_page_number"]');
+            const nextBtn = document.querySelector('button[onclick*="next_page_number"]');
+            const lastBtn = document.querySelector('button[onclick*="paginator.num_pages"]');
+
+            if (firstBtn) firstBtn.disabled = currentPage === 1;
+            if (prevBtn) prevBtn.disabled = !hasPrevious;
+            if (nextBtn) nextBtn.disabled = !hasNext;
+            if (lastBtn) lastBtn.disabled = currentPage === numPages;
+        }
+
+        // Function to attach event listeners to action dropdowns after table update
+        function attachDropdownListeners() {
+            // Re-attach changeColor function to all dropdowns
+            document.querySelectorAll('.action-dropdown').forEach(function(selectElement) {
+                // Call changeColor initially to apply color based on the current selection
+                changeColor(selectElement);
+
+                // Attach event listener to update color when user selects a new option
+                selectElement.addEventListener('change', function() {
+                    changeColor(this);
+                    // Get the audit entry id and the selected action
+                    const auditId = this.getAttribute('data-id');
+                    const selectedAction = this.value;
+
+                    // Get CSRF token
+                    function getCookie(name) {
+                        let cookieValue = null;
+                        if (document.cookie && document.cookie !== '') {
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                    break;
+                                }
+                            }
+                        }
+                        return cookieValue;
+                    }
+                    const csrftoken = getCookie('csrftoken');
+
+                    // Make AJAX POST request to update action choice
+                    fetch("{% url 'update_action_choice' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrftoken,
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({
+                            'id': auditId,
+                            'action_choice': selectedAction
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log(`Action choice updated for id ${auditId} to ${selectedAction}`);
+                            // Optionally, show a success message
+                        } else {
+                            console.error(`Failed to update action choice: ${data.error}`);
+                            Swal.fire(
+                                'Error!',
+                                data.error || 'There was an issue updating the action choice.',
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire(
+                            'Error!',
+                            'There was an issue updating the action choice.',
+                            'error'
+                        );
+                    });
+                });
+            });
+        }
+
+        // Initial attachment of dropdown listeners
+        attachDropdownListeners();
+
+        // Sortable Headers Functionality
+        const sortableHeaders = document.querySelectorAll('.sortable-header');
+
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function(event) {
+                event.preventDefault();
+                const sortField = this.getAttribute('data-sort');
+                let currentSort = "{{ current_sort }}";
+                let currentDirection = "{{ current_direction }}";
+
+                if (currentSort === sortField) {
+                    // Toggle direction
+                    currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // New sort field, default to ascending
+                    currentSort = sortField;
+                    currentDirection = 'asc';
+                }
+
+                const searchQuery = document.getElementById('search-input').value.trim();
+
+                // Construct query parameters
+                const params = new URLSearchParams({
+                    search: searchQuery,
+                    sort: currentSort,
+                    direction: currentDirection,
+                });
+
+                fetch(`?${params.toString()}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Sort data received:", data);
+                    updateTable(data.audit_data);
+                    updatePagination(data.current_page, data.num_pages, data.has_previous, data.has_next);
+                    // Update the header arrows
+                    updateSortIndicators(sortField, currentDirection);
+                })
+                .catch(error => {
+                    console.error('Error during sorting:', error);
+                });
+            });
+        });
+
+        // Function to update sort indicators (arrows) in the table headers
+        function updateSortIndicators(sortField, direction) {
+            sortableHeaders.forEach(header => {
+                const field = header.getAttribute('data-sort');
+                // Remove existing arrows
+                const existingArrow = header.querySelector('.sort-arrow');
+                if (existingArrow) {
+                    existingArrow.remove();
+                }
+
+                if (field === sortField) {
+                    // Add new arrow based on direction
+                    const arrow = document.createElement('span');
+                    arrow.classList.add('sort-arrow');
+                    arrow.innerHTML = direction === 'asc' ? '&#9650;' : '&#9660;';
+                    header.appendChild(arrow);
+                }
+            });
+        }
+
+        // Function to change color of the dropdown based on selected option
+        function changeColor(selectElement) {
+            // Define a mapping from class to background color
+            const colorMap = {
+                'text-blue-500': '#3B82F6',
+                'text-green-500': '#10B981',
+                'text-yellow-500': '#F59E0B',
+                'text-red-500': '#EF4444',
+                'text-purple-500': '#8B5CF6',
+                'text-pink-500': '#EC4899',
+                'text-indigo-500': '#6366F1',
+                'text-teal-500': '#14B8A6',
+                'text-orange-500': '#F97316',
+            };
+
+            // Remove any previously applied color classes
+            selectElement.classList.remove(
+                "text-blue-500", 
+                "text-green-500", 
+                "text-yellow-500", 
+                "text-red-500", 
+                "text-purple-500", 
+                "text-pink-500", 
+                "text-indigo-500", 
+                "text-teal-500", 
+                "text-orange-500"
+            );
+
+            // Get the selected option
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+
+            // Get the first class of the selected option
+            const selectedClass = selectedOption.classList[0]; // e.g., 'text-blue-500'
+
+            // Set the text color based on the selected option's class
+            if (selectedClass) {
+                selectElement.classList.add(selectedClass);
+            }
+
+            // Set the background color based on the selected option's class
+            const bgColor = colorMap[selectedClass] || '#253140'; // Default to theme color
+            selectElement.style.backgroundColor = bgColor;
+        }
     });
 </script>
 {% endblock %}
