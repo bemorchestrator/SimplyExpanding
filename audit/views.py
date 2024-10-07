@@ -3,6 +3,7 @@ import csv
 import re
 import requests
 import logging
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
 import xml.etree.ElementTree as ET
@@ -16,6 +17,7 @@ from google_auth import get_credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import tempfile
+
 
 # Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
 file_handler = logging.FileHandler('audit_log.log', mode='a')
@@ -262,8 +264,21 @@ def process_csv_file(file):
 
 def audit_dashboard(request):
     audit_data = UploadedFile.objects.all()
-    logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files.")
-    return render(request, 'audit/audit_dashboard.html', {'audit_data': audit_data})
+
+    # Handle pagination, get page number from request
+    page_number = request.GET.get('page', 1)
+    rows_per_page = request.GET.get('rows', 25)  # Default to 25 rows per page
+
+    paginator = Paginator(audit_data, rows_per_page)
+    page_obj = paginator.get_page(page_number)
+
+    logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files, displaying page {page_number}.")
+
+    return render(request, 'audit/audit_dashboard.html', {
+        'audit_data': page_obj,  # Pass paginated data
+        'paginator': paginator,
+        'page_obj': page_obj,  # Add this to provide page-related information in the template
+    })
 
 
 @csrf_protect

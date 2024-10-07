@@ -10,8 +10,8 @@
             </button>
         </div>
 
-        <div class="table-container" style="flex: 1; overflow-x: scroll; overflow-y: scroll;">
-            <table class="min-w-full bg-white">
+        <div class="table-container" style="flex: 1; overflow-x: auto; overflow-y: auto;">
+            <table class="min-w-full bg-white" id="audit-table">
                 <thead>
                     <tr class="text-gray-700 uppercase text-sm leading-normal">
                         <th class="py-1 px-2 text-left whitespace-nowrap sticky-header sticky-col-1">Actions</th>
@@ -125,6 +125,22 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-controls mt-4 flex items-center gap-4">
+            <label for="rows-per-page-bottom">Rows per page:</label>
+            <select id="rows-per-page-bottom" class="form-select" onchange="window.location.href='?page=1&rows='+this.value;">
+                <option value="25" {% if page_obj.paginator.per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
+                <option value="75" {% if page_obj.paginator.per_page == 75 %}selected{% endif %}>75</option>
+                <option value="100" {% if page_obj.paginator.per_page == 100 %}selected{% endif %}>100</option>
+            </select>
+            <span id="pagination-info-bottom">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <button onclick="window.location.href='?page=1&rows={{ page_obj.paginator.per_page }}'" class="btn bg-blue-500 text-white">First</button>
+            <button onclick="window.location.href='?page={{ page_obj.previous_page_number }}&rows={{ page_obj.paginator.per_page }}'" class="btn bg-blue-500 text-white" {% if not page_obj.has_previous %}disabled{% endif %}>Previous</button>
+            <button onclick="window.location.href='?page={{ page_obj.next_page_number }}&rows={{ page_obj.paginator.per_page }}'" class="btn bg-blue-500 text-white" {% if not page_obj.has_next %}disabled{% endif %}>Next</button>
+            <button onclick="window.location.href='?page={{ page_obj.paginator.num_pages }}&rows={{ page_obj.paginator.per_page }}'" class="btn bg-blue-500 text-white">Last</button>            
+        </div>
     </div>
 </div>
 
@@ -158,43 +174,43 @@
     }
     .table-container {
         flex: 1;
-        overflow-x: scroll;
-        overflow-y: scroll;
+        overflow-x: auto;
+        overflow-y: auto;
         position: relative; /* Ensure positioning context for sticky elements */
     }
-    select {
-        background-color: white;
-        color: inherit;
+    select.form-select {
+        padding: 4px 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
     }
-    select option {
-        color: inherit;
+    select.form-select:focus {
+        outline: none;
+        border-color: #80bdff;
     }
-    select option[value="Leave As Is"] {
-        color: blue;
+    input[type="number"] {
+        padding: 4px 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
     }
-    select option[value="Update On Page"] {
-        color: green;
+    button.btn {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
     }
-    select option[value="Target with Links"] {
-        color: yellow;
+    button.btn-secondary {
+        background-color: #6c757d;
+        color: white;
     }
-    select option[value="301"] {
-        color: red;
+    button.btn-secondary:hover {
+        background-color: #5a6268;
     }
-    select option[value="Canonicalize"] {
-        color: purple;
+    button.btn-danger {
+        background-color: #dc3545;
+        color: white;
     }
-    select option[value="Block Crawl"] {
-        color: pink;
-    }
-    select option[value="No Index"] {
-        color: indigo;
-    }
-    select option[value="Content Audit"] {
-        color: teal;
-    }
-    select option[value="Merge"] {
-        color: orange;
+    button.btn-danger:hover {
+        background-color: #c82333;
     }
 
     /* Sticky Columns Styles */
@@ -224,6 +240,7 @@
 
     /* Optional: Sticky Header */
     .sticky-header {
+        position: -webkit-sticky; /* For Safari */
         position: sticky;
         top: 0;
         background: #f9f9f9;
@@ -255,18 +272,36 @@
     table {
         border-collapse: separate;
         border-spacing: 0 0;
+        width: 100%;
     }
 
     /* Gap between URL and Page Path columns */
     .page-path {
-        padding-left: 36px; /* Creates a 16px gap */
+        padding-left: 16px; /* Creates a 16px gap */
     }
+
+    /* Pagination Controls Styling */
+    .pagination-controls label {
+        font-weight: 500;
+    }
+
+    .pagination-controls button {
+        margin: 0 4px;
+    }
+
+    .pagination-controls span#pagination-info,
+    .pagination-controls span#current-page,
+    .pagination-controls span#current-page-bottom {
+        font-weight: 500;
+    }
+
 </style>
 
 <!-- SweetAlert2 script -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Delete All Button Functionality
         const deleteBtn = document.getElementById('delete-all-btn');
         if (deleteBtn) {
             deleteBtn.addEventListener('click', function(event) {
@@ -351,6 +386,161 @@
         } else {
             console.error("Delete button with ID 'delete-all-btn' not found.");
         }
+
+        // Pagination Functionality
+        const table = document.getElementById('audit-table');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const paginationInfoTop = document.getElementById('pagination-info');
+        const paginationInfoBottom = document.getElementById('pagination-info-bottom');
+        const currentPageSpanTop = document.getElementById('current-page');
+        const currentPageSpanBottom = document.getElementById('current-page-bottom');
+        const rowsPerPageSelectTop = document.getElementById('rows-per-page');
+        const rowsPerPageSelectBottom = document.getElementById('rows-per-page-bottom');
+        const customRowsInputTop = document.getElementById('custom-rows');
+        const customRowsInputBottom = document.getElementById('custom-rows-bottom');
+        const firstPageBtnTop = document.getElementById('first-page');
+        const prevPageBtnTop = document.getElementById('prev-page');
+        const nextPageBtnTop = document.getElementById('next-page');
+        const lastPageBtnTop = document.getElementById('last-page');
+        const firstPageBtnBottom = document.getElementById('first-page-bottom');
+        const prevPageBtnBottom = document.getElementById('prev-page-bottom');
+        const nextPageBtnBottom = document.getElementById('next-page-bottom');
+        const lastPageBtnBottom = document.getElementById('last-page-bottom');
+
+        let currentPage = 1;
+        let rowsPerPage = 25;
+
+        function showPage(page) {
+            const totalPages = Math.ceil(rows.length / rowsPerPage);
+            if (page < 1) page = 1;
+            if (page > totalPages) page = totalPages;
+            currentPage = page;
+
+            // Hide all rows
+            rows.forEach(row => row.style.display = 'none');
+
+            // Calculate start and end indices
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const paginatedRows = rows.slice(start, end);
+
+            // Show only paginated rows
+            paginatedRows.forEach(row => row.style.display = '');
+
+            // Update pagination info
+            paginationInfoTop.textContent = `Showing ${start + 1} to ${Math.min(end, rows.length)} of ${rows.length} entries`;
+            paginationInfoBottom.textContent = `Showing ${start + 1} to ${Math.min(end, rows.length)} of ${rows.length} entries`;
+            currentPageSpanTop.textContent = `Page ${currentPage} of ${totalPages}`;
+            currentPageSpanBottom.textContent = `Page ${currentPage} of ${totalPages}`;
+
+            // Disable/Enable buttons based on page
+            // Top controls
+            firstPageBtnTop.disabled = currentPage === 1;
+            prevPageBtnTop.disabled = currentPage === 1;
+            nextPageBtnTop.disabled = currentPage === totalPages;
+            lastPageBtnTop.disabled = currentPage === totalPages;
+
+            // Bottom controls
+            firstPageBtnBottom.disabled = currentPage === 1;
+            prevPageBtnBottom.disabled = currentPage === 1;
+            nextPageBtnBottom.disabled = currentPage === totalPages;
+            lastPageBtnBottom.disabled = currentPage === totalPages;
+        }
+
+        function setRowsPerPage(newRowsPerPage) {
+            rowsPerPage = newRowsPerPage;
+            currentPage = 1;
+            showPage(currentPage);
+        }
+
+        // Initial display
+        showPage(currentPage);
+
+        // Event Listeners for Rows Per Page Select (Top)
+        rowsPerPageSelectTop.addEventListener('change', function() {
+            const value = this.value;
+            if (value === 'custom') {
+                customRowsInputTop.style.display = 'inline-block';
+                customRowsInputTop.focus();
+            } else {
+                customRowsInputTop.style.display = 'none';
+                setRowsPerPage(parseInt(value));
+            }
+        });
+
+        // Event Listeners for Rows Per Page Select (Bottom)
+        rowsPerPageSelectBottom.addEventListener('change', function() {
+            const value = this.value;
+            if (value === 'custom') {
+                customRowsInputBottom.style.display = 'inline-block';
+                customRowsInputBottom.focus();
+            } else {
+                customRowsInputBottom.style.display = 'none';
+                setRowsPerPage(parseInt(value));
+                rowsPerPageSelectTop.value = value;
+            }
+        });
+
+        // Event Listeners for Custom Rows Input (Top)
+        customRowsInputTop.addEventListener('change', function() {
+            const value = parseInt(this.value);
+            if (value > 0) {
+                setRowsPerPage(value);
+                rowsPerPageSelectTop.value = value;
+                rowsPerPageSelectBottom.value = value;
+                customRowsInputTop.style.display = 'none';
+                customRowsInputBottom.style.display = 'none';
+            } else {
+                alert('Please enter a valid number greater than 0.');
+                this.value = '';
+            }
+        });
+
+        // Event Listeners for Custom Rows Input (Bottom)
+        customRowsInputBottom.addEventListener('change', function() {
+            const value = parseInt(this.value);
+            if (value > 0) {
+                setRowsPerPage(value);
+                rowsPerPageSelectTop.value = value;
+                rowsPerPageSelectBottom.value = value;
+                customRowsInputTop.style.display = 'none';
+                customRowsInputBottom.style.display = 'none';
+            } else {
+                alert('Please enter a valid number greater than 0.');
+                this.value = '';
+            }
+        });
+
+        // Event Listeners for Pagination Buttons (Top)
+        firstPageBtnTop.addEventListener('click', function() {
+            showPage(1);
+        });
+        prevPageBtnTop.addEventListener('click', function() {
+            showPage(currentPage - 1);
+        });
+        nextPageBtnTop.addEventListener('click', function() {
+            showPage(currentPage + 1);
+        });
+        lastPageBtnTop.addEventListener('click', function() {
+            const totalPages = Math.ceil(rows.length / rowsPerPage);
+            showPage(totalPages);
+        });
+
+        // Event Listeners for Pagination Buttons (Bottom)
+        firstPageBtnBottom.addEventListener('click', function() {
+            showPage(1);
+        });
+        prevPageBtnBottom.addEventListener('click', function() {
+            showPage(currentPage - 1);
+        });
+        nextPageBtnBottom.addEventListener('click', function() {
+            showPage(currentPage + 1);
+        });
+        lastPageBtnBottom.addEventListener('click', function() {
+            const totalPages = Math.ceil(rows.length / rowsPerPage);
+            showPage(totalPages);
+        });
     });
 </script>
 {% endblock %}
