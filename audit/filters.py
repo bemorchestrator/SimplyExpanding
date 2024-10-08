@@ -2,8 +2,11 @@
 
 import django_filters
 from .models import UploadedFile
+from django.db.models import Q
 
 class UploadedFileFilter(django_filters.FilterSet):
+    search = django_filters.CharFilter(method='filter_by_all_fields', label='Search')
+
     class Meta:
         model = UploadedFile
         fields = {
@@ -37,3 +40,14 @@ class UploadedFileFilter(django_filters.FilterSet):
             'outlinks': ['exact', 'gte', 'lte'],  # Filter by outlinks
             'action_choice': ['exact'],  # Filter by action choice
         }
+
+    def filter_by_all_fields(self, queryset, name, value):
+        """Search across multiple fields."""
+        return queryset.filter(
+            Q(url__icontains=value) |
+            Q(page_path__icontains=value) |
+            Q(main_kw__icontains=value) |
+            Q(current_title__icontains=value) |
+            Q(meta__icontains=value) |
+            Q(h1__icontains=value)
+        )
