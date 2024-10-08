@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     'search_console',
     'payroll',
     'audit',
+    'django_tables2',
+    'django_filters',
 ]
 
 MIDDLEWARE = [

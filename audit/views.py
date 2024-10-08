@@ -1,26 +1,23 @@
 # views.py
 
-import os
-import csv
-import re
-import requests
-import logging
+import os, csv, re, requests, logging, tempfile, json, xml.etree.ElementTree as ET
+from .filters import UploadedFileFilter 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
-import xml.etree.ElementTree as ET
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.exceptions import ValidationError
 from django.contrib import messages
-from django.db.models import Q  # Import Q for complex queries
+from django.db.models import Q 
 from .forms import FileUploadForm, SitemapForm
 from .models import UploadedFile, SitemapURL, Sitemap
 from .google_drive_utils import upload_file_to_drive
 from google_auth import get_credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-import tempfile
-import json
+from django_tables2 import RequestConfig  
+from .tables import UploadedFileTable 
+
 
 # Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
 file_handler = logging.FileHandler('audit_log.log', mode='a')
@@ -59,8 +56,11 @@ RELEVANT_COLUMNS = {
     'crawl_depth': 43
 }
 
+
+
 def audit_result(request):
-    audit_data = UploadedFile.objects.all()
+    # Order the audit_data queryset by 'id' to ensure consistent ordering across pages
+    audit_data = UploadedFile.objects.all().order_by('id')  # You can replace 'id' with any other field if needed
     logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files.")
 
     # Pagination Logic
@@ -293,75 +293,11 @@ def process_csv_file(file):
 def audit_dashboard(request):
     audit_data = UploadedFile.objects.all()
 
-    # Get search query from GET parameters
-    search_query = request.GET.get('search', '').strip()
-    if search_query:
-        logging.info(f"Received search query: '{search_query}'")
-        # Define the fields to search across
-        search_fields = [
-            'url',
-            'type',
-            'current_title',
-            'meta',
-            'h1',
-            'canonical_link',
-            'status_code',
-            'index_status',
-            # Add more fields as needed
-        ]
-        # Build a Q object for OR-ing multiple fields
-        search_filter = Q()
-        for field in search_fields:
-            search_filter |= Q(**{f"{field}__icontains": search_query})
-        audit_data = audit_data.filter(search_filter)
-        logging.info(f"Search applied. Number of records after filtering: {audit_data.count()}")
+    # Apply the filters using django-filter
+    uploaded_file_filter = UploadedFileFilter(request.GET, queryset=audit_data)
 
-    # Get sorting parameters
-    sort = request.GET.get('sort', 'id')  # default sort by id
-    direction = request.GET.get('direction', 'asc')
-
-    # Define allowed sort fields to prevent SQL injection
-    allowed_sort_fields = {
-        'url': 'url',
-        'page_path': 'page_path',
-        'crawl_depth': 'crawl_depth',
-        'category': 'category',
-        'in_sitemap': 'in_sitemap',
-        'main_kw': 'main_kw',
-        'kw_volume': 'kw_volume',
-        'kw_ranking': 'kw_ranking',
-        'best_kw': 'best_kw',
-        'best_kw_volume': 'best_kw_volume',
-        'best_kw_ranking': 'best_kw_ranking',
-        'impressions': 'impressions',
-        'sessions': 'sessions',
-        'percent_change_sessions': 'percent_change_sessions',
-        'bounce_rate': 'bounce_rate',
-        'avg_time_on_page': 'avg_time_on_page',
-        'losing_traffic': 'losing_traffic',
-        'links': 'links',
-        'serp_ctr': 'serp_ctr',
-        'type': 'type',
-        'current_title': 'current_title',
-        'meta': 'meta',
-        'h1': 'h1',
-        'word_count': 'word_count',
-        'canonical_link': 'canonical_link',
-        'status_code': 'status_code',
-        'index_status': 'index_status',
-        'inlinks': 'inlinks',
-        'outlinks': 'outlinks',
-    }
-
-    # Validate sort field
-    sort_field = allowed_sort_fields.get(sort, 'id')
-
-    if direction == 'desc':
-        sort_field = '-' + sort_field
-
-    # Apply ordering
-    audit_data = audit_data.order_by(sort_field)
-    logging.info(f"Audit data ordered by '{sort}' in '{direction}' direction.")
+    # Get filtered data
+    filtered_audit_data = uploaded_file_filter.qs
 
     # Pagination Logic
     page_number = request.GET.get('page', 1)
@@ -375,7 +311,7 @@ def audit_dashboard(request):
     except ValueError:
         rows_per_page = 25
 
-    paginator = Paginator(audit_data, rows_per_page)
+    paginator = Paginator(filtered_audit_data, rows_per_page)
 
     try:
         page_obj = paginator.get_page(page_number)
@@ -386,27 +322,18 @@ def audit_dashboard(request):
         # If page is out of range, deliver the last page of results
         page_obj = paginator.get_page(paginator.num_pages)
 
+    # Configure the table using django-tables2
+    table = UploadedFileTable(page_obj.object_list)  # Pass only the paginated data to the table
+    RequestConfig(request, paginate={"per_page": rows_per_page}).configure(table)
+
     # Check if the request is an AJAX request for instant search
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         # Serialize the paginated audit data
         audit_list = list(page_obj.object_list.values(
-            'id',
-            'url',
-            'type',
-            'current_title',
-            'meta',
-            'h1',
-            'word_count',
-            'canonical_link',
-            'status_code',
-            'index_status',
-            'inlinks',
-            'outlinks',
-            'page_path',
-            'crawl_depth',
-            # Add other fields as necessary
+            'id', 'url', 'type', 'current_title', 'meta', 'h1', 'word_count', 
+            'canonical_link', 'status_code', 'index_status', 'inlinks', 'outlinks', 
+            'page_path', 'crawl_depth'
         ))
-        logging.debug(f"Returning JSON response for AJAX request. Number of records: {len(audit_list)}")
         return JsonResponse({
             'audit_data': audit_list,
             'has_next': page_obj.has_next(),
@@ -417,13 +344,11 @@ def audit_dashboard(request):
 
     # For normal requests, render the template with context
     return render(request, 'audit/audit_dashboard.html', {
-        'audit_data': page_obj,
+        'audit_data': table,  # Pass the table instance to the template
         'paginator': paginator,
         'page_obj': page_obj,
         'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
-        'current_sort': sort,
-        'current_direction': direction,
-        'search_query': search_query,  # Pass the search query to the template
+        'filter': uploaded_file_filter,  # Pass the filter object to the template
     })
 
 @csrf_protect

@@ -31,9 +31,27 @@ class UploadedFile(models.Model):
     last_modified = models.CharField(max_length=100, null=True, blank=True)
     inlinks = models.IntegerField(null=True, blank=True)
     outlinks = models.IntegerField(null=True, blank=True)
-    page_path = models.CharField(max_length=255, null=True, blank=True)  
+    page_path = models.CharField(max_length=255, null=True, blank=True)
     crawl_depth = models.IntegerField(null=True, blank=True)
     action_choice = models.CharField(max_length=50, choices=ACTION_CHOICES, default='leave')
+
+    # New fields based on your tables.py
+    category = models.CharField(max_length=255, null=True, blank=True)
+    main_kw = models.CharField(max_length=255, null=True, blank=True)
+    kw_volume = models.IntegerField(null=True, blank=True)
+    kw_ranking = models.IntegerField(null=True, blank=True)
+    best_kw = models.CharField(max_length=255, null=True, blank=True)
+    best_kw_volume = models.IntegerField(null=True, blank=True)
+    best_kw_ranking = models.IntegerField(null=True, blank=True)
+    impressions = models.IntegerField(null=True, blank=True)
+    sessions = models.IntegerField(null=True, blank=True)
+    percent_change_sessions = models.FloatField(null=True, blank=True)
+    bounce_rate = models.FloatField(null=True, blank=True)
+    avg_time_on_page = models.FloatField(null=True, blank=True)
+    losing_traffic = models.BooleanField(default=False)
+    links = models.IntegerField(null=True, blank=True)
+    serp_ctr = models.FloatField(null=True, blank=True)
+    in_sitemap = models.BooleanField(default=False)
 
     def __str__(self):
         return self.file_name
