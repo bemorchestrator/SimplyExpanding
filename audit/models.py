@@ -1,5 +1,3 @@
-# models.py
-
 from django.db import models
 
 class UploadedFile(models.Model):
@@ -15,32 +13,32 @@ class UploadedFile(models.Model):
         ('merge', 'Merge'),
     ]
 
-    file_name = models.CharField(max_length=255, default='unknown_file')
-    drive_file_id = models.CharField(max_length=255, default='unknown_id')
-    drive_file_link = models.URLField(max_length=500, null=True, blank=True)
+    file_name = models.CharField(max_length=2000, default='unknown_file')  # Increased from 255
+    drive_file_id = models.CharField(max_length=2000, default='unknown_id')  # Increased from 255
+    drive_file_link = models.URLField(max_length=2000, null=True, blank=True)  # Increased from 500
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    url = models.URLField(default='http://example.com')
-    type = models.CharField(max_length=100, default='text/html; charset=UTF-8')
-    current_title = models.CharField(max_length=255, null=True, blank=True)
-    meta = models.CharField(max_length=255, null=True, blank=True)
-    h1 = models.CharField(max_length=255, null=True, blank=True)
+    url = models.URLField(default='http://example.com', max_length=2000)  # Ensure enough space for long URLs
+    type = models.CharField(max_length=2000, default='text/html; charset=UTF-8')  # Increased from 100
+    current_title = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
+    meta = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
+    h1 = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
     word_count = models.IntegerField(null=True, blank=True)
-    canonical_link = models.URLField(null=True, blank=True)
-    status_code = models.CharField(max_length=10, null=True, blank=True)
-    index_status = models.CharField(max_length=50, null=True, blank=True)
-    last_modified = models.CharField(max_length=100, null=True, blank=True)
+    canonical_link = models.URLField(null=True, blank=True, max_length=2000)  # Increased from the default length
+    status_code = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 10
+    index_status = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 50
+    last_modified = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 100
     inlinks = models.IntegerField(null=True, blank=True)
     outlinks = models.IntegerField(null=True, blank=True)
-    page_path = models.CharField(max_length=255, null=True, blank=True)
+    page_path = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
     crawl_depth = models.IntegerField(null=True, blank=True)
-    action_choice = models.CharField(max_length=50, choices=ACTION_CHOICES, default='leave')
+    action_choice = models.CharField(max_length=2000, choices=ACTION_CHOICES, default='leave')  # Increased from 50
 
     # New fields based on your tables.py
-    category = models.CharField(max_length=255, null=True, blank=True)
-    main_kw = models.CharField(max_length=255, null=True, blank=True)
+    category = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
+    main_kw = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
     kw_volume = models.IntegerField(null=True, blank=True)
     kw_ranking = models.IntegerField(null=True, blank=True)
-    best_kw = models.CharField(max_length=255, null=True, blank=True)
+    best_kw = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
     best_kw_volume = models.IntegerField(null=True, blank=True)
     best_kw_ranking = models.IntegerField(null=True, blank=True)
     impressions = models.IntegerField(null=True, blank=True)
@@ -56,17 +54,19 @@ class UploadedFile(models.Model):
     def __str__(self):
         return self.file_name
 
+
 class Sitemap(models.Model):
-    url = models.URLField(default='http://example.com/sitemap.xml')
+    url = models.URLField(default='http://example.com/sitemap.xml', max_length=2000)  # Increased from default length
     added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.url
 
+
 class SitemapURL(models.Model):
     sitemap = models.ForeignKey(Sitemap, on_delete=models.CASCADE, related_name='urls')
-    url = models.URLField(max_length=1000,default='http://example.com/page')
-    status = models.CharField(max_length=50, null=True, blank=True)
+    url = models.URLField(max_length=2000, default='http://example.com/page')  # Increased from 2000
+    status = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 50
     added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

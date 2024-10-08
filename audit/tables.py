@@ -100,7 +100,30 @@ class UploadedFileTable(tables.Table):
     # Screaming Frog On-Page Columns
     type = tables.Column(verbose_name='Type', attrs={"td": {"style": "white-space: nowrap;"}})
     current_title = tables.Column(verbose_name='Current Title', attrs={"td": {"style": "white-space: nowrap;"}})
-    meta = tables.Column(verbose_name='Meta', attrs={"td": {"style": "white-space: nowrap;"}})
+    
+    # Meta Column with Custom Rendering
+    def render_meta(self, value, record):
+        """
+        Truncate the Meta description for display and show the full description on hover.
+        """
+        truncated_meta = value if len(value) <= 150 else value[:150] + "..."
+        return format_html(
+            '''
+            <div title="{}" style="
+                white-space: nowrap; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                display: inline-block; 
+                max-width: 480px;
+            ">
+                {}
+            </div>
+            ''',
+            value, truncated_meta
+        )
+
+
+
     h1 = tables.Column(verbose_name='H1', attrs={"td": {"style": "white-space: nowrap;"}})
     word_count = tables.Column(verbose_name='Word Count', attrs={"td": {"style": "white-space: nowrap;"}})
     canonical_link = tables.URLColumn(verbose_name='Canonical Link', attrs={"td": {"style": "white-space: nowrap;"}})

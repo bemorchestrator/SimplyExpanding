@@ -29,6 +29,14 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from django_tables2 import RequestConfig  
 from .tables import UploadedFileTable 
+from .utils import identify_csv_type
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+from datetime import datetime, timedelta
+from django.shortcuts import redirect
+from django.contrib import messages
+import logging
+
 
 
 # Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
@@ -51,22 +59,6 @@ root_logger.addHandler(console_handler)
 
 # Define the fixed folder ID for Google Drive
 GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
-
-# Define relevant column indexes (adjust based on your Screaming Frog CSV structure)
-RELEVANT_COLUMNS = {
-    'url': 0,
-    'type': 2,
-    'current_title': 7,
-    'meta': 10,
-    'h1': 15,
-    'word_count': 37,
-    'canonical_link': 26,
-    'status_code': 3,
-    'index_status': 5,
-    'inlinks': 46,
-    'outlinks': 50,
-    'crawl_depth': 43
-}
 
 
 
@@ -168,7 +160,7 @@ def upload_file(request):
 
                     # Step 3: Process CSV data before storing in the database
                     file.seek(0)  # Reset file pointer to process CSV
-                    audit_data = process_csv_file(file)
+                    audit_data = process_csv_file(file)  # Updated to use the expanded function
                     
                     if audit_data:
                         for data in audit_data:
@@ -211,6 +203,87 @@ def upload_file(request):
 
     return render(request, 'audit/upload.html', {'form': form})
 
+
+def fetch_search_console_data(creds, site_url, start_date, end_date):
+    try:
+        service = build('searchconsole', 'v1', credentials=creds)
+        
+        # Define the query for search analytics
+        request = {
+            'startDate': start_date,
+            'endDate': end_date,
+            'dimensions': ['page'],
+            'rowLimit': 1000  # Adjust the row limit as needed
+        }
+        
+        # Make the API request to get the search analytics data
+        response = service.searchanalytics().query(siteUrl=site_url, body=request).execute()
+        return response.get('rows', [])
+    
+    except Exception as e:
+        logging.error(f"Error fetching data from Google Search Console: {e}")
+        return []
+
+
+
+def populate_audit_dashboard_with_search_console_data(request):
+    site_url = 'https://www.example.com'
+    
+    # Calculate 6 months ago from today
+    end_date = datetime.today().strftime('%Y-%m-%d')
+    start_date = (datetime.today() - timedelta(days=180)).strftime('%Y-%m-%d')  # Approx. 6 months (180 days)
+
+    # Fetch Google Search Console credentials
+    creds = get_credentials(request)
+    if not creds:
+        messages.error(request, "Google Search Console authentication failed.")
+        logging.error("Google Search Console authentication failed.")
+        return redirect('authenticate_user')
+
+    try:
+        # Fetch data using 6-month date range
+        rows = fetch_search_console_data(creds, site_url, start_date, end_date)
+    except Exception as e:
+        logging.error(f"Error fetching data from Google Search Console: {e}")
+        messages.error(request, "An error occurred while fetching data from Google Search Console.")
+        return redirect('audit_dashboard')
+    
+    if not rows:
+        logging.info(f"No data returned for {site_url} between {start_date} and {end_date}.")
+        messages.error(request, "No data found in the last 6 months.")
+        return redirect('audit_dashboard')
+
+    # Process and update the audit dashboard with the fetched data
+    for row in rows:
+        try:
+            page_url = row['keys'][0]  # The 'page' dimension (URL)
+            clicks = row.get('clicks', 0)
+            impressions = row.get('impressions', 0)
+            ctr = row.get('ctr', 0) * 100  # Convert to percentage
+            position = row.get('position', 0)
+
+            # Update or create the UploadedFile record
+            uploaded_file, created = UploadedFile.objects.update_or_create(
+                url=page_url,
+                defaults={
+                    'impressions': impressions,
+                    'serp_ctr': ctr,
+                    'clicks': clicks,
+                    'position': position,
+                }
+            )
+            if created:
+                logging.info(f"Created new record for {page_url} with impressions: {impressions}, CTR: {ctr}%.")
+            else:
+                logging.info(f"Updated record for {page_url} with impressions: {impressions}, CTR: {ctr}%.")
+        except KeyError as e:
+            logging.error(f"KeyError while processing row {row}: {e}")
+        except Exception as e:
+            logging.error(f"Error updating audit data for {page_url}: {e}")
+
+    # Notify the user about the successful update
+    messages.success(request, "Audit data updated with the last 6 months of Search Console data.")
+    return redirect('audit_dashboard')
 
 
 def scrape_sitemap(sitemap_url):
@@ -460,57 +533,120 @@ def update_in_sitemap_status():
 
 
 
-
-# Extracts the page path from the URL
+# Function to extract the path from the URL
 def get_page_path(url):
-    # This regex extracts the part of the URL after the domain
-    pattern = r'https?://[^/]+(/.*)'
+    """
+    Extracts the path from a URL. If the URL has no path, returns '/'.
+    Handles different URL formats, including those with or without trailing slashes.
+    """
+    logging.debug(f"Extracting path from URL: {url}")
+    
+    # Regular expression to extract the part of the URL after the domain
+    pattern = r'https?://[^/]+(/.*)?'
     match = re.match(pattern, url)
-    return match.group(1) if match else '/'
+    
+    path = match.group(1) if match and match.group(1) else '/'
+    logging.debug(f"Extracted path: {path}")
+    
+    return path
 
-# Processes the CSV file and returns the audit data
 def process_csv_file(file):
     try:
-        decoded_file = file.read().decode('utf-8').splitlines()
+        # Decode and split the CSV file for processing
+        decoded_file = file.read().decode('utf-8-sig').splitlines()  # Handles BOM (\ufeff) if present
+        logging.debug(f"CSV File Content: {decoded_file[:5]}")  # Debugging: Log the first few lines for sanity check
+        
+        if not decoded_file:
+            logging.error("The CSV file is empty.")
+            return []
+
         reader = csv.reader(decoded_file)
-        headers = next(reader)  # Skip header row
-        logging.debug(f"CSV Headers: {headers}")
-
+        headers = next(reader, None)  # Get the header row
+        if headers is None:
+            logging.error("No headers found in the CSV file.")
+            return []
+        
+        logging.debug(f"CSV Headers: {headers}")  # Log headers for debugging
+        
         audit_data = []
+
+        # Determine the type of CSV (Screaming Frog or Search Console)
+        csv_type = identify_csv_type(headers)
+        logging.info(f"Detected CSV type: {csv_type}")
+
+        # Dynamically map headers to relevant fields based on CSV type
+        column_mapping = {}
+
+        if csv_type == 'screaming_frog':
+            # Screaming Frog column mappings (dynamically locate columns by header name)
+            column_mapping = {
+                'url': headers.index('Address') if 'Address' in headers else None,
+                'type': headers.index('Content Type') if 'Content Type' in headers else None,
+                'current_title': headers.index('Title 1') if 'Title 1' in headers else None,
+                'meta': headers.index('Meta Description 1') if 'Meta Description 1' in headers else None,
+                'h1': headers.index('H1-1') if 'H1-1' in headers else None,
+                'word_count': headers.index('Word Count') if 'Word Count' in headers else None,
+                'canonical_link': headers.index('Canonical Link Element 1') if 'Canonical Link Element 1' in headers else None,
+                'status_code': headers.index('Status Code') if 'Status Code' in headers else None,
+                'index_status': headers.index('Indexability') if 'Indexability' in headers else None,
+                'inlinks': headers.index('Inlinks') if 'Inlinks' in headers else None,
+                'outlinks': headers.index('Outlinks') if 'Outlinks' in headers else None,
+                'crawl_depth': headers.index('Crawl Depth') if 'Crawl Depth' in headers else None
+            }
+
+        elif csv_type == 'search_console':
+            # Search Console column mappings (adjust as per your Search Console headers)
+            column_mapping = {
+                'url': headers.index('Top pages') if 'Top pages' in headers else None,
+                'impressions': headers.index('Impressions') if 'Impressions' in headers else None,
+                'ctr': headers.index('CTR') if 'CTR' in headers else None
+            }
+
         for row in reader:
-            logging.debug(f"Processing row: {row}")
+            logging.debug(f"Processing row: {row}")  # Log each row being processed
+            
+            if not row:  # Skip empty rows
+                logging.warning("Empty row encountered, skipping.")
+                continue
+
             try:
-                # Extract page path from the URL
-                page_path = get_page_path(row[RELEVANT_COLUMNS['url']])
+                if csv_type == 'screaming_frog':
+                    # Extract Screaming Frog CSV data based on dynamic mapping
+                    url = row[column_mapping['url']] if column_mapping['url'] is not None else None
+                    page_path = get_page_path(url) if url else '/'
+                    
+                    audit_data.append({
+                        'url': url,
+                        'type': row[column_mapping['type']] if column_mapping['type'] is not None else None,
+                        'current_title': row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
+                        'meta': row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
+                        'h1': row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
+                        'word_count': int(row[column_mapping['word_count']]) if row[column_mapping['word_count']].isdigit() else 0,
+                        'canonical_link': row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
+                        'status_code': row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
+                        'index_status': row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
+                        'inlinks': int(row[column_mapping['inlinks']]) if row[column_mapping['inlinks']].isdigit() else 0,
+                        'outlinks': int(row[column_mapping['outlinks']]) if row[column_mapping['outlinks']].isdigit() else 0,
+                        'crawl_depth': int(row[column_mapping['crawl_depth']]) if row[column_mapping['crawl_depth']].isdigit() else 0,
+                        'page_path': page_path  # Include the extracted page path
+                    })
 
-                # Handle crawl depth, ensuring it's a valid number or default to 0
-                crawl_depth = row[RELEVANT_COLUMNS['crawl_depth']].strip()
-                crawl_depth = int(crawl_depth) if crawl_depth.isdigit() else 0
+                elif csv_type == 'search_console':
+                    # Extract Search Console CSV data based on dynamic mapping
+                    url = row[column_mapping['url']] if column_mapping['url'] is not None else None
+                    page_path = get_page_path(url) if url else '/'
+                    
+                    audit_data.append({
+                        'url': url,
+                        'impressions': int(row[column_mapping['impressions']]) if row[column_mapping['impressions']].isdigit() else 0,
+                        'serp_ctr': float(row[column_mapping['ctr']].replace('%', '')) if row[column_mapping['ctr']] else 0.0,
+                        'page_path': page_path  # Include the extracted page path
+                    })
 
-                # Handle inlinks and outlinks, ensuring numeric conversion
-                inlinks = int(row[RELEVANT_COLUMNS['inlinks']]) if row[RELEVANT_COLUMNS['inlinks']].isdigit() else 0
-                outlinks = int(row[RELEVANT_COLUMNS['outlinks']]) if row[RELEVANT_COLUMNS['outlinks']].isdigit() else 0
-
-                # Append the processed data to the audit_data list
-                audit_data.append({
-                    'url': row[RELEVANT_COLUMNS['url']],
-                    'type': row[RELEVANT_COLUMNS['type']],
-                    'current_title': row[RELEVANT_COLUMNS['current_title']],
-                    'meta': row[RELEVANT_COLUMNS['meta']],
-                    'h1': row[RELEVANT_COLUMNS['h1']],
-                    'word_count': int(row[RELEVANT_COLUMNS['word_count']]) if row[RELEVANT_COLUMNS['word_count']].isdigit() else 0,
-                    'canonical_link': row[RELEVANT_COLUMNS['canonical_link']],
-                    'status_code': row[RELEVANT_COLUMNS['status_code']],
-                    'index_status': row[RELEVANT_COLUMNS['index_status']],
-                    'inlinks': inlinks,
-                    'outlinks': outlinks,
-                    'page_path': page_path,
-                    'crawl_depth': crawl_depth,  # Validated crawl depth
-                })
             except IndexError as e:
                 logging.error(f"IndexError while processing row: {row} - {e}")
             except ValueError as e:
-                logging.error(f"ValueError while converting inlinks/outlinks: {row} - {e}")
+                logging.error(f"ValueError while converting data: {row} - {e}")
 
         logging.info(f"CSV processing complete. Total rows processed: {len(audit_data)}")
         return audit_data
@@ -520,16 +656,18 @@ def process_csv_file(file):
         return []
 
 
+
+@csrf_protect
 def audit_dashboard(request):
     audit_data_qs = UploadedFile.objects.all()
     
     # Apply the filters using django-filter
     uploaded_file_filter = UploadedFileFilter(request.GET, queryset=audit_data_qs)
     
-    # Get filtered data
-    filtered_audit_data = uploaded_file_filter.qs
+    # Get filtered data and apply ordering to avoid UnorderedObjectListWarning
+    filtered_audit_data = uploaded_file_filter.qs.order_by('id')  # Apply ordering by 'id', you can replace 'id' with any field you prefer
     
-    # Pagination Logic (Your Custom Pagination)
+    # Pagination Logic
     page_number = request.GET.get('page', 1)
     rows_per_page = request.GET.get('rows', 25)  # Default to 25 rows per page
     
@@ -541,12 +679,8 @@ def audit_dashboard(request):
     except ValueError:
         rows_per_page = 25
     
-    # Configure the table using django-tables2 with pagination disabled
-    table = UploadedFileTable(filtered_audit_data)
-    RequestConfig(request, paginate=False).configure(table)  # Disable django-tables2 pagination
-    
-    # Manual Pagination using Django's Paginator
-    paginator = Paginator(table.data, rows_per_page)
+    # Initialize Paginator with filtered and ordered data
+    paginator = Paginator(filtered_audit_data, rows_per_page)
     
     try:
         page_obj = paginator.get_page(page_number)
@@ -554,6 +688,10 @@ def audit_dashboard(request):
         page_obj = paginator.get_page(1)
     except EmptyPage:
         page_obj = paginator.get_page(paginator.num_pages)
+    
+    # Initialize the table with the current page's data
+    table = UploadedFileTable(page_obj.object_list)
+    RequestConfig(request, paginate=False).configure(table)  # Disable django-tables2 pagination
     
     # Check if the request is an AJAX request for instant search
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -573,12 +711,13 @@ def audit_dashboard(request):
     
     # For normal requests, render the template with context
     return render(request, 'audit/audit_dashboard.html', {
-        'audit_data': table,  # Pass the table instance to the template
+        'audit_data': table,  # Pass the table instance with current page data
         'paginator': paginator,
         'page_obj': page_obj,
         'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
         'filter': uploaded_file_filter,  # Pass the filter object to the template
     })
+
 
 
 @csrf_protect

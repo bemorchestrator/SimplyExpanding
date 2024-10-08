@@ -11,34 +11,34 @@
         <!-- Tabs -->
         <div class="mb-6">
             <div class="flex border-b border-gray-200">
-                <a href="?tab=url" class="py-2 px-4 text-gray-700 {% if tab == 'url' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
+                <a href="?tab=url" class="py-2 px-4 text-white {% if tab == 'url' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
                     URL to Keywords
                 </a>
-                <a href="?tab=keyword" class="ml-4 py-2 px-4 text-gray-700 {% if tab == 'keyword' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
+                <a href="?tab=keyword" class="ml-4 py-2 px-4 text-white {% if tab == 'keyword' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
                     Keyword to Pages
                 </a>
             </div>
         </div>
 
         <!-- Form to input URL or keyword, date range, and row limit -->
-        <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class=" rounded-lg p-6 mb-6">
             <form method="POST" novalidate class="grid grid-cols-12 gap-4">
                 {% csrf_token %}
                 <input type="hidden" name="tab" value="{{ tab }}">
 
                 <!-- Input Field -->
                 <div class="col-span-12 sm:col-span-3">
-                    <label for="input_value" class="block text-sm font-medium text-gray-700">
+                    <label for="input_value" class="block text-sm font-medium text-white">
                         {% if tab == 'url' %}Enter URL:{% else %}Enter Keyword:{% endif %}
                     </label>
-                    <input type="text" id="input_value" name="input_value" value="{{ input_value|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="{% if tab == 'url' %}Enter a URL{% else %}Enter a keyword{% endif %}">
+                    <input type="text" id="input_value" name="input_value" value="{{ input_value|default:'' }}" class="mt-1 block w-full p-2 border text-white bg-gray-800 border-gray-600 rounded-md shadow-sm" placeholder="{% if tab == 'url' %}Enter a URL{% else %}Enter a keyword{% endif %}">
                 </div>
 
                 <!-- Site Selection Dropdown (only for keyword tab) -->
                 {% if tab == 'keyword' %}
                 <div class="col-span-12 sm:col-span-3">
-                    <label for="selected_site" class="block text-sm font-medium text-gray-700">Select Site:</label>
-                    <select id="selected_site" name="selected_site" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                    <label for="selected_site" class="block text-sm font-medium text-white">Select Site:</label>
+                    <select id="selected_site" name="selected_site" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
                         <option value="">-- Select Site --</option>
                         {% for site in available_sites %}
                             <option value="{{ site }}" {% if site == selected_site %}selected{% endif %}>{{ site }}</option>
@@ -49,20 +49,20 @@
 
                 <!-- Start Date Input -->
                 <div class="col-span-12 sm:col-span-2">
-                    <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date:</label>
-                    <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="start_date" class="block text-sm font-medium text-white">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
                 </div>
 
                 <!-- End Date Input -->
                 <div class="col-span-12 sm:col-span-2">
-                    <label for="end_date" class="block text-sm font-medium text-gray-700">End Date:</label>
-                    <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="end_date" class="block text-sm font-medium text-white">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
                 </div>
 
                 <!-- Row Limit Input -->
                 <div class="col-span-12 sm:col-span-2">
-                    <label for="row_limit" class="block text-sm font-medium text-gray-700">Number of Rows:</label>
-                    <input type="number" id="row_limit" name="row_limit" value="{{ row_limit|default:10 }}" min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                    <label for="row_limit" class="block text-sm font-medium text-white">Number of Rows:</label>
+                    <input type="number" id="row_limit" name="row_limit" value="{{ row_limit|default:10 }}" min="1" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
                 </div>
 
                 <!-- Buttons for URL to Keywords Tab -->
@@ -96,7 +96,7 @@
 
         <!-- Display search console data -->
         {% if data %}
-        <div class="bg-white shadow rounded-lg p-6">
+        <div class="bg-gray-800 rounded-lg p-6">
             <div class="overflow-x-auto">
                 <div class="flex items-center justify-between mb-4 flex-wrap">
                     <div class="flex items-center space-x-4 mb-4 sm:mb-0">
@@ -104,24 +104,24 @@
                             Compare
                         </button>
                         <!-- Export CSV Icon -->
-                        <a href="?export_csv=1&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&selected_site={{ selected_site|urlencode }}&tab={{ tab }}&display_all={% if display_all %}on{% endif %}" title="Export CSV" class="text-gray-600 hover:text-gray-800">
+                        <a href="?export_csv=1&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&selected_site={{ selected_site|urlencode }}&tab={{ tab }}&display_all={% if display_all %}on{% endif %}" title="Export CSV" class="text-gray-400 hover:text-gray-200">
                             <i class="bi bi-file-earmark-spreadsheet-fill h-6 w-6"></i>
                         </a>
                         <!-- Print Icon -->
-                        <a href="#" onclick="window.print();" title="Print" class="text-gray-600 hover:text-gray-800">
+                        <a href="#" onclick="window.print();" title="Print" class="text-gray-400 hover:text-gray-200">
                             <i class="bi bi-printer-fill h-6 w-6"></i>
                         </a>
                     </div>
                     <!-- Search Bar for Filtering Results -->
                     <div class="w-full sm:w-1/3">
-                        <input type="text" id="searchInput" placeholder="Search results..." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <input type="text" id="searchInput" placeholder="Search results..." class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-white">
                     </div>
                 </div>
-                <table class="min-w-full divide-y divide-gray-200" id="resultsTable">
-                    <thead class="bg-gray-50">
+                <table class="min-w-full divide-y divide-gray-700" id="resultsTable">
+                    <thead class="bg-gray-700">
                         <tr>
                             {% for header in headers %}
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider {% if '_change' in header.field %}comparison-column{% endif %}">
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider {% if '_change' in header.field %}comparison-column{% endif %}">
                                 <a href="?sort={{ header.field }}&order={% if sort == header.field and order == 'asc' %}desc{% else %}asc{% endif %}&input_value={{ input_value|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&selected_site={{ selected_site|urlencode }}&tab={{ tab }}&display_all={% if display_all %}on{% endif %}">
                                     {{ header.name }} {% if sort == header.field %}
                                         {% if order == 'asc' %}▲{% else %}▼{% endif %}
@@ -131,34 +131,34 @@
                             {% endfor %}
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200 {% if not display_all and data|length > 25 %}max-h-96 overflow-y-scroll{% endif %}">
+                    <tbody class="bg-gray-800 divide-y divide-gray-700 {% if not display_all and data|length > 25 %}max-h-96 overflow-y-scroll{% endif %}">
                         {% for row in data %}
                         <tr>
                             {% for header in headers %}
                                 {% if header.field == 'ctr' or header.field == 'ctr_change' %}
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
                                         {{ row|get_item:header.field|default:0|floatformat:2 }}%
                                     </td>
                                 {% elif header.field == 'position' or header.field == 'position_change' %}
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
                                         {{ row|get_item:header.field|default:0|floatformat:2 }}
                                     </td>
                                 {% elif header.field == 'query' %}
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
                                         {{ row|get_item:header.field }}
                                     </td>
                                 {% elif header.field == 'page' %}
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        <a href="?tab=url&input_value={{ row|get_item:header.field|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&fetch_data=1" class="text-blue-600 hover:underline" title="{{ row|get_item:header.field }}">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
+                                        <a href="?tab=url&input_value={{ row|get_item:header.field|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&fetch_data=1" class="text-blue-400 hover:underline" title="{{ row|get_item:header.field }}">
                                             {{ row|get_item:header.field|truncatechars:50 }}
                                         </a>
                                     </td>
                                 {% elif header.field == 'index' %}
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                         {{ row|get_item:header.field }}
                                     </td>
                                 {% else %}
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 {% if '_change' in header.field %}comparison-column {{ row|get_item:header.field|delta_css_class:header.field }}{% endif %}">
                                         {{ row|get_item:header.field|default:0 }}
                                     </td>
                                 {% endif %}
@@ -170,8 +170,8 @@
             </div>
         </div>
         {% elif input_value %}
-        <div class="bg-white shadow rounded-lg p-6">
-            <p class="text-gray-700">{{ no_data_message|default:"No search data available for the specified input." }}</p>
+        <div class="bg-gray-800 shadow rounded-lg p-6">
+            <p class="text-gray-300">{{ no_data_message|default:"No search data available for the specified input." }}</p>
         </div>
         {% endif %}
     </div>
