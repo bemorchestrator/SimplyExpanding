@@ -26,6 +26,14 @@
                     <i class="bi bi-upload"></i>
                 </button>
 
+                <!-- Crawl Sitemap -->
+                <form action="/audit/crawl-sitemaps/" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" id="upload-btn" class="bg-indigo-500 text-white py-2 px-4 rounded">
+                        <i class="bi bi-bug"></i>
+                    </button>
+                </form>
+
                 <!-- Delete Button -->
                 <button id="delete-all-btn" class="bg-red-500 text-white py-2 px-4 rounded">
                     <i class="bi bi-trash"></i>

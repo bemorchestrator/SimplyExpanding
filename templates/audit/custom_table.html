@@ -1,0 +1,22 @@
+<!-- templates/audit/custom_table.html -->
+
+{% load django_tables2 %}
+
+<table class="table-auto w-full">
+    <thead>
+        <tr>
+            {% for column in table.columns %}
+                <th class="px-4 py-2">{{ column.header }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody id="audit-table-body">
+        {% for row in table.rows %}
+            <tr class="border-b border-gray-700 hover:bg-gray-700">
+                {% for cell in row %}
+                    <td class="px-4 py-2">{{ cell }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

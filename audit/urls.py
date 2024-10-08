@@ -10,4 +10,6 @@ urlpatterns = [
     path('dashboard/', views.audit_dashboard, name='audit_dashboard'),
     path('delete-uploaded-files/', views.delete_uploaded_files, name='delete_uploaded_files'),
     path('update-action-choice/', views.update_action_choice, name='update_action_choice'),  # New URL for updating actions
+    path('sitemaps/delete/<int:sitemap_id>/', views.delete_sitemap, name='delete_sitemap'),
+
 ]

@@ -1,45 +1,258 @@
+<!-- templates/audit/sitemap_dashboard.html -->
+
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="mt-10 px-8">
-    <div class="bg-white shadow-md rounded px-8 py-6">
-        <h2 class="text-xl font-semibold mb-4">Sitemap Crawler</h2>
+<div class="mt-10 px-8 flex space-x-8">
+    <!-- Sitemap Crawler Form & Results on the Left -->
+    <div class="flex-1 bg-gray-800 rounded px-8 py-6 text-gray-300">
+        <h2 class="text-xl font-semibold mb-4 text-white">Sitemap Crawler</h2>
 
         <!-- Form to add sitemap URLs -->
-        <form method="post" class="mb-6">
+        <form id="sitemap-crawler-form" class="mb-6">
             {% csrf_token %}
             <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="sitemap_urls">
+                <label class="block text-gray-400 text-sm font-bold mb-2" for="sitemap_urls">
                     Enter Sitemap URLs
                 </label>
                 <textarea id="sitemap_urls" name="sitemap_urls" rows="4" placeholder="Enter sitemap URLs here"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+                    class="shadow appearance-none border border-gray-700 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline"></textarea>
             </div>
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded">
                 Crawl
+            </button>
+            <button type="button" id="clear-results-btn" class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded ml-4">
+                Clear Results
             </button>
         </form>
 
+        <!-- Spinner for crawl loading -->
+        <div id="loading-spinner" class="hidden text-center">
+            <div class="spinner-border text-blue-600 animate-spin w-8 h-8 border-4 rounded-full border-t-transparent"></div>
+            <p class="text-gray-300 mt-2">Crawling in progress, please wait...</p>
+        </div>
+
         <!-- Display the crawl results -->
-        {% if crawled_results %}
-            <h3 class="text-lg font-semibold mb-4">Crawl Results</h3>
-            <div class="space-y-6">
-                {% for sitemap_url, urls in crawled_results.items %}
-                    <div class="bg-gray-100 p-4 rounded-md shadow-sm">
-                        <h4 class="font-bold text-lg text-blue-600">{{ sitemap_url }}</h4>
-                        {% if urls == 'Failed to crawl the sitemap.' %}
-                            <p class="text-red-500">{{ urls }}</p>
-                        {% else %}
-                            <ul class="list-disc pl-5">
-                                {% for url in urls %}
-                                    <li><a href="{{ url }}" target="_blank" class="text-blue-500 hover:underline">{{ url }}</a></li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+        <div id="crawl-results" class="space-y-6">
+            {% include 'audit/crawl_results.html' %}
+        </div>
+    </div>
+
+    <!-- Card with List of Crawled Sitemaps on the Right -->
+    <div class="w-1/3 bg-gray-800 rounded px-6 py-4 text-gray-300">
+        <h3 class="text-xl font-semibold mb-4 text-white">Crawled Sitemaps</h3>
+
+        <!-- Container for sitemap list -->
+        <div id="sitemap-list-container">
+            {% include 'audit/sitemap_list.html' %}
+        </div>
     </div>
 </div>
+
+<!-- Include SweetAlert -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // CSRF token setup for AJAX
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Function to bind delete actions using SweetAlert for confirmation
+        function bindDeleteActions() {
+            const deleteButtons = document.querySelectorAll('.delete-sitemap');
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const sitemapId = this.getAttribute('data-id');
+
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, delete it!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const deleteUrl = "{% url 'delete_sitemap' 0 %}".replace('0', sitemapId);
+
+                            fetch(deleteUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': csrftoken,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({}),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire('Deleted!', 'Your sitemap has been deleted.', 'success');
+                                    document.getElementById('sitemap-list-container').innerHTML = data.sitemaps_html;
+                                    bindDeleteActions();
+                                    bindSitemapLinks();
+                                } else {
+                                    Swal.fire('Failed!', data.error || 'Failed to delete the sitemap.', 'error');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error deleting sitemap:', error);
+                                Swal.fire('Error!', 'An error occurred while deleting the sitemap.', 'error');
+                            });
+                        }
+                    });
+                });
+            });
+        }
+
+        // Function to bind sitemap link actions
+        function bindSitemapLinks() {
+            const sitemapLinks = document.querySelectorAll('.sitemap-link');
+            sitemapLinks.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const sitemapId = this.getAttribute('data-id');
+                    fetchSitemapContent(sitemapId);
+                });
+            });
+        }
+
+        // Function to fetch sitemap content dynamically
+        function fetchSitemapContent(sitemapId) {
+            fetch(`?sitemap_id=${sitemapId}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const crawlResults = document.getElementById('crawl-results');
+                    let resultsHtml = `<h3 class="text-lg font-semibold mb-4 text-white">Crawl Results</h3>
+                        <div class="bg-gray-700 p-4 rounded-md shadow-sm">
+                            <h4 class="font-bold text-lg text-blue-400">${data.sitemap_url}</h4>`;
+                    if (data.urls.length > 0) {
+                        resultsHtml += '<ul class="list-disc pl-5">';
+                        data.urls.forEach(url => {
+                            resultsHtml += `<li><a href="${url}" target="_blank" class="text-blue-500 hover:underline">${url}</a></li>`;
+                        });
+                        resultsHtml += '</ul>';
+                    } else {
+                        resultsHtml += '<p class="text-red-400">No URLs found.</p>';
+                    }
+                    resultsHtml += '</div>';
+                    crawlResults.innerHTML = resultsHtml;
+                } else {
+                    Swal.fire('Error!', 'Failed to retrieve sitemap content.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching sitemap content:', error);
+                Swal.fire('Error!', 'An error occurred while fetching the sitemap content.', 'error');
+            });
+        }
+
+        // Function to handle form submission via AJAX
+        const sitemapForm = document.getElementById('sitemap-crawler-form');
+        sitemapForm.addEventListener('submit', function(event) {
+            event.preventDefault();  // Prevent the default form submission
+
+            const formData = new FormData(sitemapForm);
+            const sitemapUrls = document.getElementById('sitemap_urls').value.trim();
+
+            if (!sitemapUrls) {
+                Swal.fire('Warning!', 'Please enter at least one sitemap URL.', 'warning');
+                return;
+            }
+
+            // Show loading spinner
+            document.getElementById('loading-spinner').classList.remove('hidden');
+
+            fetch("{% url 'crawl_sitemaps' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading spinner
+                document.getElementById('loading-spinner').classList.add('hidden');
+
+                if (data.success) {
+                    document.getElementById('crawl-results').innerHTML = data.crawl_results_html;
+                    document.getElementById('sitemap-list-container').innerHTML = data.sitemaps_html;
+                    bindDeleteActions();
+                    bindSitemapLinks();
+                    document.getElementById('sitemap_urls').value = '';
+                    Swal.fire('Success!', 'Sitemaps crawled successfully.', 'success');
+                } else {
+                    Swal.fire('Error!', data.error || 'Failed to crawl sitemaps.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error crawling sitemaps:', error);
+                Swal.fire('Error!', 'An error occurred while crawling sitemaps.', 'error');
+                // Hide loading spinner on error
+                document.getElementById('loading-spinner').classList.add('hidden');
+            });
+        });
+
+        // Clear results when the "Clear Results" button is clicked
+        document.getElementById('clear-results-btn').addEventListener('click', function() {
+            const crawlResults = document.getElementById('crawl-results');
+            crawlResults.innerHTML = ''; // Clear the crawl results
+        });
+
+        // Handle pagination clicks for the sitemap list
+        document.getElementById('sitemap-list-container').addEventListener('click', function(event) {
+            if (event.target.classList.contains('page-link')) {
+                const page = event.target.getAttribute('data-page');
+                fetchSitemapList(page);
+            }
+        });
+
+        // Fetch updated sitemap list dynamically
+        function fetchSitemapList(page) {
+            fetch(`?page=${page}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('sitemap-list-container').innerHTML = html;
+                bindDeleteActions();
+                bindSitemapLinks();
+            })
+            .catch(error => console.error('Error fetching sitemap list:', error));
+        }
+
+        // Initial binding of event listeners
+        bindDeleteActions();
+        bindSitemapLinks();
+    });
+</script>
+
 {% endblock %}

@@ -1,14 +1,26 @@
 # views.py
+import os
+import csv
+import re
+import requests
+import logging
+import tempfile
+import json
+import xml.etree.ElementTree as ET
+import cloudscraper
+import certifi
+import ssl
 
-import os, csv, re, requests, logging, tempfile, json, xml.etree.ElementTree as ET
-from .filters import UploadedFileFilter 
+from requests.exceptions import SSLError, ConnectionError, Timeout, RequestException
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
 from django.shortcuts import render, redirect, get_object_or_404
-from django.core.exceptions import ValidationError
 from django.contrib import messages
-from django.db.models import Q 
+from django.db.models import Q
+from django.template.loader import render_to_string
+
+from .filters import UploadedFileFilter 
 from .forms import FileUploadForm, SitemapForm
 from .models import UploadedFile, SitemapURL, Sitemap
 from .google_drive_utils import upload_file_to_drive
@@ -93,6 +105,14 @@ def audit_result(request):
         'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
     })
 
+
+def normalize_url(url):
+    url = url.strip().lower()  # Convert to lowercase and strip spaces
+    if url.endswith('/'):
+        url = url[:-1]  # Remove trailing slash if present
+    return url
+
+
 def upload_file(request):
     if request.method == 'POST':
         form = FileUploadForm(request.POST, request.FILES)
@@ -160,6 +180,9 @@ def upload_file(request):
                             )
                         logging.info(f"Audit data processed and saved for file: {file.name}")
                         messages.success(request, "File uploaded successfully and audit data processed.")
+                        
+                        # Step 4: Update the 'In Sitemap' status after saving the uploaded data
+                        update_in_sitemap_status()  # Call the function to update 'in_sitemap' field
                     else:
                         logging.warning("The CSV file is empty or could not be processed.")
                         messages.error(request, "The CSV file is empty or could not be processed.")
@@ -188,49 +211,255 @@ def upload_file(request):
 
     return render(request, 'audit/upload.html', {'form': form})
 
+
+
 def scrape_sitemap(sitemap_url):
+    """
+    Scrapes the sitemap from the given URL.
+    Tries using cloudscraper first, falls back to requests if necessary.
+    """
+    # Define headers to mimic a real browser
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/91.0.4472.124 Safari/537.36'
+        )
+    }
+
+    # First attempt with cloudscraper, using TLS 1.2 and certifi for SSL certificates
+    scraper = cloudscraper.create_scraper(ssl_context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2))
     try:
-        response = requests.get(sitemap_url)
-        if response.status_code == 200:
-            root = ET.fromstring(response.content)
-            urls = []
-            for url_element in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}url'):
-                loc = url_element.find('{http://www.sitemaps.org/schemas/sitemap/0.9}loc').text
+        logging.debug(f"Attempting to fetch sitemap with cloudscraper: {sitemap_url}")
+        response = scraper.get(sitemap_url, headers=headers, timeout=10, verify=certifi.where())  # Using certifi certificates
+        response.raise_for_status()
+        logging.debug(f"Response Status Code with cloudscraper: {response.status_code}")
+        logging.debug(f"Response Content (first 500 characters): {response.text[:500]}")
+
+        # Parse the sitemap XML
+        return parse_sitemap(response.content, sitemap_url)
+
+    except (SSLError, ConnectionError, Timeout) as e:
+        logging.error(f"cloudscraper failed for {sitemap_url}. Error: {e}")
+    except RequestException as e:
+        logging.error(f"RequestException with cloudscraper for {sitemap_url}. Error: {e}")
+
+    # Fallback attempt with requests, disabling SSL verification
+    try:
+        logging.debug(f"Attempting to fetch sitemap with requests: {sitemap_url}")
+        response = requests.get(sitemap_url, headers=headers, timeout=10, verify=False)  # Disable SSL verification
+        response.raise_for_status()
+        logging.debug(f"Response Status Code with requests: {response.status_code}")
+        logging.debug(f"Response Content (first 500 characters): {response.text[:500]}")
+
+        # Parse the sitemap XML
+        return parse_sitemap(response.content, sitemap_url)
+
+    except (SSLError, ConnectionError, Timeout) as e:
+        logging.error(f"requests failed for {sitemap_url}. Error: {e}")
+    except RequestException as e:
+        logging.error(f"RequestException with requests for {sitemap_url}. Error: {e}")
+
+    # If both attempts fail, return None
+    logging.warning(f"Both cloudscraper and requests failed to fetch the sitemap: {sitemap_url}")
+    return None
+
+
+
+def parse_sitemap(content, sitemap_url):
+    """
+    Parses the sitemap XML content and returns a list of URLs.
+    """
+    try:
+        root = ET.fromstring(content)
+        urls = []
+        namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+
+        if root.tag.endswith('sitemapindex'):
+            # Sitemap index file
+            for sitemap in root.findall('ns:sitemap', namespace):
+                loc = sitemap.find('ns:loc', namespace).text
+                urls.append(loc)
+            logging.info(f"Sitemap index scraped successfully: {sitemap_url}")
+
+        elif root.tag.endswith('urlset'):
+            # Regular sitemap file
+            for url in root.findall('ns:url', namespace):
+                loc = url.find('ns:loc', namespace).text
                 urls.append(loc)
             logging.info(f"Sitemap scraped successfully: {sitemap_url}")
-            return urls
+
         else:
-            logging.warning(f"Failed to retrieve sitemap: {sitemap_url}, status code: {response.status_code}")
+            logging.warning(f"Unknown sitemap type for URL: {sitemap_url}")
             return None
-    except Exception as e:
-        logging.error(f"Error scraping sitemap: {e}")
+
+        return urls
+
+    except ET.ParseError as parse_err:
+        logging.error(f"XML parsing error for sitemap: {sitemap_url}. Error: {parse_err}")
         return None
 
+
+@csrf_protect
 def crawl_sitemaps(request):
-    form = SitemapForm()
     crawled_results = {}
+    form = SitemapForm()
 
     if request.method == 'POST':
-        form = SitemapForm(request.POST)
-        if form.is_valid():
-            sitemap_urls = form.cleaned_data['sitemap_urls'].splitlines()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # Handle AJAX POST request
+            form = SitemapForm(request.POST)
+            if form.is_valid():
+                sitemap_urls = form.cleaned_data['sitemap_urls'].splitlines()
+                new_sitemaps = []
+                failed_sitemaps = []
 
-            for sitemap_url in sitemap_urls:
-                sitemap_url = sitemap_url.strip()
-                if sitemap_url:
-                    urls = scrape_sitemap(sitemap_url)
-                    if urls:
-                        sitemap = Sitemap.objects.create(url=sitemap_url)
-                        for url in urls:
-                            SitemapURL.objects.create(sitemap=sitemap, url=url)
+                for sitemap_url in sitemap_urls:
+                    sitemap_url = sitemap_url.strip()
+                    if sitemap_url:
+                        urls = scrape_sitemap(sitemap_url)
+                        if urls:
+                            # Normalize the sitemap URLs before saving them
+                            normalized_urls = [normalize_url(url) for url in urls]
 
-                        crawled_results[sitemap_url] = urls
-                        logging.info(f"Sitemap URLs stored for: {sitemap_url}")
-                    else:
-                        crawled_results[sitemap_url] = 'Failed to crawl the sitemap.'
-                        logging.warning(f"Failed to crawl sitemap: {sitemap_url}")
+                            # Create Sitemap entry
+                            sitemap = Sitemap.objects.create(url=sitemap_url)
+                            
+                            # Save the normalized sitemap URLs
+                            sitemap_urls_bulk = [
+                                SitemapURL(sitemap=sitemap, url=url) for url in normalized_urls
+                            ]
+                            SitemapURL.objects.bulk_create(sitemap_urls_bulk)
+                            new_sitemaps.append(sitemap)
+                            crawled_results[sitemap_url] = normalized_urls
+                            logging.info(f"Sitemap URLs stored for: {sitemap_url}")
+                        else:
+                            failed_sitemaps.append(sitemap_url)
+                            crawled_results[sitemap_url] = 'Failed to crawl the sitemap.'
+                            logging.warning(f"Failed to crawl sitemap: {sitemap_url}")
 
-    return render(request, 'audit/sitemap_dashboard.html', {'form': form, 'crawled_results': crawled_results})
+                # Step 1: Update the 'In Sitemap' status after the sitemap crawl
+                update_in_sitemap_status()  # This checks and updates the 'in_sitemap' field
+
+                # Fetch the updated sitemaps list
+                sitemaps = Sitemap.objects.all().order_by('-added_at')
+                paginator = Paginator(sitemaps, 10)
+                page_number = request.GET.get('page', 1)
+                try:
+                    page_obj = paginator.get_page(page_number)
+                except PageNotAnInteger:
+                    page_obj = paginator.get_page(1)
+                except EmptyPage:
+                    page_obj = paginator.get_page(paginator.num_pages)
+
+                # Render partial templates
+                sitemaps_html = render_to_string(
+                    'audit/sitemap_list.html',
+                    {'sitemaps': page_obj},
+                    request=request
+                )
+                crawl_results_html = render_to_string(
+                    'audit/crawl_results.html',
+                    {'crawled_results': crawled_results},
+                    request=request
+                )
+
+                return JsonResponse({
+                    'success': True,
+                    'crawl_results_html': crawl_results_html,
+                    'sitemaps_html': sitemaps_html,
+                })
+
+            else:
+                # Form is invalid
+                return JsonResponse({'success': False, 'error': 'Invalid form data.'}, status=400)
+
+    elif request.method == 'GET':
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' and 'sitemap_id' in request.GET:
+            # Handle AJAX GET request for sitemap content
+            sitemap_id = request.GET['sitemap_id']
+            try:
+                sitemap = Sitemap.objects.get(id=sitemap_id)
+                sitemap_urls = SitemapURL.objects.filter(sitemap=sitemap).values_list('url', flat=True)
+                return JsonResponse({
+                    'success': True,
+                    'sitemap_url': sitemap.url,
+                    'urls': list(sitemap_urls),
+                })
+            except Sitemap.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Sitemap not found'}, status=404)
+
+    # Handle non-AJAX GET request
+    sitemaps = Sitemap.objects.all().order_by('-added_at')  # Show the most recent first
+    paginator = Paginator(sitemaps, 10)  # 10 sitemaps per page
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.get_page(1)
+    except EmptyPage:
+        page_obj = paginator.get_page(paginator.num_pages)
+
+    return render(request, 'audit/sitemap_dashboard.html', {
+        'form': form,
+        'crawled_results': crawled_results,
+        'sitemaps': page_obj
+    })
+
+
+
+@csrf_protect
+def delete_sitemap(request, sitemap_id):
+    if request.method == 'POST':
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            try:
+                sitemap = get_object_or_404(Sitemap, id=sitemap_id)
+                sitemap.delete()  # Delete the sitemap
+                logging.info(f"Sitemap deleted: {sitemap_id}")
+
+                # Fetch the updated sitemaps list
+                sitemaps = Sitemap.objects.all().order_by('-added_at')
+                paginator = Paginator(sitemaps, 10)
+                page_number = request.GET.get('page', 1)
+                try:
+                    page_obj = paginator.get_page(page_number)
+                except PageNotAnInteger:
+                    page_obj = paginator.get_page(1)
+                except EmptyPage:
+                    page_obj = paginator.get_page(paginator.num_pages)
+
+                sitemaps_html = render_to_string('audit/sitemap_list.html', {'sitemaps': page_obj}, request=request)
+
+                return JsonResponse({'success': True, 'sitemaps_html': sitemaps_html})
+            except Exception as e:
+                logging.error(f"Error deleting sitemap {sitemap_id}: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+
+
+
+def update_in_sitemap_status():
+    """Updates the 'in_sitemap' field in UploadedFile by checking
+    if the 'url' exists in the crawled SitemapURL entries."""
+    
+    # Fetch all uploaded file entries and sitemap URLs
+    audit_files = UploadedFile.objects.all()
+    sitemap_urls = SitemapURL.objects.values_list('url', flat=True)
+
+    # Normalize sitemap URLs for comparison
+    normalized_sitemap_urls = set(normalize_url(url) for url in sitemap_urls)
+
+    # Compare audit URLs with normalized sitemap URLs
+    for audit_file in audit_files:
+        normalized_audit_url = normalize_url(audit_file.url)
+        audit_file.in_sitemap = normalized_audit_url in normalized_sitemap_urls
+        audit_file.save()
+
+
+
+
 
 # Extracts the page path from the URL
 def get_page_path(url):
@@ -290,19 +519,20 @@ def process_csv_file(file):
         logging.error(f"Error while processing CSV file: {e}")
         return []
 
+
 def audit_dashboard(request):
-    audit_data = UploadedFile.objects.all()
-
+    audit_data_qs = UploadedFile.objects.all()
+    
     # Apply the filters using django-filter
-    uploaded_file_filter = UploadedFileFilter(request.GET, queryset=audit_data)
-
+    uploaded_file_filter = UploadedFileFilter(request.GET, queryset=audit_data_qs)
+    
     # Get filtered data
     filtered_audit_data = uploaded_file_filter.qs
-
-    # Pagination Logic
+    
+    # Pagination Logic (Your Custom Pagination)
     page_number = request.GET.get('page', 1)
     rows_per_page = request.GET.get('rows', 25)  # Default to 25 rows per page
-
+    
     # Ensure rows_per_page is an integer
     try:
         rows_per_page = int(rows_per_page)
@@ -310,22 +540,21 @@ def audit_dashboard(request):
             rows_per_page = 25
     except ValueError:
         rows_per_page = 25
-
-    paginator = Paginator(filtered_audit_data, rows_per_page)
-
+    
+    # Configure the table using django-tables2 with pagination disabled
+    table = UploadedFileTable(filtered_audit_data)
+    RequestConfig(request, paginate=False).configure(table)  # Disable django-tables2 pagination
+    
+    # Manual Pagination using Django's Paginator
+    paginator = Paginator(table.data, rows_per_page)
+    
     try:
         page_obj = paginator.get_page(page_number)
     except PageNotAnInteger:
-        # If page is not an integer, deliver the first page
         page_obj = paginator.get_page(1)
     except EmptyPage:
-        # If page is out of range, deliver the last page of results
         page_obj = paginator.get_page(paginator.num_pages)
-
-    # Configure the table using django-tables2
-    table = UploadedFileTable(page_obj.object_list)  # Pass only the paginated data to the table
-    RequestConfig(request, paginate={"per_page": rows_per_page}).configure(table)
-
+    
     # Check if the request is an AJAX request for instant search
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         # Serialize the paginated audit data
@@ -341,7 +570,7 @@ def audit_dashboard(request):
             'num_pages': paginator.num_pages,
             'current_page': page_obj.number,
         })
-
+    
     # For normal requests, render the template with context
     return render(request, 'audit/audit_dashboard.html', {
         'audit_data': table,  # Pass the table instance to the template
@@ -350,6 +579,7 @@ def audit_dashboard(request):
         'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
         'filter': uploaded_file_filter,  # Pass the filter object to the template
     })
+
 
 @csrf_protect
 def delete_uploaded_files(request):

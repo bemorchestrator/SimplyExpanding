@@ -65,7 +65,7 @@ class Sitemap(models.Model):
 
 class SitemapURL(models.Model):
     sitemap = models.ForeignKey(Sitemap, on_delete=models.CASCADE, related_name='urls')
-    url = models.URLField(default='http://example.com/page')
+    url = models.URLField(max_length=1000,default='http://example.com/page')
     status = models.CharField(max_length=50, null=True, blank=True)
     added_at = models.DateTimeField(auto_now_add=True)
 

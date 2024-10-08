@@ -1,0 +1,29 @@
+<!-- templates/audit/sitemap_list.html -->
+
+{% if sitemaps %}
+<ul class="space-y-3">
+    {% for sitemap in sitemaps %}
+    <li class="flex justify-between items-center bg-gray-700 p-3 rounded-md shadow-sm">
+        <a href="#" class="sitemap-link text-blue-500 hover:underline" data-id="{{ sitemap.id }}">{{ sitemap.url }}</a>
+        <button class="delete-sitemap" data-id="{{ sitemap.id }}">
+            <i class="bi bi-trash text-red-500 hover:text-red-700"></i>
+        </button>
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- Pagination for sitemap list -->
+<div class="mt-4 flex space-x-2">
+    {% if sitemaps.has_previous %}
+        <button class="bg-blue-600 text-white px-2 py-1 rounded page-link" data-page="1">First</button>
+        <button class="bg-blue-600 text-white px-2 py-1 rounded page-link" data-page="{{ sitemaps.previous_page_number }}">Previous</button>
+    {% endif %}
+    <span class="text-gray-400">Page {{ sitemaps.number }} of {{ sitemaps.paginator.num_pages }}</span>
+    {% if sitemaps.has_next %}
+        <button class="bg-blue-600 text-white px-2 py-1 rounded page-link" data-page="{{ sitemaps.next_page_number }}">Next</button>
+        <button class="bg-blue-600 text-white px-2 py-1 rounded page-link" data-page="{{ sitemaps.paginator.num_pages }}">Last</button>
+    {% endif %}
+</div>
+{% else %}
+<p class="text-gray-400">No crawled sitemaps available.</p>
+{% endif %}

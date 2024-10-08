@@ -15,7 +15,7 @@
         {% endif %}
 
         <!-- Form to upload CSV file -->
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" id="upload-form">
             {% csrf_token %}
             <div class="mb-4">
                 <label class="block text-gray-300 text-sm font-bold mb-2" for="file">
@@ -23,10 +23,28 @@
                 </label>
                 <input type="file" name="file" id="file" class="shadow appearance-none border border-gray-600 rounded w-1/2 py-2 px-3 text-gray-300 bg-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <button type="submit" id="upload-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Upload
             </button>
+            <!-- Spinner (hidden by default) -->
+            <div id="spinner" class="hidden">
+                <svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span class="text-white ml-2">Uploading...</span>
+            </div>
         </form>
     </div>
 </div>
+
+<!-- Add JavaScript for showing the spinner -->
+<script>
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+        // Hide the upload button
+        document.getElementById('upload-button').classList.add('hidden');
+        // Show the spinner
+        document.getElementById('spinner').classList.remove('hidden');
+    });
+</script>
 {% endblock %}

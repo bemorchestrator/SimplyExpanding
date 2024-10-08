@@ -1,0 +1,19 @@
+<!-- templates/audit/crawl_results.html -->
+
+{% if crawled_results %}
+    <h3 class="text-lg font-semibold mb-4 text-white">Crawl Results</h3>
+    <div class="bg-gray-700 p-4 rounded-md shadow-sm">
+        {% for sitemap_url, urls in crawled_results.items %}
+            <h4 class="font-bold text-lg text-blue-400">{{ sitemap_url }}</h4>
+            {% if urls == 'Failed to crawl the sitemap.' %}
+                <p class="text-red-400">{{ urls }}</p>
+            {% else %}
+                <ul class="list-disc pl-5">
+                    {% for url in urls %}
+                        <li><a href="{{ url }}" target="_blank" class="text-blue-500 hover:underline">{{ url }}</a></li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
