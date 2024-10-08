@@ -6,17 +6,79 @@
     <thead>
         <tr>
             {% for column in table.columns %}
-                <th class="px-4 py-2">{{ column.header }}</th>
+                <th {{ column.attrs.th.as_html }} class="px-4 py-2">{{ column.header }}</th>
             {% endfor %}
         </tr>
     </thead>
     <tbody id="audit-table-body">
         {% for row in table.rows %}
             <tr class="border-b border-gray-700 hover:bg-gray-700">
-                {% for cell in row %}
-                    <td class="px-4 py-2">{{ cell }}</td>
+                {% for column, cell in row.items %}
+                    <td {{ column.attrs.td.as_html }} class="px-4 py-2">{{ cell }}</td>
                 {% endfor %}
             </tr>
         {% endfor %}
     </tbody>
 </table>
+
+<style>
+    /* Ensure all table cells have nowrap and align properly */
+    table th, table td {
+        white-space: nowrap;
+        text-align: left;
+        padding-left: 1rem; /* Add padding to each cell */
+        padding-right: 1rem; /* Add padding to each cell */
+        border: none; /* Ensure there is no border around the cells */
+    }
+
+    /* Ensure no gaps between cells and collapse borders */
+    table {
+        border-collapse: collapse; /* This removes gaps between cells */
+    }
+
+    /* Style sticky columns and headers */
+    .sticky-col-1, .sticky-col-2 {
+        position: sticky;
+        background-color: #2d3748; /* Keep sticky column background consistent */
+        z-index: 1;
+        min-height: 100px; /* Ensure sticky columns have a minimum height */
+    }
+
+    /* First column (Actions) */
+    .sticky-col-1 {
+        left: 0;
+        width: 150px; /* Set width for the first column */
+        min-height: 100px; /* Ensure the background color extends even when no data */
+    }
+
+    /* Second column (URL) */
+    .sticky-col-2 {
+        left: 152px; /* Ensure there is no overlap with the first column */
+        width: 300px; /* Adjust the width of the second column if needed */
+        min-height: 100px; /* Ensure the background color extends even when no data */
+    }
+
+    /* Page Path column (non-sticky) */
+    .page-path {
+        min-width: 200px; /* Set a minimum width to ensure no overlap */
+        padding-left: 50px; /* Adds a gap between the URL and Page Path headers */
+    }
+
+    /* Ensure headers for sticky columns are also sticky */
+    th.sticky-col-1, th.sticky-col-2 {
+        position: sticky;
+        top: 0; /* Keep the header at the top */
+        background-color: #2d3748; /* Match header background with sticky columns */
+        z-index: 2; /* Higher z-index to keep header above the data */
+    }
+
+    /* Adjust the second sticky column header (URL) */
+    th.sticky-col-2 {
+        left: 152px; /* Ensure no overlap with the first column */
+    }
+
+    /* Adjust the Page Path header */
+    th.page-path {
+        padding-left: 50px; /* Add a gap between URL and Page Path headers */
+    }
+</style>
