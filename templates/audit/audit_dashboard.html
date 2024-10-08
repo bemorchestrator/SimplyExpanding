@@ -12,8 +12,6 @@
 
             <!-- Search Bar and Action Buttons -->
             <div class="flex items-center space-x-4">
-                
-
                 <!-- Upload Button -->
                 <button id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded">
                     <i class="bi bi-upload"></i>
@@ -55,7 +53,7 @@
                                     </div>
                                     <div>
                                         {{ filter.form.crawl_depth.label_tag }}
-                                        <input class="text-black w-full" type="text" name="crawl_depth" value="{{ filter.form.crawl_depth.value }}">
+                                        <input class="text-black w-full" type="number" name="crawl_depth" value="{{ filter.form.crawl_depth.value }}">
                                     </div>
                                 </div>
                             </div>
@@ -70,11 +68,11 @@
                                     </div>
                                     <div>
                                         {{ filter.form.kw_volume.label_tag }}
-                                        <input class="text-black w-full" type="text" name="kw_volume" value="{{ filter.form.kw_volume.value }}">
+                                        <input class="text-black w-full" type="number" name="kw_volume" value="{{ filter.form.kw_volume.value }}">
                                     </div>
                                     <div>
                                         {{ filter.form.kw_ranking.label_tag }}
-                                        <input class="text-black w-full" type="text" name="kw_ranking" value="{{ filter.form.kw_ranking.value }}">
+                                        <input class="text-black w-full" type="number" name="kw_ranking" value="{{ filter.form.kw_ranking.value }}">
                                     </div>
                                 </div>
                             </div>
@@ -89,11 +87,30 @@
                                     </div>
                                     <div>
                                         {{ filter.form.status_code.label_tag }}
-                                        <input class="text-black w-full" type="text" name="status_code" value="{{ filter.form.status_code.value }}">
+                                        <input class="text-black w-full" type="number" name="status_code" value="{{ filter.form.status_code.value }}">
                                     </div>
                                     <div>
                                         {{ filter.form.action_choice.label_tag }}
                                         <input class="text-black w-full" type="text" name="action_choice" value="{{ filter.form.action_choice.value }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Group 4: Performance Filters -->
+                            <div class="p-4 rounded">
+                                <h3 class="text-white text-lg font-semibold">Performance Information</h3>
+                                <div class="space-y-2">
+                                    <div>
+                                        {{ filter.form.impressions.label_tag }}
+                                        <input class="text-black w-full" type="number" name="impressions" value="{{ filter.form.impressions.value }}">
+                                    </div>
+                                    <div>
+                                        {{ filter.form.sessions.label_tag }}
+                                        <input class="text-black w-full" type="number" name="sessions" value="{{ filter.form.sessions.value }}">
+                                    </div>
+                                    <div>
+                                        {{ filter.form.bounce_rate.label_tag }}
+                                        <input class="text-black w-full" type="number" name="bounce_rate" value="{{ filter.form.bounce_rate.value }}">
                                     </div>
                                 </div>
                             </div>
@@ -118,17 +135,18 @@
             <span id="pagination-info-bottom">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
 
             {% if page_obj.has_previous %}
-                <a href="?page=1&search={{ search_query }}" class="bg-blue-500 text-white px-4 py-2 rounded">First</a>
-                <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}" class="bg-blue-500 text-white px-4 py-2 rounded">Previous</a>
+                <a href="?page=1" class="bg-blue-500 text-white px-4 py-2 rounded">First</a>
+                <a href="?page={{ page_obj.previous_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded">Previous</a>
             {% endif %}
 
             {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}" class="bg-blue-500 text-white px-4 py-2 rounded">Next</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}&search={{ search_query }}" class="bg-blue-500 text-white px-4 py-2 rounded">Last</a>
+                <a href="?page={{ page_obj.next_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" class="bg-blue-500 text-white px-4 py-2 rounded">Last</a>
             {% endif %}
         </div>
     </div>
 </div>
+
 
 
 
