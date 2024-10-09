@@ -129,7 +129,14 @@ class UploadedFileTable(tables.Table):
         )
 
     crawl_depth = tables.Column(verbose_name='Crawl Depth', attrs={"td": {"style": "white-space: nowrap;"}})
+    
     in_sitemap = tables.Column(verbose_name='In Sitemap', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_in_sitemap(self, value):
+        if value:  # If True
+            return format_html('<span style="color: green;">&#10003;</span>')  # Check mark in green
+        else:  # If False
+            return format_html('<span style="color: red;">&#10007;</span>')
 
     # Keyword Performance Columns
     main_kw = tables.Column(verbose_name='Main KW', attrs={"td": {"style": "white-space: nowrap;"}})
