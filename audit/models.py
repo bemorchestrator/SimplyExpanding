@@ -1,3 +1,5 @@
+# models.py
+
 from django.db import models
 
 class UploadedFile(models.Model):
@@ -17,7 +19,7 @@ class UploadedFile(models.Model):
     drive_file_id = models.CharField(max_length=2000, default='unknown_id')  # Increased from 255
     drive_file_link = models.URLField(max_length=2000, null=True, blank=True)  # Increased from 500
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    url = models.URLField(default='http://example.com', max_length=2000)  # Ensure enough space for long URLs
+    url = models.URLField(default='http://example.com', max_length=2000, unique=False)  # Ensure enough space for long URLs and enforce uniqueness
     type = models.CharField(max_length=2000, default='text/html; charset=UTF-8')  # Increased from 100
     current_title = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
     meta = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
@@ -54,14 +56,12 @@ class UploadedFile(models.Model):
     def __str__(self):
         return self.file_name
 
-
 class Sitemap(models.Model):
     url = models.URLField(default='http://example.com/sitemap.xml', max_length=2000)  # Increased from default length
     added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.url
-
 
 class SitemapURL(models.Model):
     sitemap = models.ForeignKey(Sitemap, on_delete=models.CASCADE, related_name='urls')

@@ -33,7 +33,7 @@
                 <!-- Crawl Sitemap -->
                 <form action="/audit/crawl-sitemaps/" method="POST">
                     {% csrf_token %}
-                    <button type="submit" id="upload-btn" class="bg-indigo-500 text-white py-2 px-4 rounded">
+                    <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded">
                         <i class="bi bi-bug"></i>
                     </button>
                 </form>
@@ -146,17 +146,27 @@
         <!-- Pagination Controls -->
         <div class="pagination-controls mt-4 flex items-center space-x-4">
             <span id="pagination-info-bottom">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-
+        
             {% if page_obj.has_previous %}
                 <a href="?page=1" class="bg-blue-500 text-white px-4 py-2 rounded">First</a>
                 <a href="?page={{ page_obj.previous_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded">Previous</a>
             {% endif %}
-
+        
+            <!-- Page Numbers -->
+            {% for page_num in page_obj.paginator.page_range %}
+                {% if page_num == page_obj.number %}
+                    <span class="bg-gray-500 text-white px-4 py-2 rounded">{{ page_num }}</span>
+                {% elif page_num > page_obj.number|add:-3 and page_num < page_obj.number|add:3 %}
+                    <a href="?page={{ page_num }}" class="bg-gray-300 text-black px-4 py-2 rounded">{{ page_num }}</a>
+                {% endif %}
+            {% endfor %}
+        
             {% if page_obj.has_next %}
                 <a href="?page={{ page_obj.next_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded">Next</a>
                 <a href="?page={{ page_obj.paginator.num_pages }}" class="bg-blue-500 text-white px-4 py-2 rounded">Last</a>
             {% endif %}
         </div>
+        
     </div>
 </div>
 
@@ -323,7 +333,7 @@
         }
 
         // Search Functionality
-        const searchInput = document.getElementById('search-input');
+        const searchInput = document.querySelector('input[name="search"]');
         let searchTimeout = null;
 
         searchInput.addEventListener('input', function() {
@@ -431,10 +441,10 @@
             const paginationInfo = document.getElementById('pagination-info-bottom');
             paginationInfo.textContent = `Page ${currentPage} of ${numPages}`;
 
-            const firstBtn = document.querySelector('button[onclick*="page=1"]');
-            const prevBtn = document.querySelector('button[onclick*="previous_page_number"]');
-            const nextBtn = document.querySelector('button[onclick*="next_page_number"]');
-            const lastBtn = document.querySelector('button[onclick*="paginator.num_pages"]');
+            const firstBtn = document.querySelector('a[href="?page=1"]');
+            const prevBtn = document.querySelector('a[href="?page=' + (currentPage - 1) + '"]');
+            const nextBtn = document.querySelector('a[href="?page=' + (currentPage + 1) + '"]');
+            const lastBtn = document.querySelector('a[href="?page=' + numPages + '"]');
 
             setButtonState(firstBtn, currentPage !== 1);
             setButtonState(prevBtn, hasPrevious);
@@ -463,6 +473,7 @@
         }
     });
 
+    // Toggle Filter Dropdown Visibility
     document.getElementById('filter-toggle-btn').addEventListener('click', function() {
         const dropdown = document.getElementById('filter-dropdown');
         dropdown.classList.toggle('hidden');

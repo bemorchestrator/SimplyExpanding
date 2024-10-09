@@ -39,6 +39,7 @@ import logging
 
 
 
+
 # Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
 file_handler = logging.FileHandler('audit_log.log', mode='a')
 file_handler.setLevel(logging.DEBUG)
@@ -144,14 +145,14 @@ def upload_file(request):
                     }
                     media = MediaFileUpload(temp_file_path, mimetype='text/csv')
 
-                    uploaded_file = service.files().create(
+                    uploaded_file_drive = service.files().create(
                         body=file_metadata,
                         media_body=media,
                         fields='id, webViewLink'
                     ).execute()
 
-                    drive_file_id = uploaded_file.get('id')
-                    drive_file_link = uploaded_file.get('webViewLink')
+                    drive_file_id = uploaded_file_drive.get('id')
+                    drive_file_link = uploaded_file_drive.get('webViewLink')
 
                     logging.info(f"File uploaded to Google Drive: {drive_file_id}, link: {drive_file_link}")
 
@@ -160,19 +161,42 @@ def upload_file(request):
 
                     # Step 3: Process CSV data before storing in the database
                     file.seek(0)  # Reset file pointer to process CSV
-                    audit_data = process_csv_file(file)  # Updated to use the expanded function
-                    
+                    audit_data = process_csv_file(file)  # Use the updated function
+
                     if audit_data:
                         for data in audit_data:
-                            UploadedFile.objects.create(
-                                file_name=file.name,
-                                drive_file_id=drive_file_id,
-                                drive_file_link=drive_file_link,
-                                **data
-                            )
-                        logging.info(f"Audit data processed and saved for file: {file.name}")
+                            url = data.get('url')
+                            if not url:
+                                continue
+                            url = normalize_url(url)  # Normalize the URL before processing
+                            try:
+                                # Try to get existing UploadedFile with matching URL
+                                uploaded_file = UploadedFile.objects.filter(url=url).first()
+                                if uploaded_file:
+                                    # Update fields
+                                    uploaded_file.file_name = file.name
+                                    uploaded_file.drive_file_id = drive_file_id
+                                    uploaded_file.drive_file_link = drive_file_link
+                                    # Update all fields from data
+                                    for key, value in data.items():
+                                        if value is not None:
+                                            setattr(uploaded_file, key, value)
+                                    uploaded_file.save()
+                                    logging.info(f"Updated UploadedFile for URL: {url}")
+                                else:
+                                    # Create new UploadedFile
+                                    data['file_name'] = file.name
+                                    data['drive_file_id'] = drive_file_id
+                                    data['drive_file_link'] = drive_file_link
+                                    data['url'] = url  # Ensure the URL is included
+                                    uploaded_file = UploadedFile(**data)
+                                    uploaded_file.save()
+                                    logging.info(f"Created new UploadedFile for URL: {url}")
+                            except Exception as e:
+                                logging.error(f"Error processing URL {url}: {e}")
+
                         messages.success(request, "File uploaded successfully and audit data processed.")
-                        
+
                         # Step 4: Update the 'In Sitemap' status after saving the uploaded data
                         update_in_sitemap_status()  # Call the function to update 'in_sitemap' field
                     else:
@@ -202,6 +226,8 @@ def upload_file(request):
         form = FileUploadForm()
 
     return render(request, 'audit/upload.html', {'form': form})
+
+
 
 
 def fetch_search_console_data(creds, site_url, start_date, end_date):
@@ -257,10 +283,8 @@ def populate_audit_dashboard_with_search_console_data(request):
     for row in rows:
         try:
             page_url = row['keys'][0]  # The 'page' dimension (URL)
-            clicks = row.get('clicks', 0)
             impressions = row.get('impressions', 0)
             ctr = row.get('ctr', 0) * 100  # Convert to percentage
-            position = row.get('position', 0)
 
             # Update or create the UploadedFile record
             uploaded_file, created = UploadedFile.objects.update_or_create(
@@ -268,8 +292,6 @@ def populate_audit_dashboard_with_search_console_data(request):
                 defaults={
                     'impressions': impressions,
                     'serp_ctr': ctr,
-                    'clicks': clicks,
-                    'position': position,
                 }
             )
             if created:
@@ -533,7 +555,6 @@ def update_in_sitemap_status():
 
 
 
-# Function to extract the path from the URL
 def get_page_path(url):
     """
     Extracts the path from a URL. If the URL has no path, returns '/'.
@@ -549,6 +570,8 @@ def get_page_path(url):
     logging.debug(f"Extracted path: {path}")
     
     return path
+
+
 
 def process_csv_file(file):
     try:
@@ -654,6 +677,7 @@ def process_csv_file(file):
     except Exception as e:
         logging.error(f"Error while processing CSV file: {e}")
         return []
+
 
 
 
