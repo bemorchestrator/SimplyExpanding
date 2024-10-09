@@ -1,5 +1,3 @@
-<!-- templates/audit/custom_table.html -->
-
 {% load django_tables2 %}
 
 <table class="table-auto w-full">
@@ -11,19 +9,105 @@
                 </th>
             {% endfor %}
         </tr>
-    </thead>              
+    </thead>
     <tbody id="audit-table-body">
         {% for row in table.rows %}
             <tr class="border-b border-gray-700 hover:bg-gray-700">
                 {% for column, cell in row.items %}
                     <td {{ column.attrs.td.as_html }} class="px-4 py-2 {% if forloop.counter0 == 0 %}sticky-col-1{% endif %}">
-                        {{ cell|safe }}
+                        {% if column.accessor == "action_choice" %}
+                            <!-- Action Choice Form with Dynamic Options -->
+                            <form method="POST" action="{% url 'update_action_choice' %}" class="ajax-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="id" value="{{ row.record.id }}">
+                                <select name="action_choice" class="action-dropdown">
+                                    {% for key, value in row.record.ACTION_CHOICES %}
+                                        <option value="{{ key }}" {% if row.record.action_choice == key %}selected{% endif %}>{{ value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        {% elif column.accessor == "category" %}
+                            <!-- Category Form with Dynamic Options (Now using CATEGORY_CHOICES) -->
+                            <form method="POST" action="{% url 'update_category' %}" class="ajax-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="id" value="{{ row.record.id }}">
+                                <select name="category" class="category-dropdown">
+                                    {% for key, value in row.record.CATEGORY_CHOICES %}
+                                        <option value="{{ key }}" {% if row.record.category == key %}selected{% endif %}>{{ value }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        {% else %}
+                            {{ cell|safe }}
+                        {% endif %}
                     </td>
                 {% endfor %}
             </tr>
         {% endfor %}
-    </tbody>    
+    </tbody>
 </table>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropdowns = document.querySelectorAll('.action-dropdown, .category-dropdown');
+
+        dropdowns.forEach(dropdown => {
+            dropdown.addEventListener('change', function() {
+                const form = this.closest('form');  // Get the closest form for this dropdown
+                const formData = new FormData(form); // Gather form data
+                const url = form.action;  // Get the form action URL
+
+                // Get CSRF token from cookie
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i=0; i<cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length+1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length+1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+                const csrftoken = getCookie('csrftoken');
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData, // Use form data
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',  // Important for AJAX
+                        'X-CSRFToken': csrftoken,  // Include the CSRF token
+                    }
+                })
+                .then(response => {
+                    return response.text().then((text) => {
+                        try {
+                            const json = JSON.parse(text);  // Attempt to parse JSON
+                            return json;
+                        } catch (error) {
+                            console.error("Failed to parse JSON. Response was:", text);  // Log raw response
+                            throw new Error("Failed to parse JSON");
+                        }
+                    });
+                })
+                .then(data => {
+                    if (data.success) {
+                        console.log(data.message);
+                    } else {
+                        console.error('Error:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Request failed:', error);
+                });
+            });
+        });
+    });
+
+</script>
 
 <style>
     /* Ensure all table cells have nowrap and align properly */
@@ -88,24 +172,16 @@
         padding-left: 50px; /* Add a gap between URL and Page Path headers */
     }
 
-    /* Optional: Style for the action form dropdowns */
-    .action-form form {
-        display: flex;
-        align-items: center;
-    }
-
-    .action-dropdown {
-        width: 100%;
-        background-color: #4a5568; /* Dark background */
-        color: #fff; /* White text */
+    /* Style for both dropdowns */
+    .category-dropdown, .action-dropdown {
+        width: 100%;  /* Ensure they take up the full width of the cell */
+        max-width: 250px;  /* Set a maximum width */
+        background-color: #4a5568;  /* Dark background */
+        color: #fff;  /* White text */
         border: none;
         border-radius: 4px;
         padding: 0.25rem;
-    }
-
-    /* Ensure the table container allows sticky positioning */
-    .table-container {
-        position: relative;
-        overflow: auto;
+        height: 38px;  /* Control the height to be consistent */
+        display: block;  /* Ensure block display to avoid inline issues */
     }
 </style>

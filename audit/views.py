@@ -19,6 +19,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
 from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_protect
 
 from .filters import UploadedFileFilter 
 from .forms import FileUploadForm, SitemapForm, UploadedFileForm
@@ -39,7 +40,7 @@ from django.contrib import messages
 import logging
 
 
-
+logger = logging.getLogger(__name__)
 
 # Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
 file_handler = logging.FileHandler('audit_log.log', mode='a')
@@ -700,7 +701,8 @@ def audit_dashboard(request):
 
             # Assuming form.save() is enough if the form is linked to a model instance
             form.save()  # Save the updated form fields
-            return redirect('audit_dashboard')  # Redirect to the dashboard after saving
+            return JsonResponse({'success': True, 'message': 'Form submitted successfully.'})
+
     else:
         form = UploadedFileForm()
 
@@ -728,58 +730,55 @@ def delete_uploaded_files(request):
         logging.warning("Received non-POST request to delete_uploaded_files.")
         return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
+
+
+
 @csrf_protect
 def update_action_choice(request):
-    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+    if request.method == 'POST':
+        audit_id = request.POST.get('id')
+        action_choice = request.POST.get('action_choice')
+
+        if not audit_id or not action_choice:
+            return JsonResponse({'success': False, 'error': 'Invalid data provided.'}, status=400)
+
         try:
-            data = json.loads(request.body)
-            audit_id = data.get('id')
-            action = data.get('action_choice')
+            audit_entry = UploadedFile.objects.get(id=audit_id)
+            audit_entry.action_choice = action_choice
+            audit_entry.save()
+            return JsonResponse({'success': True, 'message': 'Action choice updated successfully.'})
+        except UploadedFile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
 
-            if not audit_id or not action:
-                return JsonResponse({'success': False, 'error': 'Invalid data.'}, status=400)
-
-            if action not in dict(UploadedFile.ACTION_CHOICES).keys():
-                return JsonResponse({'success': False, 'error': 'Invalid action choice.'}, status=400)
-
-            try:
-                audit_entry = UploadedFile.objects.get(id=audit_id)
-                audit_entry.action_choice = action
-                audit_entry.save()
-                logging.info(f"Action choice updated for UploadedFile id {audit_id} to {action}.")
-                return JsonResponse({'success': True})
-            except UploadedFile.DoesNotExist:
-                return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
-        except Exception as e:
-            logging.error(f"Error updating action choice: {e}")
-            return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
-    else:
-        return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
 
 
-@csrf_exempt
+
+
+
+
+@csrf_protect
 def update_category(request):
-    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+    if request.method == 'POST':
+        audit_id = request.POST.get('id')
+        category = request.POST.get('category')
+
+        # Check if both ID and category are provided
+        if not audit_id or not category:
+            return JsonResponse({'success': False, 'error': 'Invalid data provided.'}, status=400)
+
         try:
-            data = json.loads(request.body)
-            audit_id = data.get('id')
-            category = data.get('category')
+            # Fetch the UploadedFile record and update the category
+            audit_entry = UploadedFile.objects.get(id=audit_id)
+            audit_entry.category = category
+            audit_entry.save()
+            
+            # Return a success response as JSON
+            return JsonResponse({'success': True, 'message': 'Category updated successfully.'})
+        
+        except UploadedFile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
 
-            if not audit_id or not category:
-                return JsonResponse({'success': False, 'error': 'Invalid data.'}, status=400)
-
-            try:
-                audit_entry = UploadedFile.objects.get(id=audit_id)
-                audit_entry.category = category
-                audit_entry.save()
-                return JsonResponse({'success': True})
-            except UploadedFile.DoesNotExist:
-                return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    # Return an error if the request is not a POST request
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)

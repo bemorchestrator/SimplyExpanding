@@ -2,6 +2,8 @@ import django_tables2 as tables
 from django.utils.html import format_html
 from .models import UploadedFile
 from .forms import UploadedFileForm  # Import the form to use for rendering dropdowns
+from django.urls import reverse
+from django.middleware.csrf import get_token
 
 class UploadedFileTable(tables.Table):
     action_choice = tables.Column(
@@ -38,8 +40,25 @@ class UploadedFileTable(tables.Table):
 
     # Category Column with Dropdown Rendering
     def render_category(self, value, record):
-        form = UploadedFileForm(instance=record)  # Create a form instance for each row
-        return format_html('''<form method="post">{}</form>''', form['category'])  # Render category dropdown
+        form = UploadedFileForm(instance=record)  # Get the form instance for the row
+        csrf_token = get_token(self.request)  # Fetch the CSRF token for form security
+        update_url = reverse('update_category')  # URL where the form will be submitted
+
+        return format_html(
+            '''<form method="post" action="{}">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{}">
+                <input type="hidden" name="id" value="{}">
+                {}
+            </form>''',
+            update_url,  # Form submission URL
+            csrf_token,  # CSRF token for security
+            record.id,  # The record's ID
+            form['category']  # Render the category dropdown
+        )
+
+
+
+
 
     # URL Column with Custom Rendering
     def render_url(self, value, record):
@@ -79,8 +98,36 @@ class UploadedFileTable(tables.Table):
         }
     )
 
-    # Other Columns (as is)
-    page_path = tables.Column(verbose_name='Page Path', attrs={"td": {"style": "white-space: nowrap;"}})
+    page_path = tables.Column(
+    verbose_name='Page Path',
+    attrs={
+        "td": {
+            "style": "white-space: nowrap; padding-left: 40px;"
+        },
+        "th": {
+            "style": "text-align: left; padding-left: 50px;"
+        }
+    }
+)
+
+    def render_page_path(self, value, record):
+        truncated_page_path = value if len(value) <= 150 else value[:150] + "..."
+        return format_html(
+            '''
+            <div title="{}" style="
+                white-space: nowrap; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                display: inline-block; 
+                max-width: 480px;
+                padding-left: 15px;
+            ">
+                {}
+            </div>
+            ''',
+            value, truncated_page_path
+        )
+
     crawl_depth = tables.Column(verbose_name='Crawl Depth', attrs={"td": {"style": "white-space: nowrap;"}})
     in_sitemap = tables.Column(verbose_name='In Sitemap', attrs={"td": {"style": "white-space: nowrap;"}})
 

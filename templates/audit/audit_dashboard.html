@@ -40,7 +40,7 @@
         </div>
 
         <!-- Table Rendering using django-tables2 -->
-        <div class="table-container overflow-x-auto overflow-y-auto flex-1">
+        <div class="table-container overflow-y-auto flex-1">
             <form method="POST" action="">
                 {% csrf_token %}
                 {% render_table table %}  <!-- Render the table using Django Tables2 -->
