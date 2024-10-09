@@ -46,6 +46,30 @@
                 {% render_table table %}  <!-- Render the table using Django Tables2 -->
             </form>
         </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination mt-4 text-center">
+            <span class="step-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1" class="px-3 py-2 bg-gray-700 text-white rounded">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded">Previous</a>
+                {% endif %}
+
+                <!-- Display page numbers -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="current-page px-3 py-2 bg-blue-500 text-white rounded">{{ num }}</span>
+                    {% else %}
+                        <a href="?page={{ num }}" class="px-3 py-2 bg-gray-700 text-white rounded">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 bg-gray-700 text-white rounded">Last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
     </div>
 </div>
 

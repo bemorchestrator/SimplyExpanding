@@ -1,187 +1,250 @@
 {% load django_tables2 %}
 
-<table class="table-auto w-full">
-    <thead>
-        <tr>
-            {% for column in table.columns %}
-                <th {{ column.attrs.th.as_html }} class="px-4 py-2 {% if forloop.counter0 == 0 %}sticky-col-1{% endif %}">
-                    {{ column.header }}
-                </th>
-            {% endfor %}
-        </tr>
-    </thead>
-    <tbody id="audit-table-body">
-        {% for row in table.rows %}
-            <tr class="border-b border-gray-700 hover:bg-gray-700">
-                {% for column, cell in row.items %}
-                    <td {{ column.attrs.td.as_html }} class="px-4 py-2 {% if forloop.counter0 == 0 %}sticky-col-1{% endif %}">
-                        {% if column.accessor == "action_choice" %}
-                            <!-- Action Choice Form with Dynamic Options -->
-                            <form method="POST" action="{% url 'update_action_choice' %}" class="ajax-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="id" value="{{ row.record.id }}">
-                                <select name="action_choice" class="action-dropdown">
-                                    {% for key, value in row.record.ACTION_CHOICES %}
-                                        <option value="{{ key }}" {% if row.record.action_choice == key %}selected{% endif %}>{{ value }}</option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                        {% elif column.accessor == "category" %}
-                            <!-- Category Form with Dynamic Options (Now using CATEGORY_CHOICES) -->
-                            <form method="POST" action="{% url 'update_category' %}" class="ajax-form">
-                                {% csrf_token %}
-                                <input type="hidden" name="id" value="{{ row.record.id }}">
-                                <select name="category" class="category-dropdown">
-                                    {% for key, value in row.record.CATEGORY_CHOICES %}
-                                        <option value="{{ key }}" {% if row.record.category == key %}selected{% endif %}>{{ value }}</option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                        {% else %}
-                            {{ cell|safe }}
-                        {% endif %}
-                    </td>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Custom Table</title>
+    <!-- Add any additional CSS or JS links here -->
+    <style>
+        /* Ensure all table cells have nowrap and align properly */
+        table th, table td {
+            white-space: nowrap;
+            text-align: left;
+            padding-left: 1rem; /* Add padding to each cell */
+            padding-right: 1rem; /* Add padding to each cell */
+            border: none; /* Ensure there is no border around the cells */
+        }
+
+        /* Ensure no gaps between cells and collapse borders */
+        table {
+            border-collapse: collapse; /* This removes gaps between cells */
+            width: 100%; /* Ensure table takes full width */
+        }
+
+        /* Style sticky columns and headers */
+        .sticky-col-1, .sticky-col-2 {
+            position: sticky;
+            background-color: #2d3748; /* Keep sticky column background consistent */
+            z-index: 3; /* Base z-index for body cells */
+        }
+
+        /* First column (Actions) */
+        .sticky-col-1 {
+            left: 0;
+            width: 150px; /* Set width for the first column */
+            z-index: 3; /* Higher z-index to stay above other sticky columns */
+            background-color: #2d3748; /* Ensure consistent background */
+        }
+
+        /* Ensure headers for sticky columns are also sticky */
+        th.sticky-col-1 {
+            top: 0;
+            z-index: 5; /* Highest z-index for headers */
+            background-color: #2d3748; /* Ensure consistent header background */
+        }
+
+        /* Second column (URL) */
+        .sticky-col-2 {
+            left: 150px; /* Align right next to the first sticky column */
+            width: 300px; /* Adjust the width of the second column if needed */
+            z-index: 2; /* Lower z-index than the first sticky column */
+        }
+
+        /* Ensure headers for sticky columns are also sticky */
+        th.sticky-col-2 {
+            top: 0;
+            left: 150px; /* Same left position as the body cells */
+            z-index: 4; /* Lower than the first sticky header */
+            background-color: #2d3748;
+        }
+
+        /* Page Path column (non-sticky) */
+        .page-path {
+            min-width: 200px; /* Set a minimum width to ensure no overlap */
+            padding-left: 50px; /* Adds a gap between the URL and Page Path headers */
+        }
+
+        /* Adjust the Page Path header */
+        th.page-path {
+            padding-left: 50px; /* Add a gap between URL and Page Path headers */
+        }
+
+        /* Style for both dropdowns */
+        .category-dropdown, .action-dropdown {
+            width: 100%;  /* Ensure they take up the full width of the cell */
+            max-width: 250px;  /* Set a maximum width */
+            background-color: #4a5568;  /* Dark background */
+            color: #fff;  /* White text */
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem;
+            height: 38px;  /* Control the height to be consistent */
+            display: block;  /* Ensure block display to avoid inline issues */
+        }
+
+        /* Optional: Hover effect for table rows */
+        tr:hover {
+            background-color: #4a5568; /* Change to a slightly different shade on hover */
+        }
+
+        /* Pagination styling */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .pagination a, .pagination span {
+            margin: 0 0.25rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #ddd;
+            background-color: #f4f4f4;
+            text-decoration: none;
+            color: #333;
+            border-radius: 4px;
+        }
+
+        .pagination a:hover {
+            background-color: #ddd;
+        }
+
+        .pagination .current {
+            background-color: #2d3748;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <table class="table-auto w-full">
+        <thead>
+            <tr>
+                {% for column in table.columns %}
+                    {% if column.name == 'action_choice' %}
+                        <th {{ column.attrs.th.as_html }} class="sticky-col-1 px-4 py-2">
+                            {{ column.header }}
+                        </th>
+                    {% elif column.name == 'url' %}
+                        <th {{ column.attrs.th.as_html }} class="sticky-col-2 px-4 py-2">
+                            {{ column.header }}
+                        </th>
+                    {% elif column.name == 'page_path' %}
+                        <th {{ column.attrs.th.as_html }} class="page-path px-4 py-2">
+                            {{ column.header }}
+                        </th>
+                    {% else %}
+                        <th {{ column.attrs.th.as_html }} class="px-4 py-2">
+                            {{ column.header }}
+                        </th>
+                    {% endif %}
                 {% endfor %}
             </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        </thead>
+        <tbody id="audit-table-body">
+            {% for row in table.rows %}
+                <tr class="border-b border-gray-700 hover:bg-gray-700">
+                    {% for column, cell in row.items %}
+                        {% if column.name == 'action_choice' %}
+                            <td {{ column.attrs.td.as_html }} class="sticky-col-1 px-4 py-2">
+                                <!-- Action Choice Form with Dynamic Options -->
+                                <form method="POST" action="{% url 'update_action_choice' %}" class="ajax-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="id" value="{{ row.record.id }}">
+                                    <select name="action_choice" class="action-dropdown">
+                                        {% for key, value in row.record.ACTION_CHOICES %}
+                                            <option value="{{ key }}" {% if row.record.action_choice == key %}selected{% endif %}>{{ value }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                        {% elif column.name == 'category' %}
+                            <td {{ column.attrs.td.as_html }} class="px-4 py-2">
+                                <!-- Category Form with Dynamic Options -->
+                                <form method="POST" action="{% url 'update_category' %}" class="ajax-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="id" value="{{ row.record.id }}">
+                                    <select name="category" class="category-dropdown">
+                                        {% for key, value in row.record.CATEGORY_CHOICES %}
+                                            <option value="{{ key }}" {% if row.record.category == key %}selected{% endif %}>{{ value }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                        {% elif column.name == 'url' %}
+                            <td {{ column.attrs.td.as_html }} class="sticky-col-2 px-4 py-2">
+                                {{ cell|safe }}
+                            </td>
+                        {% else %}
+                            <td {{ column.attrs.td.as_html }} class="px-4 py-2">
+                                {{ cell|safe }}
+                            </td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const dropdowns = document.querySelectorAll('.action-dropdown, .category-dropdown');
 
-        dropdowns.forEach(dropdown => {
-            dropdown.addEventListener('change', function() {
-                const form = this.closest('form');  // Get the closest form for this dropdown
-                const formData = new FormData(form); // Gather form data
-                const url = form.action;  // Get the form action URL
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdowns = document.querySelectorAll('.action-dropdown, .category-dropdown');
 
-                // Get CSRF token from cookie
-                function getCookie(name) {
-                    let cookieValue = null;
-                    if (document.cookie && document.cookie !== '') {
-                        const cookies = document.cookie.split(';');
-                        for (let i=0; i<cookies.length; i++) {
-                            const cookie = cookies[i].trim();
-                            if (cookie.substring(0, name.length+1) === (name + '=')) {
-                                cookieValue = decodeURIComponent(cookie.substring(name.length+1));
-                                break;
+            dropdowns.forEach(dropdown => {
+                dropdown.addEventListener('change', function() {
+                    const form = this.closest('form');  // Get the closest form for this dropdown
+                    const formData = new FormData(form); // Gather form data
+                    const url = form.action;  // Get the form action URL
+
+                    // Get CSRF token from cookie
+                    function getCookie(name) {
+                        let cookieValue = null;
+                        if (document.cookie && document.cookie !== '') {
+                            const cookies = document.cookie.split(';');
+                            for (let i=0; i<cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.substring(0, name.length+1) === (name + '=')) {
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length+1));
+                                    break;
+                                }
                             }
                         }
+                        return cookieValue;
                     }
-                    return cookieValue;
-                }
-                const csrftoken = getCookie('csrftoken');
+                    const csrftoken = getCookie('csrftoken');
 
-                fetch(url, {
-                    method: 'POST',
-                    body: formData, // Use form data
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',  // Important for AJAX
-                        'X-CSRFToken': csrftoken,  // Include the CSRF token
-                    }
-                })
-                .then(response => {
-                    return response.text().then((text) => {
-                        try {
-                            const json = JSON.parse(text);  // Attempt to parse JSON
-                            return json;
-                        } catch (error) {
-                            console.error("Failed to parse JSON. Response was:", text);  // Log raw response
-                            throw new Error("Failed to parse JSON");
+                    fetch(url, {
+                        method: 'POST',
+                        body: formData, // Use form data
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',  // Important for AJAX
+                            'X-CSRFToken': csrftoken,  // Include the CSRF token
                         }
+                    })
+                    .then(response => {
+                        return response.text().then((text) => {
+                            try {
+                                const json = JSON.parse(text);  // Attempt to parse JSON
+                                return json;
+                            } catch (error) {
+                                console.error("Failed to parse JSON. Response was:", text);  // Log raw response
+                                throw new Error("Failed to parse JSON");
+                            }
+                        });
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            console.log(data.message);
+                        } else {
+                            console.error('Error:', data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Request failed:', error);
                     });
-                })
-                .then(data => {
-                    if (data.success) {
-                        console.log(data.message);
-                    } else {
-                        console.error('Error:', data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Request failed:', error);
                 });
             });
         });
-    });
-
-</script>
-
-<style>
-    /* Ensure all table cells have nowrap and align properly */
-    table th, table td {
-        white-space: nowrap;
-        text-align: left;
-        padding-left: 1rem; /* Add padding to each cell */
-        padding-right: 1rem; /* Add padding to each cell */
-        border: none; /* Ensure there is no border around the cells */
-    }
-
-    /* Ensure no gaps between cells and collapse borders */
-    table {
-        border-collapse: collapse; /* This removes gaps between cells */
-    }
-
-    /* Style sticky columns and headers */
-    .sticky-col-1, .sticky-col-2 {
-        position: sticky;
-        background-color: #2d3748; /* Keep sticky column background consistent */
-        z-index: 3; /* Base z-index for body cells */
-    }
-
-    /* First column (Actions) */
-    .sticky-col-1 {
-        left: 0;
-        width: 150px; /* Set width for the first column */
-        z-index: 3; /* Higher z-index to stay above other sticky columns */
-        background-color: #2d3748; /* Ensure consistent background */
-    }
-
-    /* Ensure headers for sticky columns are also sticky */
-    th.sticky-col-1 {
-        top: 0;
-        z-index: 5; /* Highest z-index for headers */
-        background-color: #2d3748; /* Ensure consistent header background */
-    }
-
-    /* Second column (URL) */
-    .sticky-col-2 {
-        left: 150px; /* Align right next to the first sticky column */
-        width: 300px; /* Adjust the width of the second column if needed */
-        z-index: 2; /* Lower z-index than the first sticky column */
-    }
-
-    /* Ensure headers for sticky columns are also sticky */
-    th.sticky-col-2 {
-        top: 0;
-        left: 150px; /* Same left position as the body cells */
-        z-index: 4; /* Lower than the first sticky header */
-        background-color: #2d3748;
-    }
-
-    /* Page Path column (non-sticky) */
-    .page-path {
-        min-width: 200px; /* Set a minimum width to ensure no overlap */
-        padding-left: 50px; /* Adds a gap between the URL and Page Path headers */
-    }
-
-    /* Adjust the Page Path header */
-    th.page-path {
-        padding-left: 50px; /* Add a gap between URL and Page Path headers */
-    }
-
-    /* Style for both dropdowns */
-    .category-dropdown, .action-dropdown {
-        width: 100%;  /* Ensure they take up the full width of the cell */
-        max-width: 250px;  /* Set a maximum width */
-        background-color: #4a5568;  /* Dark background */
-        color: #fff;  /* White text */
-        border: none;
-        border-radius: 4px;
-        padding: 0.25rem;
-        height: 38px;  /* Control the height to be consistent */
-        display: block;  /* Ensure block display to avoid inline issues */
-    }
-</style>
+    </script>
+</body>
+</html>

@@ -72,15 +72,15 @@ def audit_result(request):
 
     # Pagination Logic
     page_number = request.GET.get('page', 1)
-    rows_per_page = request.GET.get('rows', 25)  # Default to 25 rows per page
+    rows_per_page = request.GET.get('rows', 15)  # Default to 25 rows per page
 
     # Ensure rows_per_page is an integer
     try:
         rows_per_page = int(rows_per_page)
         if rows_per_page <= 0:
-            rows_per_page = 25
+            rows_per_page = 15
     except ValueError:
-        rows_per_page = 25
+        rows_per_page = 15
 
     paginator = Paginator(audit_data, rows_per_page)
 
@@ -685,31 +685,40 @@ def process_csv_file(file):
 
 @csrf_protect
 def audit_dashboard(request):
-    audit_data_qs = UploadedFile.objects.all()  # Retrieve all audit data
+    audit_data_qs = UploadedFile.objects.all().order_by('id')  # Retrieve and order audit data by 'id'
 
-    # Initialize the table with all data (no pagination or filtering)
-    table = UploadedFileTable(audit_data_qs)
-    RequestConfig(request, paginate=False).configure(table)  # Ensure pagination is disabled
+    # Pagination Logic
+    page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
+    rows_per_page = 15  # Set the number of rows per page
+
+    paginator = Paginator(audit_data_qs, rows_per_page)  # Paginate the data with 15 rows per page
+
+    try:
+        page_obj = paginator.get_page(page_number)  # Get the current page of data
+    except PageNotAnInteger:
+        page_obj = paginator.get_page(1)  # If page is not an integer, return the first page
+    except EmptyPage:
+        page_obj = paginator.get_page(paginator.num_pages)  # If page is out of range, return the last page
+
+    # Initialize the table with paginated data
+    table = UploadedFileTable(page_obj)
+    RequestConfig(request, paginate=False).configure(table)  # Set paginate=False as we're using manual pagination
 
     # Handle form submission for category and action_choice
     if request.method == 'POST':
         form = UploadedFileForm(request.POST)
         if form.is_valid():
-            # Process the form and save it, but we need to ensure it's saving the correct record
-            # Assuming you're updating a specific record, you'll want to retrieve and update it.
-            # Add logic to retrieve the specific object by ID or another identifier
-
-            # Assuming form.save() is enough if the form is linked to a model instance
             form.save()  # Save the updated form fields
             return JsonResponse({'success': True, 'message': 'Form submitted successfully.'})
 
     else:
         form = UploadedFileForm()
 
-    # Render the template with the table and form
+    # Render the template with the paginated table and form
     return render(request, 'audit/audit_dashboard.html', {
-        'table': table,  # Pass the table instance (updated to match the key in the template)
+        'table': table,  # Pass the paginated table instance to the template
         'form': form,  # Pass the form to the template
+        'page_obj': page_obj,  # Pass the page object for pagination controls in the template
     })
 
 
