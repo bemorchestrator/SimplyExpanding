@@ -15,6 +15,21 @@ class UploadedFile(models.Model):
         ('merge', 'Merge'),
     ]
 
+
+    CATEGORY_CHOICES = [
+        ('Product Page', 'Product Page'),
+        ('Product Category', 'Product Category'),
+        ('Local Lander', 'Local Lander'),
+        ('Lead Generation', 'Lead Generation'),
+        ('Blog Post', 'Blog Post'),
+        ('Resource / Guide', 'Resource / Guide'),
+        ('Blog Category', 'Blog Category'),
+        ('Site Info', 'Site Info'),
+        ('Images', 'Images'),
+        ('Assets', 'Assets'),
+    ]
+    
+    category = models.CharField(max_length=255, choices=CATEGORY_CHOICES, blank=True, null=True)
     file_name = models.CharField(max_length=2000, default='unknown_file')  # Increased from 255
     drive_file_id = models.CharField(max_length=2000, default='unknown_id')  # Increased from 255
     drive_file_link = models.URLField(max_length=2000, null=True, blank=True)  # Increased from 500
@@ -36,7 +51,6 @@ class UploadedFile(models.Model):
     action_choice = models.CharField(max_length=2000, choices=ACTION_CHOICES, default='leave')  # Increased from 50
 
     # New fields based on your tables.py
-    category = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
     main_kw = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
     kw_volume = models.IntegerField(null=True, blank=True)
     kw_ranking = models.IntegerField(null=True, blank=True)

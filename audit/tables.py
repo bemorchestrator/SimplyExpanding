@@ -1,38 +1,48 @@
-# tables.py
-
 import django_tables2 as tables
 from django.utils.html import format_html
 from .models import UploadedFile
+from .forms import UploadedFileForm  # Import the form to use for rendering dropdowns
 
 class UploadedFileTable(tables.Table):
-    # Actions Column with Custom Attributes
     action_choice = tables.Column(
-        verbose_name='Actions',
-        orderable=False,  # Disable ordering for the actions column
-        empty_values=(),  # Allows the column to be rendered even if no value is present
-        attrs={
-            "td": {
-                "class": "sticky-col-1",
-                "style": (
-                    "white-space: nowrap; position: sticky; left: 0; "
-                    "background-color: #2d3748; z-index: 1; width: 150px; min-height: 100px;"
-                )
-            },
-            "th": {
-                "class": "sticky-col-1",
-                "style": (
-                    "position: sticky; top: 0; background-color: #2d3748; "
-                    "z-index: 2; width: 150px;"
-                )
-            }
+    verbose_name='Action choice',
+    attrs={
+        "td": {
+            "class": "sticky-col-1",
+            "style": (
+                "white-space: nowrap; position: sticky; left: 0; "
+                "background-color: #2d3748; z-index: 3; width: 150px;"
+            )
+        },
+        "th": {
+            "class": "sticky-col-1",
+            "style": (
+                "position: sticky; top: 0; left: 0; "
+                "background-color: #2d3748; z-index: 5; width: 150px;"
+            )
         }
-    )
+    }
+)
+
+
+    # Actions Column with Dropdown Rendering
+    def render_action_choice(self, value, record):
+        form = UploadedFileForm(instance=record)
+        return format_html(
+            '''<form method="post" class="sticky-col-1" style="position: sticky; left: 0; z-index: 3;">
+                {}
+            </form>''', 
+            form['action_choice']
+        )
+
+
+    # Category Column with Dropdown Rendering
+    def render_category(self, value, record):
+        form = UploadedFileForm(instance=record)  # Create a form instance for each row
+        return format_html('''<form method="post">{}</form>''', form['category'])  # Render category dropdown
 
     # URL Column with Custom Rendering
     def render_url(self, value, record):
-        """
-        Truncate the URL for display and show the full URL on hover.
-        """
         truncated_url = value if len(value) <= 150 else value[:150] + "..."
         return format_html(
             '''
@@ -69,15 +79,10 @@ class UploadedFileTable(tables.Table):
         }
     )
 
-    # Other Columns with Custom Attributes
+    # Other Columns (as is)
     page_path = tables.Column(verbose_name='Page Path', attrs={"td": {"style": "white-space: nowrap;"}})
     crawl_depth = tables.Column(verbose_name='Crawl Depth', attrs={"td": {"style": "white-space: nowrap;"}})
-    category = tables.Column(verbose_name='Category', attrs={"td": {"style": "white-space: nowrap;"}})
     in_sitemap = tables.Column(verbose_name='In Sitemap', attrs={"td": {"style": "white-space: nowrap;"}})
-
-    # Custom render for the 'In Sitemap' column
-    def render_in_sitemap(self, value):
-        return "Yes" if value else "No"
 
     # Keyword Performance Columns
     main_kw = tables.Column(verbose_name='Main KW', attrs={"td": {"style": "white-space: nowrap;"}})
@@ -100,12 +105,9 @@ class UploadedFileTable(tables.Table):
     # Screaming Frog On-Page Columns
     type = tables.Column(verbose_name='Type', attrs={"td": {"style": "white-space: nowrap;"}})
     current_title = tables.Column(verbose_name='Current Title', attrs={"td": {"style": "white-space: nowrap;"}})
-    
+
     # Meta Column with Custom Rendering
     def render_meta(self, value, record):
-        """
-        Truncate the Meta description for display and show the full description on hover.
-        """
         truncated_meta = value if len(value) <= 150 else value[:150] + "..."
         return format_html(
             '''
@@ -122,8 +124,6 @@ class UploadedFileTable(tables.Table):
             value, truncated_meta
         )
 
-
-
     h1 = tables.Column(verbose_name='H1', attrs={"td": {"style": "white-space: nowrap;"}})
     word_count = tables.Column(verbose_name='Word Count', attrs={"td": {"style": "white-space: nowrap;"}})
     canonical_link = tables.URLColumn(verbose_name='Canonical Link', attrs={"td": {"style": "white-space: nowrap;"}})
@@ -134,60 +134,12 @@ class UploadedFileTable(tables.Table):
 
     class Meta:
         model = UploadedFile
-        template_name = 'audit/custom_table.html'  # Use the custom table template without pagination
+        template_name = 'audit/custom_table.html'
         fields = [
             'action_choice', 'url', 'page_path', 'crawl_depth', 'category', 'in_sitemap',
             'main_kw', 'kw_volume', 'kw_ranking', 'best_kw', 'best_kw_volume', 'best_kw_ranking',
-            'impressions', 'sessions', 'percent_change_sessions', 'bounce_rate', 'avg_time_on_page', 
-            'losing_traffic', 'links', 'serp_ctr', 'type', 'current_title', 'meta', 'h1', 
+            'impressions', 'sessions', 'percent_change_sessions', 'bounce_rate', 'avg_time_on_page',
+            'losing_traffic', 'links', 'serp_ctr', 'type', 'current_title', 'meta', 'h1',
             'word_count', 'canonical_link', 'status_code', 'index_status', 'inlinks', 'outlinks'
         ]
         attrs = {'class': 'table table-striped text-white'}
-
-    def render_action_choice(self, value, record):
-        """
-        Renders a dropdown for action choices with different background colors.
-        The dropdown allows users to select an action, which is handled via JavaScript.
-        """
-        return format_html('''
-            <select class="shadow border rounded w-32 py-1 text-white action-dropdown" data-id="{}">
-                <option value="leave" class="text-blue-500" {}>
-                    1. Leave As Is
-                </option>
-                <option value="update_on_page" class="text-green-500" {}>
-                    2. Update "On Page"
-                </option>
-                <option value="target_with_links" class="text-yellow-500" {}>
-                    3. Target w/ Links
-                </option>
-                <option value="301" class="text-red-500" {}>
-                    4. 301
-                </option>
-                <option value="canonicalize" class="text-purple-500" {}>
-                    5. Canonicalize
-                </option>
-                <option value="block_crawl" class="text-pink-500" {}>
-                    6. Block Crawl
-                </option>
-                <option value="no_index" class="text-indigo-500" {}>
-                    7. No Index
-                </option>
-                <option value="content_audit" class="text-teal-500" {}>
-                    8. Content Audit
-                </option>
-                <option value="merge" class="text-orange-500" {}>
-                    9. Merge
-                </option>
-            </select>
-        ''', 
-            record.id,
-            'selected' if value == 'leave' else '',
-            'selected' if value == 'update_on_page' else '',
-            'selected' if value == 'target_with_links' else '',
-            'selected' if value == '301' else '',
-            'selected' if value == 'canonicalize' else '',
-            'selected' if value == 'block_crawl' else '',
-            'selected' if value == 'no_index' else '',
-            'selected' if value == 'content_audit' else '',
-            'selected' if value == 'merge' else ''
-        )

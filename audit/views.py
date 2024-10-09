@@ -21,13 +21,14 @@ from django.db.models import Q
 from django.template.loader import render_to_string
 
 from .filters import UploadedFileFilter 
-from .forms import FileUploadForm, SitemapForm
+from .forms import FileUploadForm, SitemapForm, UploadedFileForm
 from .models import UploadedFile, SitemapURL, Sitemap
 from .google_drive_utils import upload_file_to_drive
 from google_auth import get_credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from django_tables2 import RequestConfig  
+from django_tables2 import RequestConfig
+from django.views.decorators.csrf import csrf_exempt
 from .tables import UploadedFileTable 
 from .utils import identify_csv_type
 from googleapiclient.discovery import build
@@ -683,63 +684,30 @@ def process_csv_file(file):
 
 @csrf_protect
 def audit_dashboard(request):
-    audit_data_qs = UploadedFile.objects.all()
-    
-    # Apply the filters using django-filter
-    uploaded_file_filter = UploadedFileFilter(request.GET, queryset=audit_data_qs)
-    
-    # Get filtered data and apply ordering to avoid UnorderedObjectListWarning
-    filtered_audit_data = uploaded_file_filter.qs.order_by('id')  # Apply ordering by 'id', you can replace 'id' with any field you prefer
-    
-    # Pagination Logic
-    page_number = request.GET.get('page', 1)
-    rows_per_page = request.GET.get('rows', 25)  # Default to 25 rows per page
-    
-    # Ensure rows_per_page is an integer
-    try:
-        rows_per_page = int(rows_per_page)
-        if rows_per_page <= 0:
-            rows_per_page = 25
-    except ValueError:
-        rows_per_page = 25
-    
-    # Initialize Paginator with filtered and ordered data
-    paginator = Paginator(filtered_audit_data, rows_per_page)
-    
-    try:
-        page_obj = paginator.get_page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.get_page(1)
-    except EmptyPage:
-        page_obj = paginator.get_page(paginator.num_pages)
-    
-    # Initialize the table with the current page's data
-    table = UploadedFileTable(page_obj.object_list)
-    RequestConfig(request, paginate=False).configure(table)  # Disable django-tables2 pagination
-    
-    # Check if the request is an AJAX request for instant search
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        # Serialize the paginated audit data
-        audit_list = list(page_obj.object_list.values(
-            'id', 'url', 'type', 'current_title', 'meta', 'h1', 'word_count', 
-            'canonical_link', 'status_code', 'index_status', 'inlinks', 'outlinks', 
-            'page_path', 'crawl_depth'
-        ))
-        return JsonResponse({
-            'audit_data': audit_list,
-            'has_next': page_obj.has_next(),
-            'has_previous': page_obj.has_previous(),
-            'num_pages': paginator.num_pages,
-            'current_page': page_obj.number,
-        })
-    
-    # For normal requests, render the template with context
+    audit_data_qs = UploadedFile.objects.all()  # Retrieve all audit data
+
+    # Initialize the table with all data (no pagination or filtering)
+    table = UploadedFileTable(audit_data_qs)
+    RequestConfig(request, paginate=False).configure(table)  # Ensure pagination is disabled
+
+    # Handle form submission for category and action_choice
+    if request.method == 'POST':
+        form = UploadedFileForm(request.POST)
+        if form.is_valid():
+            # Process the form and save it, but we need to ensure it's saving the correct record
+            # Assuming you're updating a specific record, you'll want to retrieve and update it.
+            # Add logic to retrieve the specific object by ID or another identifier
+
+            # Assuming form.save() is enough if the form is linked to a model instance
+            form.save()  # Save the updated form fields
+            return redirect('audit_dashboard')  # Redirect to the dashboard after saving
+    else:
+        form = UploadedFileForm()
+
+    # Render the template with the table and form
     return render(request, 'audit/audit_dashboard.html', {
-        'audit_data': table,  # Pass the table instance with current page data
-        'paginator': paginator,
-        'page_obj': page_obj,
-        'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
-        'filter': uploaded_file_filter,  # Pass the filter object to the template
+        'table': table,  # Pass the table instance (updated to match the key in the template)
+        'form': form,  # Pass the form to the template
     })
 
 
@@ -789,3 +757,29 @@ def update_action_choice(request):
             return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+
+
+
+@csrf_exempt
+def update_category(request):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            data = json.loads(request.body)
+            audit_id = data.get('id')
+            category = data.get('category')
+
+            if not audit_id or not category:
+                return JsonResponse({'success': False, 'error': 'Invalid data.'}, status=400)
+
+            try:
+                audit_entry = UploadedFile.objects.get(id=audit_id)
+                audit_entry.category = category
+                audit_entry.save()
+                return JsonResponse({'success': True})
+            except UploadedFile.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)

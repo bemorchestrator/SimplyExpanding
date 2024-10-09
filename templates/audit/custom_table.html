@@ -6,19 +6,23 @@
     <thead>
         <tr>
             {% for column in table.columns %}
-                <th {{ column.attrs.th.as_html }} class="px-4 py-2">{{ column.header }}</th>
+                <th {{ column.attrs.th.as_html }} class="px-4 py-2 {% if forloop.counter0 == 0 %}sticky-col-1{% endif %}">
+                    {{ column.header }}
+                </th>
             {% endfor %}
         </tr>
-    </thead>
+    </thead>              
     <tbody id="audit-table-body">
         {% for row in table.rows %}
             <tr class="border-b border-gray-700 hover:bg-gray-700">
                 {% for column, cell in row.items %}
-                    <td {{ column.attrs.td.as_html }} class="px-4 py-2">{{ cell }}</td>
+                    <td {{ column.attrs.td.as_html }} class="px-4 py-2 {% if forloop.counter0 == 0 %}sticky-col-1{% endif %}">
+                        {{ cell|safe }}
+                    </td>
                 {% endfor %}
             </tr>
         {% endfor %}
-    </tbody>
+    </tbody>    
 </table>
 
 <style>
@@ -40,22 +44,37 @@
     .sticky-col-1, .sticky-col-2 {
         position: sticky;
         background-color: #2d3748; /* Keep sticky column background consistent */
-        z-index: 1;
-        min-height: 100px; /* Ensure sticky columns have a minimum height */
+        z-index: 3; /* Base z-index for body cells */
     }
 
     /* First column (Actions) */
     .sticky-col-1 {
         left: 0;
         width: 150px; /* Set width for the first column */
-        min-height: 100px; /* Ensure the background color extends even when no data */
+        z-index: 3; /* Higher z-index to stay above other sticky columns */
+        background-color: #2d3748; /* Ensure consistent background */
+    }
+
+    /* Ensure headers for sticky columns are also sticky */
+    th.sticky-col-1 {
+        top: 0;
+        z-index: 5; /* Highest z-index for headers */
+        background-color: #2d3748; /* Ensure consistent header background */
     }
 
     /* Second column (URL) */
     .sticky-col-2 {
-        left: 152px; /* Ensure there is no overlap with the first column */
+        left: 150px; /* Align right next to the first sticky column */
         width: 300px; /* Adjust the width of the second column if needed */
-        min-height: 100px; /* Ensure the background color extends even when no data */
+        z-index: 2; /* Lower z-index than the first sticky column */
+    }
+
+    /* Ensure headers for sticky columns are also sticky */
+    th.sticky-col-2 {
+        top: 0;
+        left: 150px; /* Same left position as the body cells */
+        z-index: 4; /* Lower than the first sticky header */
+        background-color: #2d3748;
     }
 
     /* Page Path column (non-sticky) */
@@ -64,21 +83,29 @@
         padding-left: 50px; /* Adds a gap between the URL and Page Path headers */
     }
 
-    /* Ensure headers for sticky columns are also sticky */
-    th.sticky-col-1, th.sticky-col-2 {
-        position: sticky;
-        top: 0; /* Keep the header at the top */
-        background-color: #2d3748; /* Match header background with sticky columns */
-        z-index: 2; /* Higher z-index to keep header above the data */
-    }
-
-    /* Adjust the second sticky column header (URL) */
-    th.sticky-col-2 {
-        left: 152px; /* Ensure no overlap with the first column */
-    }
-
     /* Adjust the Page Path header */
     th.page-path {
         padding-left: 50px; /* Add a gap between URL and Page Path headers */
+    }
+
+    /* Optional: Style for the action form dropdowns */
+    .action-form form {
+        display: flex;
+        align-items: center;
+    }
+
+    .action-dropdown {
+        width: 100%;
+        background-color: #4a5568; /* Dark background */
+        color: #fff; /* White text */
+        border: none;
+        border-radius: 4px;
+        padding: 0.25rem;
+    }
+
+    /* Ensure the table container allows sticky positioning */
+    .table-container {
+        position: relative;
+        overflow: auto;
     }
 </style>

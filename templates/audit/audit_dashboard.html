@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% load render_table from django_tables2 %}
 
 {% block content %}
@@ -10,13 +9,8 @@
         <div class="flex justify-between items-center mb-5">
             <h2 class="text-xl font-semibold text-white">Website Audit Dashboard</h2>
 
-            <!-- Search Bar and Action Buttons -->
+            <!-- Action Buttons -->
             <div class="flex items-center space-x-2">
-                <!-- Search Bar -->
-                <form method="GET" class="flex items-center">
-                    <input type="text" name="search" placeholder="Search..." value="{{ filter.form.search.value }}" class="text-black px-4 py-2 rounded w-80">
-                </form>
-
                 <!-- Upload Button -->
                 <button id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded">
                     <i class="bi bi-upload"></i>
@@ -42,136 +36,18 @@
                 <button id="delete-all-btn" class="bg-red-500 text-white py-2 px-4 rounded">
                     <i class="bi bi-trash"></i>
                 </button>
-
-                <!-- Filter Button -->
-                <div class="relative">
-                    <button id="filter-toggle-btn" class="bg-blue-500 text-white py-2 px-4 rounded">
-                        <i class="bi bi-funnel"></i>
-                    </button>
-
-                    <!-- Filter Dropdown -->
-                    <div id="filter-dropdown" class="hidden absolute right-0 bg-gray-700 p-4 mt-2 rounded shadow-lg w-96 z-50 max-h-96 overflow-y-auto">
-                        <form method="GET" class="space-y-4">
-                            <!-- Group 1: Basic Information Filters -->
-                            <div class="p-4 rounded">
-                                <h3 class="text-white text-lg font-semibold">Basic Information</h3>
-                                <div class="space-y-2">
-                                    <div>
-                                        {{ filter.form.url.label_tag }}
-                                        <input class="text-black w-full" type="text" name="url" value="{{ filter.form.url.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.page_path.label_tag }}
-                                        <input class="text-black w-full" type="text" name="page_path" value="{{ filter.form.page_path.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.crawl_depth.label_tag }}
-                                        <input class="text-black w-full" type="number" name="crawl_depth" value="{{ filter.form.crawl_depth.value }}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Group 2: Keyword Filters -->
-                            <div class="p-4 rounded">
-                                <h3 class="text-white text-lg font-semibold">Keyword Information</h3>
-                                <div class="space-y-2">
-                                    <div>
-                                        {{ filter.form.main_kw.label_tag }}
-                                        <input class="text-black w-full" type="text" name="main_kw" value="{{ filter.form.main_kw.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.kw_volume.label_tag }}
-                                        <input class="text-black w-full" type="number" name="kw_volume" value="{{ filter.form.kw_volume.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.kw_ranking.label_tag }}
-                                        <input class="text-black w-full" type="number" name="kw_ranking" value="{{ filter.form.kw_ranking.value }}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Group 3: Other Filters -->
-                            <div class="p-4 rounded">
-                                <h3 class="text-white text-lg font-semibold">Other Information</h3>
-                                <div class="space-y-2">
-                                    <div>
-                                        {{ filter.form.category.label_tag }}
-                                        <input class="text-black w-full" type="text" name="category" value="{{ filter.form.category.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.status_code.label_tag }}
-                                        <input class="text-black w-full" type="number" name="status_code" value="{{ filter.form.status_code.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.action_choice.label_tag }}
-                                        <input class="text-black w-full" type="text" name="action_choice" value="{{ filter.form.action_choice.value }}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Group 4: Performance Filters -->
-                            <div class="p-4 rounded">
-                                <h3 class="text-white text-lg font-semibold">Performance Information</h3>
-                                <div class="space-y-2">
-                                    <div>
-                                        {{ filter.form.impressions.label_tag }}
-                                        <input class="text-black w-full" type="number" name="impressions" value="{{ filter.form.impressions.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.sessions.label_tag }}
-                                        <input class="text-black w-full" type="number" name="sessions" value="{{ filter.form.sessions.value }}">
-                                    </div>
-                                    <div>
-                                        {{ filter.form.bounce_rate.label_tag }}
-                                        <input class="text-black w-full" type="number" name="bounce_rate" value="{{ filter.form.bounce_rate.value }}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Filter Button -->
-                            <div class="mt-4">
-                                <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded w-full">Apply Filters</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
             </div>
         </div>
 
         <!-- Table Rendering using django-tables2 -->
         <div class="table-container overflow-x-auto overflow-y-auto flex-1">
-            {% render_table audit_data %}
+            <form method="POST" action="">
+                {% csrf_token %}
+                {% render_table table %}  <!-- Render the table using Django Tables2 -->
+            </form>
         </div>
-
-        <!-- Pagination Controls -->
-        <div class="pagination-controls mt-4 flex items-center space-x-4">
-            <span id="pagination-info-bottom">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        
-            {% if page_obj.has_previous %}
-                <a href="?page=1" class="bg-blue-500 text-white px-4 py-2 rounded">First</a>
-                <a href="?page={{ page_obj.previous_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded">Previous</a>
-            {% endif %}
-        
-            <!-- Page Numbers -->
-            {% for page_num in page_obj.paginator.page_range %}
-                {% if page_num == page_obj.number %}
-                    <span class="bg-gray-500 text-white px-4 py-2 rounded">{{ page_num }}</span>
-                {% elif page_num > page_obj.number|add:-3 and page_num < page_obj.number|add:3 %}
-                    <a href="?page={{ page_num }}" class="bg-gray-300 text-black px-4 py-2 rounded">{{ page_num }}</a>
-                {% endif %}
-            {% endfor %}
-        
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}" class="bg-blue-500 text-white px-4 py-2 rounded">Next</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}" class="bg-blue-500 text-white px-4 py-2 rounded">Last</a>
-            {% endif %}
-        </div>
-        
     </div>
 </div>
-
-
-
 
 <!-- SweetAlert2 script -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
@@ -242,218 +118,12 @@
             });
         }
 
-        // Function to change color of the dropdown based on selected option
-        function changeColor(selectElement) {
-            const colorMap = {
-                'text-blue-500': '#3B82F6',
-                'text-green-500': '#10B981',
-                'text-yellow-500': '#F59E0B',
-                'text-red-500': '#EF4444',
-                'text-purple-500': '#8B5CF6',
-                'text-pink-500': '#EC4899',
-                'text-indigo-500': '#6366F1',
-                'text-teal-500': '#14B8A6',
-                'text-orange-500': '#F97316',
-            };
-
-            selectElement.classList.remove(
-                "text-blue-500", 
-                "text-green-500", 
-                "text-yellow-500", 
-                "text-red-500", 
-                "text-purple-500", 
-                "text-pink-500", 
-                "text-indigo-500", 
-                "text-teal-500", 
-                "text-orange-500"
-            );
-
-            const selectedOption = selectElement.options[selectElement.selectedIndex];
-            const selectedClass = selectedOption.classList[0];
-
-            if (selectedClass) {
-                selectElement.classList.add(selectedClass);
-            }
-
-            selectElement.style.backgroundColor = colorMap[selectedClass] || '#253140';
-        }
-
-        // Attach changeColor function to all dropdowns
-        function attachDropdownListeners() {
-            document.querySelectorAll('.action-dropdown').forEach(function(selectElement) {
-                changeColor(selectElement);
-
-                selectElement.addEventListener('change', function() {
-                    changeColor(this);
-                    const auditId = this.getAttribute('data-id');
-                    const selectedAction = this.value;
-                    const csrftoken = getCookie('csrftoken');
-
-                    // Make AJAX POST request to update action choice
-                    fetch("{% url 'update_action_choice' %}", {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': csrftoken,
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        body: JSON.stringify({
-                            'id': auditId,
-                            'action_choice': selectedAction
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (!data.success) {
-                            Swal.fire(
-                                'Error!',
-                                data.error || 'There was an issue updating the action choice.',
-                                'error'
-                            );
-                        }
-                    })
-                    .catch(error => {
-                        Swal.fire(
-                            'Error!',
-                            'There was an issue updating the action choice.',
-                            'error'
-                        );
-                    });
-                });
-            });
-        }
-        attachDropdownListeners();
-
         // Upload Button Click Event
         const uploadBtn = document.getElementById('upload-btn');
         if (uploadBtn) {
             uploadBtn.addEventListener('click', function () {
                 window.location.href = "{% url 'upload_file' %}";
             });
-        }
-
-        // Search Functionality
-        const searchInput = document.querySelector('input[name="search"]');
-        let searchTimeout = null;
-
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            const query = this.value.trim();
-
-            searchTimeout = setTimeout(() => {
-                performSearch(query);
-            }, 300);
-        });
-
-        // Function to perform AJAX search
-        function performSearch(query) {
-            const params = new URLSearchParams({
-                search: query,
-            });
-
-            fetch(`?${params.toString()}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                updateTable(data.audit_data);
-                updatePagination(data.current_page, data.num_pages, data.has_previous, data.has_next);
-            })
-            .catch(error => console.error('Error during search:', error));
-        }
-
-        // Function to update the table body with new data
-        function updateTable(auditData) {
-            const tableBody = document.getElementById('audit-table-body');
-            tableBody.innerHTML = '';
-
-            auditData.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.classList.add('border-b', 'border-gray-700', 'hover:bg-gray-700');
-                
-                const tdActions = createDropdownTd(row);
-                const tdUrl = createUrlTd(row);
-                const tdCrawlDepth = createSimpleTd(row.crawl_depth);
-                const tdCategory = createSimpleTd(row.category);
-
-                tr.append(tdActions, tdUrl, tdCrawlDepth, tdCategory);
-                tableBody.appendChild(tr);
-            });
-
-            attachDropdownListeners();
-        }
-
-        // Create Table Data for Dropdown
-        function createDropdownTd(row) {
-            const td = document.createElement('td');
-            td.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap', 'sticky-col-1');
-            td.style.backgroundColor = '#253140';
-
-            const select = document.createElement('select');
-            select.classList.add('shadow', 'border', 'rounded', 'w-32', 'py-1', 'text-white', 'action-dropdown');
-            select.setAttribute('data-id', row.id);
-
-            const actions = [
-                { value: 'leave', text: '1. Leave As Is', class: 'text-blue-500' },
-                { value: 'update_on_page', text: '2. Update "On Page"', class: 'text-green-500' },
-                { value: '301', text: '4. 301', class: 'text-red-500' },
-            ];
-
-            actions.forEach(action => {
-                const option = document.createElement('option');
-                option.value = action.value;
-                option.textContent = action.text;
-                option.classList.add(action.class);
-                if (row.action_choice === action.value) option.selected = true;
-                select.appendChild(option);
-            });
-
-            td.appendChild(select);
-            return td;
-        }
-
-        // Create Simple Table Data for URL
-        function createUrlTd(row) {
-            const td = document.createElement('td');
-            td.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap', 'sticky-col-2');
-            td.style.backgroundColor = '#253140';
-
-            const span = document.createElement('span');
-            span.style.maxWidth = '400px';
-            span.style.whiteSpace = 'nowrap';
-            span.textContent = row.url;
-            td.appendChild(span);
-
-            return td;
-        }
-
-        function createSimpleTd(text) {
-            const td = document.createElement('td');
-            td.classList.add('py-1', 'px-2', 'text-left', 'whitespace-nowrap');
-            td.textContent = text;
-            return td;
-        }
-
-        // Function to update pagination controls
-        function updatePagination(currentPage, numPages, hasPrevious, hasNext) {
-            const paginationInfo = document.getElementById('pagination-info-bottom');
-            paginationInfo.textContent = `Page ${currentPage} of ${numPages}`;
-
-            const firstBtn = document.querySelector('a[href="?page=1"]');
-            const prevBtn = document.querySelector('a[href="?page=' + (currentPage - 1) + '"]');
-            const nextBtn = document.querySelector('a[href="?page=' + (currentPage + 1) + '"]');
-            const lastBtn = document.querySelector('a[href="?page=' + numPages + '"]');
-
-            setButtonState(firstBtn, currentPage !== 1);
-            setButtonState(prevBtn, hasPrevious);
-            setButtonState(nextBtn, hasNext);
-            setButtonState(lastBtn, currentPage !== numPages);
-        }
-
-        function setButtonState(button, condition) {
-            if (button) button.disabled = !condition;
         }
 
         // Cookie function to get CSRF token
@@ -470,21 +140,6 @@
                 }
             }
             return cookieValue;
-        }
-    });
-
-    // Toggle Filter Dropdown Visibility
-    document.getElementById('filter-toggle-btn').addEventListener('click', function() {
-        const dropdown = document.getElementById('filter-dropdown');
-        dropdown.classList.toggle('hidden');
-    });
-
-    // Optionally, close the dropdown if the user clicks outside
-    document.addEventListener('click', function(event) {
-        const dropdown = document.getElementById('filter-dropdown');
-        const button = document.getElementById('filter-toggle-btn');
-        if (!button.contains(event.target) && !dropdown.contains(event.target)) {
-            dropdown.classList.add('hidden');
         }
     });
 </script>
