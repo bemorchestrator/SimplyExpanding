@@ -7,7 +7,7 @@
     <h1 class="text-3xl font-bold mb-4">Google Analytics 4 Data Report</h1>
 
     <!-- Form for fetching data -->
-    <form method="POST" class="mb-6  rounded-lg p-4">
+    <form method="POST" class="mb-6 rounded-lg p-4">
         {% csrf_token %}
         <div class="flex flex-wrap md:flex-row md:items-end gap-4">
             <!-- Dropdown to Select GA4 Property -->
@@ -37,15 +37,15 @@
                 </select>
             </div>
 
-            <!-- Custom Date Input (hidden by default, side-by-side in the same row) -->
+            <!-- Custom Date Input (hidden by default) -->
             <div id="custom_date_input" class="flex flex-grow gap-2 md:flex-2" style="display: none;">
                 <div class="flex-grow">
                     <label class="block text-gray-300 text-sm font-bold mb-2" for="start_date">Start Date</label>
-                    <input name="start_date" type="date" id="start_date" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600">
+                    <input name="start_date" type="date" id="start_date" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" value="{{ start_date }}">
                 </div>
                 <div class="flex-grow">
                     <label class="block text-gray-300 text-sm font-bold mb-2" for="end_date">End Date</label>
-                    <input name="end_date" type="date" id="end_date" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600">
+                    <input name="end_date" type="date" id="end_date" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" value="{{ end_date }}">
                 </div>
             </div>
 
@@ -73,17 +73,37 @@
 
             <!-- Comparison Button -->
             <div>
-                <button class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline" type="submit" name="compare" value="true">Compare</button>
+                <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline" type="submit" name="compare" value="true">Compare</button>
             </div>
         </div>
     </form>
+
+    <!-- Icons for Export, Print, and Clear Results -->
+    {% if report_data %}
+    <div class="flex justify-end gap-4 mb-4">
+        <!-- Export to CSV Icon -->
+        <button onclick="exportToCSV()" class="text-blue-500 hover:text-blue-700" title="Export to CSV">
+            <i class="bi bi-file-earmark-spreadsheet text-xl"></i> <!-- Bootstrap CSV Icon -->
+        </button>
+
+        <!-- Print Icon -->
+        <button onclick="window.print()" class="text-green-500 hover:text-green-700" title="Print">
+            <i class="bi bi-printer text-xl"></i> <!-- Bootstrap Print Icon -->
+        </button>
+
+        <!-- Clear Results Icon -->
+        <button onclick="clearResults()" class="text-red-500 hover:text-red-700" title="Clear Results">
+            <i class="bi bi-x-circle text-xl"></i> <!-- Bootstrap Clear Icon -->
+        </button>
+    </div>
+    {% endif %}
 
     <!-- Display Report Data as Table if Available -->
     {% if report_data %}
     <div class="overflow-x-auto">
         <table class="min-w-full text-gray-100 border-collapse">
             <thead>
-                <tr class>
+                <tr>
                     <th class="px-4 py-2 text-left">Page Path</th>
                     <th class="px-4 py-2 text-left">Total Users</th>
                     <th class="px-4 py-2 text-left">Sessions</th>
@@ -107,11 +127,11 @@
                     <td class="px-4 py-2">{{ row.sessions }}</td>
                     <td class="px-4 py-2">{{ row.bounce_rate|floatformat:2 }}</td>
                     <td class="px-4 py-2">{{ row.avg_session_duration }}</td>
-            
+
                     <!-- Only show delta data if comparison is selected -->
                     {% if comparison_range and comparison_range != 'none' %}
                     <td class="px-4 py-2">
-                        {% if row.total_users_diff %}
+                        {% if row.total_users_diff is not None %}
                             <span class="{% if row.total_users_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
                                 {{ row.total_users_diff }}
                             </span>
@@ -120,7 +140,7 @@
                         {% endif %}
                     </td>
                     <td class="px-4 py-2">
-                        {% if row.sessions_diff %}
+                        {% if row.sessions_diff is not None %}
                             <span class="{% if row.sessions_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
                                 {{ row.sessions_diff }}
                             </span>
@@ -129,7 +149,7 @@
                         {% endif %}
                     </td>
                     <td class="px-4 py-2">
-                        {% if row.bounce_rate_diff %}
+                        {% if row.bounce_rate_diff is not None %}
                             <span class="{% if row.bounce_rate_diff >= 0 %}text-red-500{% else %}text-green-500{% endif %}">
                                 {{ row.bounce_rate_diff|floatformat:2 }}
                             </span>
@@ -138,7 +158,7 @@
                         {% endif %}
                     </td>
                     <td class="px-4 py-2">
-                        {% if row.avg_session_duration_diff %}
+                        {% if row.avg_session_duration_diff is not None %}
                             <span class="{% if row.avg_session_duration_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
                                 {{ row.avg_session_duration_diff }}
                             </span>
@@ -157,7 +177,7 @@
     {% endif %}
 </div>
 
-<!-- JavaScript to toggle the custom date input -->
+<!-- JavaScript to toggle the custom date input and export/clear functions -->
 <script>
     function toggleCustomDateInput() {
         const dateRange = document.getElementById('date_range').value;
@@ -168,6 +188,79 @@
             customDateInput.style.display = 'none';
         }
     }
-</script>
 
+    // Export table data to CSV
+    function exportToCSV() {
+        // Select the table
+        const table = document.querySelector('table');
+        if (!table) {
+            alert('No data available to export.');
+            return;
+        }
+
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
+
+        // Iterate through each row of the table
+        for (let i = 0; i < rows.length; i++) {
+            const row = [], cols = rows[i].querySelectorAll('th, td');
+
+            // Iterate through each column in the row
+            for (let j = 0; j < cols.length; j++) {
+                let data = cols[j].innerText;
+
+                // Escape double quotes by replacing with two double quotes
+                data = data.replace(/"/g, '""');
+
+                // If data contains comma, newline, or double quotes, wrap it in double quotes
+                if (data.search(/("|,|\n)/g) >= 0) {
+                    data = `"${data}"`;
+                }
+
+                row.push(data);
+            }
+
+            csv.push(row.join(',')); // Join each row's columns with commas
+        }
+
+        // Join all rows with newlines to form the CSV string
+        const csvString = csv.join('\n');
+
+        // Create a Blob from the CSV string
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+
+        // Create a link to trigger the download
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+
+        // Name the CSV file with a timestamp
+        const currentDate = new Date();
+        const timestamp = currentDate.toISOString().slice(0,19).replace(/[:T]/g, "-");
+        link.setAttribute("download", `ga4_data_report_${timestamp}.csv`);
+        link.style.visibility = 'hidden';
+
+        // Append the link to the body and trigger a click
+        document.body.appendChild(link);
+        link.click();
+
+        // Clean up by removing the link
+        document.body.removeChild(link);
+    }
+
+    // Clear the results, hide the table, and reset the view
+    function clearResults() {
+        const table = document.querySelector('table');
+        if (table) {
+            table.style.display = 'none'; // Hide the table
+        }
+        // Optionally reset other inputs or perform actions
+        // For example, you might want to reset the form
+        // document.querySelector('form').reset();
+        // toggleCustomDateInput(); // Update the custom date input visibility
+    }
+
+    // Ensure the custom date input is displayed correctly on page load
+    document.addEventListener('DOMContentLoaded', toggleCustomDateInput);
+</script>
 {% endblock %}
