@@ -25,6 +25,14 @@ def identify_csv_type(headers):
         'ctr': ['ctr', 'click through rate']
     }
 
+    # Updated Columns required to identify Google Analytics CSV
+    google_analytics_columns = {
+        'page_path': ['page path and screen class'],
+        'sessions': ['sessions'],
+        'bounce_rate': ['bounce rate'],
+        'avg_session_duration': ['average session duration']
+    }
+
     # Helper function to check if any of the possible columns exist
     def has_columns(required_columns):
         return all(any(col in normalized_headers for col in possible_names) for possible_names in required_columns.values())
@@ -36,6 +44,10 @@ def identify_csv_type(headers):
     # Check for Search Console CSV
     if has_columns(search_console_columns):
         return 'search_console'
+
+    # Check for Google Analytics CSV
+    if has_columns(google_analytics_columns):
+        return 'google_analytics'
 
     # Return unknown if neither type matches
     return 'unknown'

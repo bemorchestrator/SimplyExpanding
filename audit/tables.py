@@ -129,7 +129,7 @@ class UploadedFileTable(tables.Table):
         )
 
     crawl_depth = tables.Column(verbose_name='Crawl Depth', attrs={"td": {"style": "white-space: nowrap;"}})
-    
+
     in_sitemap = tables.Column(verbose_name='In Sitemap', attrs={"td": {"style": "white-space: nowrap;"}})
 
     def render_in_sitemap(self, value):
@@ -149,9 +149,22 @@ class UploadedFileTable(tables.Table):
     # Page Performance Columns
     impressions = tables.Column(verbose_name='Impressions', attrs={"td": {"style": "white-space: nowrap;"}})
     sessions = tables.Column(verbose_name='Sessions', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_sessions(self, value, record):
+        return value if value else '-'
+    
+
     percent_change_sessions = tables.Column(verbose_name='% Change Sessions', attrs={"td": {"style": "white-space: nowrap;"}})
     bounce_rate = tables.Column(verbose_name='Bounce Rate', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_bounce_rate(self, value, record):
+        return f"{value:.2f}%" if value else '-'
+
     avg_time_on_page = tables.Column(verbose_name='Avg Time on Page', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_avg_time_on_page(self, value, record):
+        return f"{value:.2f}" if value else '-'
+
     losing_traffic = tables.Column(verbose_name='Losing Traffic?', attrs={"td": {"style": "white-space: nowrap;"}})
     links = tables.Column(verbose_name='Links', attrs={"td": {"style": "white-space: nowrap;"}})
     serp_ctr = tables.Column(verbose_name='SERP CTR', attrs={"td": {"style": "white-space: nowrap;"}})

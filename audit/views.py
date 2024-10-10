@@ -13,7 +13,7 @@ import ssl
 
 from requests.exceptions import SSLError, ConnectionError, Timeout, RequestException
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.views.decorators.csrf import csrf_protect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -38,6 +38,8 @@ from datetime import datetime, timedelta
 from django.shortcuts import redirect
 from django.contrib import messages
 import logging
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google_auth import get_credentials
 
 
 logger = logging.getLogger(__name__)
@@ -131,7 +133,7 @@ def upload_file(request):
                     logging.info(f"Temporary file created: {temp_file_path}")
 
                 # Step 1: Get Google Drive credentials
-                creds = get_credentials(request)
+                creds = get_credentials(request, 'drive')
                 if not creds:
                     messages.error(request, "Google Drive authentication failed.")
                     logging.error("Google Drive authentication failed.")
@@ -575,11 +577,12 @@ def get_page_path(url):
 
 
 
+
 def process_csv_file(file):
     try:
         # Decode and split the CSV file for processing
         decoded_file = file.read().decode('utf-8-sig').splitlines()  # Handles BOM (\ufeff) if present
-        logging.debug(f"CSV File Content: {decoded_file[:5]}")  # Debugging: Log the first few lines for sanity check
+        logging.debug(f"CSV File Content: {decoded_file[:5]}")  # Log the first few lines for sanity check
         
         if not decoded_file:
             logging.error("The CSV file is empty.")
@@ -595,7 +598,7 @@ def process_csv_file(file):
         
         audit_data = []
 
-        # Determine the type of CSV (Screaming Frog or Search Console)
+        # Determine the type of CSV (Screaming Frog, Search Console, or Google Analytics)
         csv_type = identify_csv_type(headers)
         logging.info(f"Detected CSV type: {csv_type}")
 
@@ -625,6 +628,15 @@ def process_csv_file(file):
                 'url': headers.index('Top pages') if 'Top pages' in headers else None,
                 'impressions': headers.index('Impressions') if 'Impressions' in headers else None,
                 'ctr': headers.index('CTR') if 'CTR' in headers else None
+            }
+
+        elif csv_type == 'google_analytics':
+            # Google Analytics column mappings
+            column_mapping = {
+                'page_path': headers.index('Page path and screen class') if 'Page path and screen class' in headers else None,
+                'sessions': headers.index('Sessions') if 'Sessions' in headers else None,
+                'bounce_rate': headers.index('Bounce rate') if 'Bounce rate' in headers else None,
+                'avg_session_duration': headers.index('Average session duration') if 'Average session duration' in headers else None,
             }
 
         for row in reader:
@@ -668,6 +680,30 @@ def process_csv_file(file):
                         'page_path': page_path  # Include the extracted page path
                     })
 
+                elif csv_type == 'google_analytics':
+                    # Extract Google Analytics CSV data based on dynamic mapping
+                    page_path = row[column_mapping['page_path']] if column_mapping['page_path'] is not None else None
+                    sessions = int(row[column_mapping['sessions']]) if column_mapping['sessions'] is not None and row[column_mapping['sessions']].isdigit() else 0
+                    bounce_rate = float(row[column_mapping['bounce_rate']].replace('%', '')) if row[column_mapping['bounce_rate']] else 0.0
+                    avg_session_duration = row[column_mapping['avg_session_duration']] if column_mapping['avg_session_duration'] is not None else None
+
+                    # Match the page_path with the page_path column in the UploadedFile model
+                    try:
+                        uploaded_file = UploadedFile.objects.filter(page_path=page_path).first()
+                        if uploaded_file:
+                            # Update the relevant fields
+                            uploaded_file.sessions = sessions
+                            uploaded_file.bounce_rate = bounce_rate
+                            uploaded_file.avg_time_on_page = avg_session_duration
+                            uploaded_file.save()
+
+                            logging.info(f"Updated data for page_path: {page_path}")
+                        else:
+                            logging.warning(f"No match found for page_path: {page_path}")
+
+                    except Exception as e:
+                        logging.error(f"Error updating data for page_path {page_path}: {e}")
+
             except IndexError as e:
                 logging.error(f"IndexError while processing row: {row} - {e}")
             except ValueError as e:
@@ -679,6 +715,7 @@ def process_csv_file(file):
     except Exception as e:
         logging.error(f"Error while processing CSV file: {e}")
         return []
+
 
 
 
@@ -791,3 +828,6 @@ def update_category(request):
 
     # Return an error if the request is not a POST request
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+
+
+
