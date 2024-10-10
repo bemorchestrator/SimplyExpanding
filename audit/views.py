@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 import cloudscraper
 import certifi
 import ssl
+from urllib.parse import urlparse
 
 from requests.exceptions import SSLError, ConnectionError, Timeout, RequestException
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -105,9 +106,12 @@ def audit_result(request):
 
 def normalize_url(url):
     url = url.strip().lower()  # Convert to lowercase and strip spaces
-    if url.endswith('/'):
-        url = url[:-1]  # Remove trailing slash if present
-    return url
+    parsed_url = urlparse(url)
+    netloc = parsed_url.netloc
+    if netloc.startswith('www.'):
+        netloc = netloc[4:]
+    path = parsed_url.path.rstrip('/')
+    return netloc + path
 
 
 def upload_file(request):
@@ -596,12 +600,9 @@ def process_csv_file(file):
 
         logging.debug(f"CSV Headers: {headers}")  # Log headers for debugging
 
-        # Determine the type of CSV (Screaming Frog, Search Console, Google Analytics, or Keyword Research)
+        # Determine the type of CSV (Screaming Frog, Search Console, Google Analytics, Keyword Research, or Backlinks)
         csv_type = identify_csv_type(headers)
         logging.info(f"Detected CSV type: {csv_type}")
-
-        # Dynamically map headers to relevant fields based on CSV type
-        column_mapping = {}
 
         # Normalize headers and create a mapping
         normalized_headers = [header.strip().lower() for header in headers]
@@ -707,8 +708,10 @@ def process_csv_file(file):
                     position = int(position_str) if position_str.isdigit() else float('inf')  # Use infinity if position is not a number
 
                     if url:
-                        if url not in url_data:
-                            url_data[url] = {
+                        # Normalize the URL for matching
+                        normalized_url = normalize_url(url)
+                        if normalized_url not in url_data:
+                            url_data[normalized_url] = {
                                 'main_kw': keyword,
                                 'kw_volume': search_vol,
                                 'kw_ranking': position,
@@ -718,16 +721,16 @@ def process_csv_file(file):
                             }
                         else:
                             # Update the main keyword if the current keyword has a higher search volume
-                            if search_vol > url_data[url]['kw_volume']:
-                                url_data[url]['main_kw'] = keyword
-                                url_data[url]['kw_volume'] = search_vol
-                                url_data[url]['kw_ranking'] = position
+                            if search_vol > url_data[normalized_url]['kw_volume']:
+                                url_data[normalized_url]['main_kw'] = keyword
+                                url_data[normalized_url]['kw_volume'] = search_vol
+                                url_data[normalized_url]['kw_ranking'] = position
 
                             # Update the best keyword if the current keyword has a better ranking (lower position value)
-                            if position < url_data[url]['best_kw_ranking']:
-                                url_data[url]['best_kw'] = keyword
-                                url_data[url]['best_kw_volume'] = search_vol
-                                url_data[url]['best_kw_ranking'] = position
+                            if position < url_data[normalized_url]['best_kw_ranking']:
+                                url_data[normalized_url]['best_kw'] = keyword
+                                url_data[normalized_url]['best_kw_volume'] = search_vol
+                                url_data[normalized_url]['best_kw_ranking'] = position
 
                 except IndexError as e:
                     logging.error(f"IndexError while processing row: {row} - {e}")
@@ -735,10 +738,14 @@ def process_csv_file(file):
                     logging.error(f"ValueError while converting data: {row} - {e}")
 
             # Now update the Django table with the processed data
-            for url, data in url_data.items():
+            # Build a mapping from normalized URL to UploadedFile
+            uploaded_files = UploadedFile.objects.all()
+            uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
+
+            for normalized_url, data in url_data.items():
                 try:
-                    # Look for the corresponding entry in the Django table by URL
-                    uploaded_file = UploadedFile.objects.filter(url=url).first()
+                    # Look for the corresponding entry in the Django table by normalized URL
+                    uploaded_file = uploaded_files_dict.get(normalized_url)
                     if uploaded_file:
                         # Update the relevant fields in the Django table
                         uploaded_file.main_kw = data['main_kw']
@@ -748,12 +755,12 @@ def process_csv_file(file):
                         uploaded_file.best_kw_volume = data['best_kw_volume']
                         uploaded_file.best_kw_ranking = data['best_kw_ranking']
                         uploaded_file.save()
-                        logging.info(f"Updated data for URL: {url}")
+                        logging.info(f"Updated data for URL: {uploaded_file.url}")
                     else:
-                        logging.warning(f"No match found for URL: {url}")
+                        logging.warning(f"No match found for URL: {normalized_url}")
 
                 except Exception as e:
-                    logging.error(f"Error updating data for URL {url}: {e}")
+                    logging.error(f"Error updating data for URL {normalized_url}: {e}")
 
         elif csv_type == 'search_console':
             # Search Console column mappings
@@ -766,6 +773,10 @@ def process_csv_file(file):
             # Read all rows
             rows = list(reader)
 
+            # Build a mapping from normalized URL to UploadedFile
+            uploaded_files = UploadedFile.objects.all()
+            uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
+
             for row in rows:
                 logging.debug(f"Processing row: {row}")  # Log each row being processed
 
@@ -776,7 +787,6 @@ def process_csv_file(file):
                 try:
                     # Extract Search Console CSV data based on dynamic mapping
                     url = row[column_mapping['url']] if column_mapping['url'] is not None else None
-                    page_path = get_page_path(url) if url else '/'
 
                     impressions_str = row[column_mapping['impressions']].replace(',', '') if column_mapping['impressions'] is not None else '0'
                     ctr_str = row[column_mapping['ctr']].replace('%', '') if column_mapping['ctr'] is not None else '0'
@@ -784,16 +794,18 @@ def process_csv_file(file):
                     impressions = int(impressions_str) if impressions_str.isdigit() else 0
                     serp_ctr = float(ctr_str) if ctr_str else 0.0
 
-                    # Match the page_path with the page_path column in the UploadedFile model
-                    uploaded_file = UploadedFile.objects.filter(page_path=page_path).first()
+                    # Normalize URL for matching
+                    normalized_url = normalize_url(url)
+
+                    uploaded_file = uploaded_files_dict.get(normalized_url)
                     if uploaded_file:
                         # Update the relevant fields
                         uploaded_file.impressions = impressions
                         uploaded_file.serp_ctr = serp_ctr
                         uploaded_file.save()
-                        logging.info(f"Updated data for page_path: {page_path}")
+                        logging.info(f"Updated data for URL: {uploaded_file.url}")
                     else:
-                        logging.warning(f"No match found for page_path: {page_path}")
+                        logging.warning(f"No match found for URL: {normalized_url}")
 
                 except IndexError as e:
                     logging.error(f"IndexError while processing row: {row} - {e}")
@@ -814,6 +826,10 @@ def process_csv_file(file):
             # Read all rows
             rows = list(reader)
 
+            # Build a mapping from page_path to UploadedFile
+            uploaded_files = UploadedFile.objects.all()
+            uploaded_files_dict = {u.page_path: u for u in uploaded_files}
+
             for row in rows:
                 logging.debug(f"Processing row: {row}")  # Log each row being processed
 
@@ -830,8 +846,7 @@ def process_csv_file(file):
                     sessions = int(sessions_str) if sessions_str.isdigit() else 0
                     bounce_rate = float(bounce_rate_str) if bounce_rate_str else 0.0
 
-                    # Match the page_path with the page_path column in the UploadedFile model
-                    uploaded_file = UploadedFile.objects.filter(page_path=page_path).first()
+                    uploaded_file = uploaded_files_dict.get(page_path)
                     if uploaded_file:
                         # Update the relevant fields
                         uploaded_file.sessions = sessions
@@ -848,6 +863,68 @@ def process_csv_file(file):
                     logging.error(f"ValueError while converting data: {row} - {e}")
                 except Exception as e:
                     logging.error(f"Unexpected error while processing row: {row} - {e}")
+
+        elif csv_type == 'backlinks':
+            # Backlinks CSV column mappings
+            column_mapping = {
+                'backlink_url': header_to_index.get('backlink url'),
+                'destination_url': header_to_index.get('destination url'),
+            }
+
+            # Check if all required columns are present
+            required_columns = ['backlink_url', 'destination_url']
+            missing_columns = [col for col in required_columns if column_mapping[col] is None]
+            if missing_columns:
+                logging.error(f"Missing required columns in CSV: {missing_columns}")
+                return []
+
+            # Dictionary to count backlinks for each destination URL
+            backlink_counts = {}
+
+            # Read all rows
+            rows = list(reader)
+
+            for row in rows:
+                logging.debug(f"Processing row: {row}")  # Log each row being processed
+
+                if not row:  # Skip empty rows
+                    logging.warning("Empty row encountered, skipping.")
+                    continue
+
+                try:
+                    destination_url = row[column_mapping['destination_url']].strip() if column_mapping['destination_url'] is not None else None
+
+                    if destination_url:
+                        # Normalize the destination URL
+                        destination_url_normalized = normalize_url(destination_url)
+
+                        # Increment the backlink count for the destination URL
+                        backlink_counts[destination_url_normalized] = backlink_counts.get(destination_url_normalized, 0) + 1
+
+                except IndexError as e:
+                    logging.error(f"IndexError while processing row: {row} - {e}")
+                except Exception as e:
+                    logging.error(f"Unexpected error while processing row: {row} - {e}")
+
+            # Now update the Django table with the backlink counts
+            # Build a mapping from normalized URL to UploadedFile
+            uploaded_files = UploadedFile.objects.all()
+            uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
+
+            for normalized_url, count in backlink_counts.items():
+                try:
+                    # Look for the corresponding entry in the Django table by normalized URL
+                    uploaded_file = uploaded_files_dict.get(normalized_url)
+                    if uploaded_file:
+                        # Update the 'links' field in the Django table
+                        uploaded_file.links = count
+                        uploaded_file.save()
+                        logging.info(f"Updated backlinks count for URL: {uploaded_file.url} with count: {count}")
+                    else:
+                        logging.warning(f"No match found for URL: {normalized_url}")
+
+                except Exception as e:
+                    logging.error(f"Error updating backlinks for URL {normalized_url}: {e}")
 
         else:
             logging.error(f"Unknown CSV type: {csv_type}")

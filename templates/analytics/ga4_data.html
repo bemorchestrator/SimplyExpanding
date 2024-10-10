@@ -3,17 +3,17 @@
 {% load static %}
 
 {% block content %}
-<div class="container mx-auto p-4">
+<div class="container mx-auto p-4 text-gray-100 mt-10">
     <h1 class="text-3xl font-bold mb-4">Google Analytics 4 Data Report</h1>
 
-    <!-- Form for fetching data, aligned in a single row -->
-    <form method="POST" class="mb-6 bg-white shadow-md rounded-lg p-4">
+    <!-- Form for fetching data -->
+    <form method="POST" class="mb-6  rounded-lg p-4">
         {% csrf_token %}
-        <div class="flex flex-col md:flex-row md:items-end gap-4">
+        <div class="flex flex-wrap md:flex-row md:items-end gap-4">
             <!-- Dropdown to Select GA4 Property -->
-            <div class="flex-grow">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="property_id">Select GA4 Property</label>
-                <select name="property_id" id="property_id" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+            <div class="flex-grow md:flex-1">
+                <label class="block text-gray-300 text-sm font-bold mb-2" for="property_id">Select GA4 Property</label>
+                <select name="property_id" id="property_id" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" required>
                     {% if properties %}
                         {% for property in properties %}
                             <option value="{{ property.property_id }}" {% if property_id == property.property_id %}selected{% endif %}>{{ property.display_name }}</option>
@@ -24,200 +24,150 @@
                 </select>
             </div>
 
-            <!-- Start Date Input -->
-            <div class="flex-grow">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="start_date">Start Date</label>
-                <input name="start_date" type="date" id="start_date" value="{{ start_date }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+            <!-- Date Range Preset Dropdown -->
+            <div class="flex-grow md:flex-1">
+                <label class="block text-gray-300 text-sm font-bold mb-2" for="date_range">Date Range</label>
+                <select name="date_range" id="date_range" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" onchange="toggleCustomDateInput()">
+                    <option value="last_7_days" {% if date_range == "last_7_days" %}selected{% endif %}>Last 7 days</option>
+                    <option value="last_14_days" {% if date_range == "last_14_days" %}selected{% endif %}>Last 14 days</option>
+                    <option value="last_28_days" {% if date_range == "last_28_days" %}selected{% endif %}>Last 28 days</option>
+                    <option value="last_90_days" {% if date_range == "last_90_days" %}selected{% endif %}>Last 90 days</option>
+                    <option value="last_12_months" {% if date_range == "last_12_months" %}selected{% endif %}>Last 12 months</option>
+                    <option value="custom" {% if date_range == "custom" %}selected{% endif %}>Custom</option>
+                </select>
             </div>
 
-            <!-- End Date Input -->
-            <div class="flex-grow">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="end_date">End Date</label>
-                <input name="end_date" type="date" id="end_date" value="{{ end_date }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+            <!-- Custom Date Input (hidden by default, side-by-side in the same row) -->
+            <div id="custom_date_input" class="flex flex-grow gap-2 md:flex-2" style="display: none;">
+                <div class="flex-grow">
+                    <label class="block text-gray-300 text-sm font-bold mb-2" for="start_date">Start Date</label>
+                    <input name="start_date" type="date" id="start_date" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600">
+                </div>
+                <div class="flex-grow">
+                    <label class="block text-gray-300 text-sm font-bold mb-2" for="end_date">End Date</label>
+                    <input name="end_date" type="date" id="end_date" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600">
+                </div>
             </div>
 
             <!-- Row Limit Input -->
-            <div class="flex-grow">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="row_limit">Row Limit</label>
-                <input name="row_limit" type="number" id="row_limit" value="{{ row_limit }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+            <div class="flex-grow md:flex-1">
+                <label class="block text-gray-300 text-sm font-bold mb-2" for="row_limit">Row Limit</label>
+                <input name="row_limit" type="number" id="row_limit" value="{{ row_limit }}" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" required>
+            </div>
+
+            <!-- Comparison Dropdown -->
+            <div class="flex-grow md:flex-1">
+                <label class="block text-gray-300 text-sm font-bold mb-2" for="comparison_range">Comparison</label>
+                <select name="comparison_range" id="comparison_range" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600">
+                    <option value="none" {% if comparison_range == "none" %}selected{% endif %}>None</option>
+                    <option value="preceding_period" {% if comparison_range == "preceding_period" %}selected{% endif %}>Preceding period</option>
+                    <option value="preceding_period_match_day" {% if comparison_range == "preceding_period_match_day" %}selected{% endif %}>Preceding period (match day of week)</option>
+                    <option value="same_period_last_year" {% if comparison_range == "same_period_last_year" %}selected{% endif %}>Same period last year</option>
+                </select>
             </div>
 
             <!-- Submit Button -->
             <div>
-                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline" type="submit">Fetch GA4 Data</button>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline" type="submit">Fetch</button>
+            </div>
+
+            <!-- Comparison Button -->
+            <div>
+                <button class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline" type="submit" name="compare" value="true">Compare</button>
             </div>
         </div>
     </form>
 
-    <!-- Display Report Data as Cards if Available -->
+    <!-- Display Report Data as Table if Available -->
     {% if report_data %}
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-gray-100 border-collapse">
+            <thead>
+                <tr class>
+                    <th class="px-4 py-2 text-left">Page Path</th>
+                    <th class="px-4 py-2 text-left">Total Users</th>
+                    <th class="px-4 py-2 text-left">Sessions</th>
+                    <th class="px-4 py-2 text-left">Bounce Rate (%)</th>
+                    <th class="px-4 py-2 text-left">Average Session Duration</th>
 
-        <!-- Total Users Card -->
-        <div class="bg-white shadow-md rounded-lg p-6 text-center">
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Total Users</h2>
-            <p class="text-4xl font-bold text-gray-900">{{ report_data.0.total_users }}</p>
-        </div>
-
-        <!-- Bounce Rate Card -->
-        <div class="bg-white shadow-md rounded-lg p-6 text-center">
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Bounce Rate</h2>
-            <p class="text-4xl font-bold text-gray-900">{{ report_data.0.bounce_rate|floatformat:2 }}%</p>
-        </div>
-
-        <!-- Sessions Card -->
-        <div class="bg-white shadow-md rounded-lg p-6 text-center">
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Sessions</h2>
-            <p class="text-4xl font-bold text-gray-900">{{ report_data.0.sessions }}</p>
-        </div>
-
-        <!-- Average Session Duration Card -->
-        <div class="bg-white shadow-md rounded-lg p-6 text-center">
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Avg. Session Duration (Seconds)</h2>
-            <p class="text-4xl font-bold text-gray-900">{{ report_data.0.avg_session_duration|floatformat:2 }}</p>
-        </div>
-
+                    <!-- Only show delta columns if comparison is selected -->
+                    {% if comparison_range and comparison_range != 'none' %}
+                    <th class="px-4 py-2 text-left">Total Users Δ</th>
+                    <th class="px-4 py-2 text-left">Sessions Δ</th>
+                    <th class="px-4 py-2 text-left">Bounce Rate Δ (%)</th>
+                    <th class="px-4 py-2 text-left">Average Session Duration Δ</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report_data %}
+                <tr class="border-b border-gray-700">
+                    <td class="px-4 py-2">{{ row.page_path }}</td>
+                    <td class="px-4 py-2">{{ row.total_users }}</td>
+                    <td class="px-4 py-2">{{ row.sessions }}</td>
+                    <td class="px-4 py-2">{{ row.bounce_rate|floatformat:2 }}</td>
+                    <td class="px-4 py-2">{{ row.avg_session_duration }}</td>
+            
+                    <!-- Only show delta data if comparison is selected -->
+                    {% if comparison_range and comparison_range != 'none' %}
+                    <td class="px-4 py-2">
+                        {% if row.total_users_diff %}
+                            <span class="{% if row.total_users_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
+                                {{ row.total_users_diff }}
+                            </span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">
+                        {% if row.sessions_diff %}
+                            <span class="{% if row.sessions_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
+                                {{ row.sessions_diff }}
+                            </span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">
+                        {% if row.bounce_rate_diff %}
+                            <span class="{% if row.bounce_rate_diff >= 0 %}text-red-500{% else %}text-green-500{% endif %}">
+                                {{ row.bounce_rate_diff|floatformat:2 }}
+                            </span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">
+                        {% if row.avg_session_duration_diff %}
+                            <span class="{% if row.avg_session_duration_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
+                                {{ row.avg_session_duration_diff }}
+                            </span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-
-    <!-- New Charts Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-        <!-- Total Users Chart -->
-        <div class="bg-white shadow-md rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Total Users</h2>
-            <div id="totalUsersChart" style="width: 100%; height: 300px;"></div>
-        </div>
-
-        <!-- Bounce Rate Chart -->
-        <div class="bg-white shadow-md rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Bounce Rate</h2>
-            <div id="bounceRateChart" style="width: 100%; height: 300px;"></div>
-        </div>
-
-        <!-- Sessions Chart -->
-        <div class="bg-white shadow-md rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Sessions</h2>
-            <div id="sessionsChart" style="width: 100%; height: 300px;"></div>
-        </div>
-
-        <!-- Average Session Duration Chart -->
-        <div class="bg-white shadow-md rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Avg. Session Duration</h2>
-            <div id="avgSessionDurationChart" style="width: 100%; height: 300px;"></div>
-        </div>
-    </div>
-
-    <!-- Serialize Report Data to JavaScript -->
-    <script>
-        // Safely parse the serialized JSON data
-        const reportData = {{ report_data_json|safe }};
-    </script>
-
-    <!-- Load Google Charts -->
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
-    <!-- Initialize and Draw Charts -->
-    <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-            if (reportData && Array.isArray(reportData) && reportData.length > 0) {
-                const data = reportData[0];
-
-                // Load the Google Charts packages
-                google.charts.load('current', {'packages':['corechart']});
-                google.charts.setOnLoadCallback(drawCharts);
-
-                function drawCharts() {
-                    // Total Users Bar Chart
-                    var dataTotalUsers = google.visualization.arrayToDataTable([
-                        ['Metric', 'Value'],
-                        ['Total Users', parseInt(data.total_users) || 0]
-                    ]);
-
-                    var optionsTotalUsers = {
-                        title: 'Total Users',
-                        legend: { position: 'none' },
-                        hAxis: {
-                            minValue: 0
-                        },
-                        vAxis: {
-                            title: 'Users'
-                        },
-                        chartArea: {width: '50%'}
-                    };
-
-                    var chartTotalUsers = new google.visualization.ColumnChart(document.getElementById('totalUsersChart'));
-                    chartTotalUsers.draw(dataTotalUsers, optionsTotalUsers);
-
-                    // Bounce Rate Pie Chart
-                    var bounceRate = parseFloat(data.bounce_rate) || 0;
-                    var dataBounceRate = google.visualization.arrayToDataTable([
-                        ['Metric', 'Percentage'],
-                        ['Bounce Rate', bounceRate],
-                        ['Other', 100 - bounceRate]
-                    ]);
-
-                    var optionsBounceRate = {
-                        title: 'Bounce Rate',
-                        pieHole: 0.4,
-                        slices: {
-                            0: { color: '#FF6384' },
-                            1: { color: '#C9CBCE' }
-                        }
-                    };
-
-                    var chartBounceRate = new google.visualization.PieChart(document.getElementById('bounceRateChart'));
-                    chartBounceRate.draw(dataBounceRate, optionsBounceRate);
-
-                    // Sessions Line Chart
-                    var dataSessions = google.visualization.arrayToDataTable([
-                        ['Metric', 'Sessions'],
-                        ['Sessions', parseInt(data.sessions) || 0]
-                    ]);
-
-                    var optionsSessions = {
-                        title: 'Sessions',
-                        hAxis: { title: 'Metric' },
-                        vAxis: { title: 'Sessions', minValue: 0 },
-                        legend: 'none',
-                        chartArea: {width: '70%'}
-                    };
-
-                    var chartSessions = new google.visualization.LineChart(document.getElementById('sessionsChart'));
-                    chartSessions.draw(dataSessions, optionsSessions);
-
-                    // Average Session Duration Doughnut Chart
-                    var avgSessionDuration = parseFloat(data.avg_session_duration) || 0;
-                    var maxDuration = 300; // Assuming 300 seconds as a max for visualization
-                    var remainingDuration = maxDuration - avgSessionDuration;
-                    if (remainingDuration < 0) remainingDuration = 0;
-
-                    var dataAvgSession = google.visualization.arrayToDataTable([
-                        ['Metric', 'Seconds'],
-                        ['Avg. Session Duration', avgSessionDuration],
-                        ['Remaining', remainingDuration]
-                    ]);
-
-                    var optionsAvgSession = {
-                        title: 'Avg. Session Duration (s)',
-                        pieHole: 0.4,
-                        slices: {
-                            0: { color: '#9966FF' },
-                            1: { color: '#C9CBCE' }
-                        }
-                    };
-
-                    var chartAvgSession = new google.visualization.PieChart(document.getElementById('avgSessionDurationChart'));
-                    chartAvgSession.draw(dataAvgSession, optionsAvgSession);
-                }
-
-                // Redraw charts on window resize to make them responsive
-                window.addEventListener('resize', drawCharts);
-            } else {
-                console.error("No report data available to render charts.");
-            }
-        });
-    </script>
     {% else %}
-        <p class="text-red-500 mt-4">No data available. Please enter valid information and fetch the data.</p>
+        <p class="text-red-400 mt-4">No data available. Please enter valid information and fetch the data.</p>
     {% endif %}
 </div>
+
+<!-- JavaScript to toggle the custom date input -->
+<script>
+    function toggleCustomDateInput() {
+        const dateRange = document.getElementById('date_range').value;
+        const customDateInput = document.getElementById('custom_date_input');
+        if (dateRange === 'custom') {
+            customDateInput.style.display = 'flex'; // Show custom date fields in a single row
+        } else {
+            customDateInput.style.display = 'none';
+        }
+    }
+</script>
+
 {% endblock %}

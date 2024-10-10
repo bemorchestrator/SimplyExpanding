@@ -1,14 +1,17 @@
+# search_console/views.py
+
 import logging
 from urllib.parse import urlparse
 from django.http import HttpResponseBadRequest, HttpResponseRedirect, HttpResponseServerError, HttpResponse
 from django.shortcuts import redirect, render
 from googleapiclient.discovery import build
-from google_auth import authenticate_user, get_credentials, oauth2_callback
+from google_auth import get_credentials
 from datetime import datetime, timedelta
 import csv
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
 
 def find_matching_site_url(input_url, available_sites):
     """
@@ -73,6 +76,7 @@ def find_matching_site_url(input_url, available_sites):
     logger.debug(f"Best match selected: {best_match}")
     return best_match
 
+
 def search_console_data(request):
     try:
         logger.debug("Accessing search_console_data view.")
@@ -88,7 +92,7 @@ def search_console_data(request):
                 return HttpResponseBadRequest("Selected email is not authenticated.")
 
         # Get the credentials
-        creds = get_credentials(request)
+        creds = get_credentials(request, 'search_console')  # Pass 'search_console' as the service
 
         # If creds is a redirect response, return it
         if isinstance(creds, HttpResponseRedirect):
@@ -96,8 +100,8 @@ def search_console_data(request):
             return creds
 
         if not creds:
-            logger.warning("Credentials are missing. Redirecting to authenticate_user.")
-            return redirect('authenticate_user')
+            logger.warning("Credentials are missing. Redirecting to authenticate_search_console.")
+            return redirect('authenticate_search_console')  # Use the named URL for Search Console authentication
 
         # Build the Search Console service with the credentials
         service = build('webmasters', 'v3', credentials=creds)

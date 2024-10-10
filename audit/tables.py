@@ -190,6 +190,10 @@ class UploadedFileTable(tables.Table):
 
     losing_traffic = tables.Column(verbose_name='Losing Traffic?', attrs={"td": {"style": "white-space: nowrap;"}})
     links = tables.Column(verbose_name='Links', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_links(self, value, record):
+        return value if value else '-'
+
     serp_ctr = tables.Column(verbose_name='SERP CTR', attrs={"td": {"style": "white-space: nowrap;"}})
 
     # Screaming Frog On-Page Columns

@@ -51,7 +51,24 @@ def identify_csv_type(headers):
         'traffic_cost': ['traffic cost']
     }
 
-    # Helper function to check if any of the possible columns exist
+    # Columns required to identify Backlinks CSV
+    backlinks_columns = {
+        'backlink_url': ['backlink url'],
+        'title': ['title'],
+        'destination_url': ['destination url'],
+        'anchor': ['anchor'],
+        'image': ['image'],
+        'nofollow': ['nofollow'],
+        'pt': ['pt'],
+        'toxicity_score': ['toxicity score'],
+        'total_traffic': ['total traffic'],
+        'dt': ['dt'],
+        'first_seen': ['first seen'],
+        'last_seen': ['last seen'],
+        'disavow': ['disavow']
+    }
+
+    # Helper function to check if all required columns exist
     def has_columns(required_columns):
         return all(any(col in normalized_headers for col in possible_names) for possible_names in required_columns.values())
 
@@ -70,6 +87,10 @@ def identify_csv_type(headers):
     # Check for Keyword Research CSV
     if has_columns(keyword_research_columns):
         return 'keyword_research'
+
+    # Check for Backlinks CSV
+    if has_columns(backlinks_columns):
+        return 'backlinks'
 
     # Return unknown if neither type matches
     return 'unknown'
