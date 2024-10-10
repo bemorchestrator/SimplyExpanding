@@ -1,31 +1,30 @@
 import django_tables2 as tables
 from django.utils.html import format_html
 from .models import UploadedFile
-from .forms import UploadedFileForm  # Import the form to use for rendering dropdowns
+from .forms import UploadedFileForm
 from django.urls import reverse
 from django.middleware.csrf import get_token
 
 class UploadedFileTable(tables.Table):
     action_choice = tables.Column(
-    verbose_name='Action choice',
-    attrs={
-        "td": {
-            "class": "sticky-col-1",
-            "style": (
-                "white-space: nowrap; position: sticky; left: 0; "
-                "background-color: #2d3748; z-index: 3; width: 150px;"
-            )
-        },
-        "th": {
-            "class": "sticky-col-1",
-            "style": (
-                "position: sticky; top: 0; left: 0; "
-                "background-color: #2d3748; z-index: 5; width: 150px;"
-            )
+        verbose_name='Action choice',
+        attrs={
+            "td": {
+                "class": "sticky-col-1",
+                "style": (
+                    "white-space: nowrap; position: sticky; left: 0; "
+                    "background-color: #2d3748; z-index: 3; width: 150px;"
+                )
+            },
+            "th": {
+                "class": "sticky-col-1",
+                "style": (
+                    "position: sticky; top: 0; left: 0; "
+                    "background-color: #2d3748; z-index: 5; width: 150px;"
+                )
+            }
         }
-    }
-)
-
+    )
 
     # Actions Column with Dropdown Rendering
     def render_action_choice(self, value, record):
@@ -33,16 +32,15 @@ class UploadedFileTable(tables.Table):
         return format_html(
             '''<form method="post" class="sticky-col-1" style="position: sticky; left: 0; z-index: 3;">
                 {}
-            </form>''', 
+            </form>''',
             form['action_choice']
         )
 
-
     # Category Column with Dropdown Rendering
     def render_category(self, value, record):
-        form = UploadedFileForm(instance=record)  # Get the form instance for the row
-        csrf_token = get_token(self.request)  # Fetch the CSRF token for form security
-        update_url = reverse('update_category')  # URL where the form will be submitted
+        form = UploadedFileForm(instance=record)
+        csrf_token = get_token(self.request)
+        update_url = reverse('update_category')
 
         return format_html(
             '''<form method="post" action="{}">
@@ -50,15 +48,11 @@ class UploadedFileTable(tables.Table):
                 <input type="hidden" name="id" value="{}">
                 {}
             </form>''',
-            update_url,  # Form submission URL
-            csrf_token,  # CSRF token for security
-            record.id,  # The record's ID
-            form['category']  # Render the category dropdown
+            update_url,
+            csrf_token,
+            record.id,
+            form['category']
         )
-
-
-
-
 
     # URL Column with Custom Rendering
     def render_url(self, value, record):
@@ -99,16 +93,16 @@ class UploadedFileTable(tables.Table):
     )
 
     page_path = tables.Column(
-    verbose_name='Page Path',
-    attrs={
-        "td": {
-            "style": "white-space: nowrap; padding-left: 40px;"
-        },
-        "th": {
-            "style": "text-align: left; padding-left: 50px;"
+        verbose_name='Page Path',
+        attrs={
+            "td": {
+                "style": "white-space: nowrap; padding-left: 40px;"
+            },
+            "th": {
+                "style": "text-align: left; padding-left: 50px;"
+            }
         }
-    }
-)
+    )
 
     def render_page_path(self, value, record):
         truncated_page_path = value if len(value) <= 150 else value[:150] + "..."
@@ -133,9 +127,9 @@ class UploadedFileTable(tables.Table):
     in_sitemap = tables.Column(verbose_name='In Sitemap', attrs={"td": {"style": "white-space: nowrap;"}})
 
     def render_in_sitemap(self, value):
-        if value:  # If True
-            return format_html('<span style="color: green;">&#10003;</span>')  # Check mark in green
-        else:  # If False
+        if value:
+            return format_html('<span style="color: green;">&#10003;</span>')
+        else:
             return format_html('<span style="color: red;">&#10007;</span>')
 
     # Keyword Performance Columns
@@ -175,26 +169,64 @@ class UploadedFileTable(tables.Table):
 
     def render_sessions(self, value, record):
         return value if value else '-'
-    
 
     percent_change_sessions = tables.Column(verbose_name='% Change Sessions', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_percent_change_sessions(self, value, record):
+        if value is None:
+            return '-'
+        try:
+            value_float = float(value)
+        except (ValueError, TypeError):
+            return '-'
+        if value_float > 0:
+            color = 'green'
+        elif value_float < 0:
+            color = 'red'
+        else:
+            color = 'orange'
+        formatted_value = '{:+.2f}%'.format(value_float)
+        return format_html('<span style="color: {};">{}</span>', color, formatted_value)
+
     bounce_rate = tables.Column(verbose_name='Bounce Rate', attrs={"td": {"style": "white-space: nowrap;"}})
 
     def render_bounce_rate(self, value, record):
-        return f"{value:.2f}%" if value else '-'
+        if value:
+            try:
+                value_float = float(value)
+                formatted_value = f"{value_float:.2f}%"
+                return formatted_value
+            except (ValueError, TypeError):
+                return '-'
+        else:
+            return '-'
 
     avg_time_on_page = tables.Column(verbose_name='Avg Time on Page', attrs={"td": {"style": "white-space: nowrap;"}})
 
     def render_avg_time_on_page(self, value, record):
-        return f"{value:.2f}" if value else '-'
+        if value:
+            # Directly return the value from the CSV without conversion
+            return value
+        else:
+            return '-'
 
-    losing_traffic = tables.Column(verbose_name='Losing Traffic?', attrs={"td": {"style": "white-space: nowrap;"}})
+
+
     links = tables.Column(verbose_name='Links', attrs={"td": {"style": "white-space: nowrap;"}})
 
     def render_links(self, value, record):
         return value if value else '-'
 
     serp_ctr = tables.Column(verbose_name='SERP CTR', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_serp_ctr(self, value, record):
+        if value is not None:
+            try:
+                return f"{float(value):.2f}%"
+            except (ValueError, TypeError):
+                return '-'
+        else:
+            return '-'
 
     # Screaming Frog On-Page Columns
     type = tables.Column(verbose_name='Type', attrs={"td": {"style": "white-space: nowrap;"}})

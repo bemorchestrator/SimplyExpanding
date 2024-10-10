@@ -6,16 +6,16 @@
 
 {% block content %}
 <div class="min-h-screen flex items-start justify-left py-10">
-    <div class="w-full max-w-4xl rounded-lg p-8 flex">
+    <div class="w-full max-w-4xl rounded-lg p-8 flex bg-gray-800">
         <!-- Left Column: Description -->
         <div class="w-1/3 pr-8">
-            <h2 class="text-xl font-bold text-black mb-4">Personal Information</h2>
-            <p class="text-sm text-black mb-6">Use a permanent address where you can receive mail.</p>
+            <h2 class="text-xl font-bold text-white mb-4">Personal Information</h2>
+            <p class="text-sm text-gray-400 mb-6">Use a permanent address where you can receive mail.</p>
         </div>
 
         <!-- Right Column: Form -->
         <div class="w-2/3">
-            <h1 class="text-2xl font-bold text-black mb-6">Account Settings</h1>
+            <h1 class="text-2xl font-bold text-white mb-6">Account Settings</h1>
             <form method="post" enctype="multipart/form-data" class="space-y-6">
                 {% csrf_token %}
 
@@ -27,58 +27,58 @@
                         <img class="rounded-full w-24 h-24" src="{% static 'profile_pictures/default-profile.png' %}" alt="Default Avatar">
                     {% endif %}
                     <div class="ml-4">
-                        <label for="{{ form.profile_picture.id_for_label }}" class="block text-sm font-medium text-black">Change avatar</label>
+                        <label for="{{ form.profile_picture.id_for_label }}" class="block text-sm font-medium text-white">Change avatar</label>
                         {{ form.profile_picture }}
-                        <p class="mt-1 text-xs text-black">JPG, GIF or PNG. 1MB max.</p>
+                        <p class="mt-1 text-xs text-gray-400">JPG, GIF or PNG. 1MB max.</p>
                     </div>
                 </div>
 
                 <!-- User Information -->
-                <h3 class="text-lg font-semibold text-black">User Information</h3>
+                <h3 class="text-lg font-semibold text-white">User Information</h3>
                 <div class="grid grid-cols-2 gap-6">
                     <div class="col-span-1">
-                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-black">Username</label>
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-white">Username</label>
                         {{ form.username }}
                     </div>
                     <div class="col-span-1">
-                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-black">Email address</label>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-white">Email address</label>
                         {{ form.email }}
                     </div>
                     <div class="col-span-1">
-                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-black">First name</label>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-white">First name</label>
                         {{ form.first_name }}
                     </div>
                     <div class="col-span-1">
-                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-black">Last name</label>
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-white">Last name</label>
                         {{ form.last_name }}
                     </div>
                 </div>
 
                 <!-- Employee Information -->
-                <h3 class="text-lg font-semibold text-black mt-8">Employee Information</h3>
+                <h3 class="text-lg font-semibold text-white mt-8">Employee Information</h3>
                 <div class="grid grid-cols-2 gap-6">
                     <div class="col-span-1">
-                        <label for="{{ form.middle_name.id_for_label }}" class="block text-sm font-medium text-black">Middle name</label>
+                        <label for="{{ form.middle_name.id_for_label }}" class="block text-sm font-medium text-white">Middle name</label>
                         {{ form.middle_name }}
                     </div>
                     <div class="col-span-1">
-                        <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-black">Phone number</label>
+                        <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-white">Phone number</label>
                         {{ form.phone_number }}
                     </div>
                     <div class="col-span-2">
-                        <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-black">Address</label>
+                        <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-white">Address</label>
                         {{ form.address }}
                     </div>
                     <div class="col-span-1">
-                        <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-black">City</label>
+                        <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-white">City</label>
                         {{ form.city }}
                     </div>
                     <div class="col-span-1">
-                        <label for="{{ form.country.id_for_label }}" class="block text-sm font-medium text-black">Country</label>
+                        <label for="{{ form.country.id_for_label }}" class="block text-sm font-medium text-white">Country</label>
                         {{ form.country }}
                     </div>
                     <div class="col-span-1">
-                        <label for="{{ form.scheduled_start_time.id_for_label }}" class="block text-sm font-medium text-black">Scheduled Start Time</label>
+                        <label for="{{ form.scheduled_start_time.id_for_label }}" class="block text-sm font-medium text-white">Scheduled Start Time</label>
                         {{ form.scheduled_start_time }}
                     </div>
                 </div>
@@ -111,13 +111,14 @@
 
 <style>
     body {
-        color: #000000; /* Black */
+        background-color: #1a202c; /* Tailwind's gray-900 */
+        color: #e2e8f0; /* Tailwind's gray-200 */
     }
     input, select {
-        background-color: #ffffff; /* White */
-        color: #000000; /* Black text */
+        background-color: #2d3748; /* Tailwind's gray-800 */
+        color: #e2e8f0; /* Tailwind's gray-200 */
         padding: 10px;
-        border: 1px solid #d1d5db; /* Tailwind's gray-300 */
+        border: 1px solid #4a5568; /* Tailwind's gray-700 */
         border-radius: 6px;
         width: 100%;
         margin-top: 6px;

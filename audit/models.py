@@ -61,8 +61,12 @@ class UploadedFile(models.Model):
     sessions = models.IntegerField(null=True, blank=True)
     percent_change_sessions = models.FloatField(null=True, blank=True)
     bounce_rate = models.FloatField(null=True, blank=True)
-    avg_time_on_page = models.FloatField(null=True, blank=True)
-    losing_traffic = models.BooleanField(default=False)
+    avg_time_on_page = models.CharField(max_length=20, null=True, blank=True)
+    losing_traffic = models.CharField(
+        max_length=10, 
+        choices=[('up', 'Up'), ('down', 'Down'), ('none', 'None')], 
+        default='none'
+    )
     links = models.IntegerField(null=True, blank=True)
     serp_ctr = models.FloatField(null=True, blank=True)
     in_sitemap = models.BooleanField(default=False)

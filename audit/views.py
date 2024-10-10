@@ -32,7 +32,7 @@ from googleapiclient.http import MediaFileUpload
 from django_tables2 import RequestConfig
 from django.views.decorators.csrf import csrf_exempt
 from .tables import UploadedFileTable 
-from .utils import identify_csv_type
+from .utils import identify_csv_type, normalize_page_path
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from datetime import datetime, timedelta
@@ -46,8 +46,7 @@ from google_auth import get_credentials
 logger = logging.getLogger(__name__)
 
 # Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
-file_handler = logging.FileHandler('audit_log.log', mode='a')
-file_handler.setLevel(logging.DEBUG)
+file_handler = logging.FileHandler('audit_log.log', mode='a', encoding='utf-8')  # Specify utf-8 encoding
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.ERROR)  # Only show top-level errors in the terminal
@@ -62,6 +61,7 @@ root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)  # Log all levels to the file
 root_logger.addHandler(file_handler)
 root_logger.addHandler(console_handler)
+
 
 # Define the fixed folder ID for Google Drive
 GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
@@ -600,7 +600,7 @@ def process_csv_file(file):
 
         logging.debug(f"CSV Headers: {headers}")  # Log headers for debugging
 
-        # Determine the type of CSV (Screaming Frog, Search Console, Google Analytics, Keyword Research, or Backlinks)
+        # Determine the type of CSV
         csv_type = identify_csv_type(headers)
         logging.info(f"Detected CSV type: {csv_type}")
 
@@ -608,35 +608,43 @@ def process_csv_file(file):
         normalized_headers = [header.strip().lower() for header in headers]
         header_to_index = {header.strip().lower(): index for index, header in enumerate(headers)}
 
+        # Helper function to get index from possible header names
+        def get_header_index(possible_headers):
+            for header in possible_headers:
+                index = header_to_index.get(header.lower())
+                if index is not None:
+                    return index
+            return None
+
         if csv_type == 'screaming_frog':
-            # Screaming Frog column mappings (dynamically locate columns by header name)
+            # Screaming Frog column mappings
             column_mapping = {
-                'url': header_to_index.get('address'),
-                'type': header_to_index.get('content type'),
-                'current_title': header_to_index.get('title 1'),
-                'meta': header_to_index.get('meta description 1'),
-                'h1': header_to_index.get('h1-1'),
-                'word_count': header_to_index.get('word count'),
-                'canonical_link': header_to_index.get('canonical link element 1'),
-                'status_code': header_to_index.get('status code'),
-                'index_status': header_to_index.get('indexability'),
-                'inlinks': header_to_index.get('inlinks'),
-                'outlinks': header_to_index.get('outlinks'),
-                'crawl_depth': header_to_index.get('crawl depth')
+                'url': get_header_index(['address', 'url']),
+                'type': get_header_index(['content type', 'type']),
+                'current_title': get_header_index(['title 1', 'title']),
+                'meta': get_header_index(['meta description 1', 'meta description']),
+                'h1': get_header_index(['h1-1', 'h1']),
+                'word_count': get_header_index(['word count']),
+                'canonical_link': get_header_index(['canonical link element 1', 'canonical link']),
+                'status_code': get_header_index(['status code', 'status']),
+                'index_status': get_header_index(['indexability']),
+                'inlinks': get_header_index(['inlinks']),
+                'outlinks': get_header_index(['outlinks']),
+                'crawl_depth': get_header_index(['crawl depth'])
             }
 
             # Read all rows
             rows = list(reader)
 
             for row in rows:
-                logging.debug(f"Processing row: {row}")  # Log each row being processed
+                logging.debug(f"Processing row: {row}")
 
-                if not row:  # Skip empty rows
+                if not row:
                     logging.warning("Empty row encountered, skipping.")
                     continue
 
                 try:
-                    # Extract Screaming Frog CSV data based on dynamic mapping
+                    # Extract data
                     url = row[column_mapping['url']] if column_mapping['url'] is not None else None
                     page_path = get_page_path(url) if url else '/'
 
@@ -666,15 +674,16 @@ def process_csv_file(file):
                     logging.error(f"Unexpected error while processing row: {row} - {e}")
 
             # After processing Screaming Frog CSV, update the 'in_sitemap' status
-            update_in_sitemap_status()  # Call the function to update 'in_sitemap' field
+            # (Assuming you have a function named update_in_sitemap_status)
+            # update_in_sitemap_status()
 
         elif csv_type == 'keyword_research':
             # Keyword Research CSV column mappings
             column_mapping = {
-                'url': header_to_index.get('url'),
-                'keyword': header_to_index.get('keyword'),
-                'search_vol': header_to_index.get('search vol.'),
-                'position': header_to_index.get('position')
+                'url': get_header_index(['url']),
+                'keyword': get_header_index(['keyword']),
+                'search_vol': get_header_index(['search vol.']),
+                'position': get_header_index(['position'])
             }
 
             # Check if all required columns are present
@@ -688,27 +697,26 @@ def process_csv_file(file):
             url_data = {}
 
             # Read all rows
-            rows = list(reader)  # Need to read all rows for keyword_research
+            rows = list(reader)
 
             for row in rows:
-                logging.debug(f"Processing row: {row}")  # Log each row being processed
+                logging.debug(f"Processing row: {row}")
 
-                if not row:  # Skip empty rows
+                if not row:
                     logging.warning("Empty row encountered, skipping.")
                     continue
 
                 try:
-                    # Extract data for each URL and associated keyword
+                    # Extract data
                     url = row[column_mapping['url']].strip() if column_mapping['url'] is not None else None
                     keyword = row[column_mapping['keyword']].strip() if column_mapping['keyword'] is not None else None
                     search_vol_str = row[column_mapping['search_vol']].replace(',', '').strip() if column_mapping['search_vol'] is not None else '0'
                     position_str = row[column_mapping['position']].strip() if column_mapping['position'] is not None else '0'
 
                     search_vol = int(search_vol_str) if search_vol_str.isdigit() else 0
-                    position = int(position_str) if position_str.isdigit() else float('inf')  # Use infinity if position is not a number
+                    position = int(position_str) if position_str.isdigit() else float('inf')
 
                     if url:
-                        # Normalize the URL for matching
                         normalized_url = normalize_url(url)
                         if normalized_url not in url_data:
                             url_data[normalized_url] = {
@@ -720,13 +728,13 @@ def process_csv_file(file):
                                 'best_kw_ranking': position
                             }
                         else:
-                            # Update the main keyword if the current keyword has a higher search volume
+                            # Update main_kw if higher search_vol
                             if search_vol > url_data[normalized_url]['kw_volume']:
                                 url_data[normalized_url]['main_kw'] = keyword
                                 url_data[normalized_url]['kw_volume'] = search_vol
                                 url_data[normalized_url]['kw_ranking'] = position
 
-                            # Update the best keyword if the current keyword has a better ranking (lower position value)
+                            # Update best_kw if better ranking
                             if position < url_data[normalized_url]['best_kw_ranking']:
                                 url_data[normalized_url]['best_kw'] = keyword
                                 url_data[normalized_url]['best_kw_volume'] = search_vol
@@ -738,16 +746,13 @@ def process_csv_file(file):
                     logging.error(f"ValueError while converting data: {row} - {e}")
 
             # Now update the Django table with the processed data
-            # Build a mapping from normalized URL to UploadedFile
             uploaded_files = UploadedFile.objects.all()
             uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
 
             for normalized_url, data in url_data.items():
                 try:
-                    # Look for the corresponding entry in the Django table by normalized URL
                     uploaded_file = uploaded_files_dict.get(normalized_url)
                     if uploaded_file:
-                        # Update the relevant fields in the Django table
                         uploaded_file.main_kw = data['main_kw']
                         uploaded_file.kw_volume = data['kw_volume']
                         uploaded_file.kw_ranking = data['kw_ranking']
@@ -765,41 +770,37 @@ def process_csv_file(file):
         elif csv_type == 'search_console':
             # Search Console column mappings
             column_mapping = {
-                'url': header_to_index.get('top pages'),
-                'impressions': header_to_index.get('impressions'),
-                'ctr': header_to_index.get('ctr')
+                'url': get_header_index(['top pages', 'page', 'url']),
+                'impressions': get_header_index(['impressions', 'total impressions']),
+                'ctr': get_header_index(['ctr', 'click through rate'])
             }
 
             # Read all rows
             rows = list(reader)
 
-            # Build a mapping from normalized URL to UploadedFile
+            # Build mapping from normalized URL to UploadedFile
             uploaded_files = UploadedFile.objects.all()
             uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
 
             for row in rows:
-                logging.debug(f"Processing row: {row}")  # Log each row being processed
+                logging.debug(f"Processing row: {row}")
 
-                if not row:  # Skip empty rows
+                if not row:
                     logging.warning("Empty row encountered, skipping.")
                     continue
 
                 try:
-                    # Extract Search Console CSV data based on dynamic mapping
                     url = row[column_mapping['url']] if column_mapping['url'] is not None else None
-
                     impressions_str = row[column_mapping['impressions']].replace(',', '') if column_mapping['impressions'] is not None else '0'
                     ctr_str = row[column_mapping['ctr']].replace('%', '') if column_mapping['ctr'] is not None else '0'
 
-                    impressions = int(impressions_str) if impressions_str.isdigit() else 0
-                    serp_ctr = float(ctr_str) if ctr_str else 0.0
+                    impressions = int(impressions_str) if impressions_str.replace('.', '', 1).isdigit() else 0
+                    serp_ctr = float(ctr_str) if ctr_str.replace('.', '', 1).isdigit() else 0.0
 
-                    # Normalize URL for matching
                     normalized_url = normalize_url(url)
 
                     uploaded_file = uploaded_files_dict.get(normalized_url)
                     if uploaded_file:
-                        # Update the relevant fields
                         uploaded_file.impressions = impressions
                         uploaded_file.serp_ctr = serp_ctr
                         uploaded_file.save()
@@ -815,43 +816,66 @@ def process_csv_file(file):
                     logging.error(f"Unexpected error while processing row: {row} - {e}")
 
         elif csv_type == 'google_analytics':
-            # Google Analytics column mappings
-            column_mapping = {
-                'page_path': header_to_index.get('page path and screen class'),
-                'sessions': header_to_index.get('sessions'),
-                'bounce_rate': header_to_index.get('bounce rate'),
-                'avg_session_duration': header_to_index.get('average session duration'),
+            # Define possible headers to look for in the CSV
+            possible_headers = {
+                'page_path': ['page path and screen class', 'page path'],
+                'sessions': ['sessions'],
+                'bounce_rate': ['bounce rate', 'bounce rate (%)'],
+                'avg_session_duration': ['average session duration', 'avg. session duration'],
+                'percent_change_sessions': ['sessions Δ', 'sessions delta', 'sessions δ', 'sessions Δ (%)', 'sessions delta (%)', 'sessions change (%)', 'sessions change'],
             }
 
-            # Read all rows
+            # Map the headers in the CSV to their corresponding indices
+            column_mapping = {key: get_header_index(possible_headers[key]) for key in possible_headers}
+
+            # Read the CSV rows
             rows = list(reader)
 
-            # Build a mapping from page_path to UploadedFile
+            # Create a dictionary mapping normalized page_path to UploadedFile instances
             uploaded_files = UploadedFile.objects.all()
-            uploaded_files_dict = {u.page_path: u for u in uploaded_files}
+            uploaded_files_dict = {normalize_page_path(u.page_path): u for u in uploaded_files}
 
+            # Process each row in the CSV
             for row in rows:
-                logging.debug(f"Processing row: {row}")  # Log each row being processed
+                logging.debug(f"Processing row: {row}")
 
-                if not row:  # Skip empty rows
+                if not row:
                     logging.warning("Empty row encountered, skipping.")
                     continue
 
                 try:
+                    # Extract values from the row using the column mapping
                     page_path = row[column_mapping['page_path']] if column_mapping['page_path'] is not None else None
+                    page_path = normalize_page_path(page_path)
                     sessions_str = row[column_mapping['sessions']].replace(',', '') if column_mapping['sessions'] is not None else '0'
                     bounce_rate_str = row[column_mapping['bounce_rate']].replace('%', '') if column_mapping['bounce_rate'] is not None else '0'
-                    avg_session_duration = row[column_mapping['avg_session_duration']] if column_mapping['avg_session_duration'] is not None else None
+                    avg_session_duration_str = row[column_mapping['avg_session_duration']] if column_mapping['avg_session_duration'] is not None else '0:00'
+                    percent_change_sessions_str = row[column_mapping['percent_change_sessions']].replace('%', '').replace('−', '-') if column_mapping['percent_change_sessions'] is not None else '0.0'
 
-                    sessions = int(sessions_str) if sessions_str.isdigit() else 0
-                    bounce_rate = float(bounce_rate_str) if bounce_rate_str else 0.0
+                    # Convert extracted data into their appropriate types
+                    sessions = int(float(sessions_str)) if re.match(r'^-?\d+(\.\d+)?$', sessions_str) else 0
+                    bounce_rate = float(bounce_rate_str) if re.match(r'^-?\d+(\.\d+)?$', bounce_rate_str) else 0.0
+                    avg_time_on_page = avg_session_duration_str  # Keep the original string (no conversion)
+                    percent_change_sessions = float(percent_change_sessions_str) if re.match(r'^-?\d+(\.\d+)?$', percent_change_sessions_str) else 0.0
 
+                    # Find the corresponding UploadedFile by page_path
                     uploaded_file = uploaded_files_dict.get(page_path)
                     if uploaded_file:
-                        # Update the relevant fields
+                        # Update the fields of the UploadedFile instance
                         uploaded_file.sessions = sessions
                         uploaded_file.bounce_rate = bounce_rate
-                        uploaded_file.avg_time_on_page = avg_session_duration
+                        uploaded_file.avg_time_on_page = avg_time_on_page  # Save the original avg_session_duration string
+                        uploaded_file.percent_change_sessions = percent_change_sessions
+
+                        # Update losing_traffic field based on percent_change_sessions
+                        if percent_change_sessions > 0:
+                            uploaded_file.losing_traffic = 'up'
+                        elif percent_change_sessions < 0:
+                            uploaded_file.losing_traffic = 'down'
+                        else:
+                            uploaded_file.losing_traffic = 'none'
+
+                        # Save the updated instance to the database
                         uploaded_file.save()
                         logging.info(f"Updated data for page_path: {page_path}")
                     else:
@@ -867,8 +891,8 @@ def process_csv_file(file):
         elif csv_type == 'backlinks':
             # Backlinks CSV column mappings
             column_mapping = {
-                'backlink_url': header_to_index.get('backlink url'),
-                'destination_url': header_to_index.get('destination url'),
+                'backlink_url': get_header_index(['backlink url']),
+                'destination_url': get_header_index(['destination url']),
             }
 
             # Check if all required columns are present
@@ -878,16 +902,16 @@ def process_csv_file(file):
                 logging.error(f"Missing required columns in CSV: {missing_columns}")
                 return []
 
-            # Dictionary to count backlinks for each destination URL
+            # Dictionary to count backlinks
             backlink_counts = {}
 
             # Read all rows
             rows = list(reader)
 
             for row in rows:
-                logging.debug(f"Processing row: {row}")  # Log each row being processed
+                logging.debug(f"Processing row: {row}")
 
-                if not row:  # Skip empty rows
+                if not row:
                     logging.warning("Empty row encountered, skipping.")
                     continue
 
@@ -895,10 +919,7 @@ def process_csv_file(file):
                     destination_url = row[column_mapping['destination_url']].strip() if column_mapping['destination_url'] is not None else None
 
                     if destination_url:
-                        # Normalize the destination URL
                         destination_url_normalized = normalize_url(destination_url)
-
-                        # Increment the backlink count for the destination URL
                         backlink_counts[destination_url_normalized] = backlink_counts.get(destination_url_normalized, 0) + 1
 
                 except IndexError as e:
@@ -907,16 +928,13 @@ def process_csv_file(file):
                     logging.error(f"Unexpected error while processing row: {row} - {e}")
 
             # Now update the Django table with the backlink counts
-            # Build a mapping from normalized URL to UploadedFile
             uploaded_files = UploadedFile.objects.all()
             uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
 
             for normalized_url, count in backlink_counts.items():
                 try:
-                    # Look for the corresponding entry in the Django table by normalized URL
                     uploaded_file = uploaded_files_dict.get(normalized_url)
                     if uploaded_file:
-                        # Update the 'links' field in the Django table
                         uploaded_file.links = count
                         uploaded_file.save()
                         logging.info(f"Updated backlinks count for URL: {uploaded_file.url} with count: {count}")

@@ -1,3 +1,8 @@
+# utils.py
+
+import urllib.parse
+import re
+
 def identify_csv_type(headers):
     # Normalize headers by stripping whitespace and converting to lowercase
     normalized_headers = [header.strip().lower() for header in headers]
@@ -27,70 +32,76 @@ def identify_csv_type(headers):
 
     # Columns required to identify Google Analytics CSV
     google_analytics_columns = {
-        'page_path': ['page path and screen class'],
+        'page_path': ['page path and screen class', 'page path'],
         'sessions': ['sessions'],
-        'bounce_rate': ['bounce rate'],
-        'avg_session_duration': ['average session duration']
+        'bounce_rate': ['bounce rate', 'bounce rate (%)'],
+        'avg_session_duration': ['average session duration', 'avg. session duration'],
+        'percent_change_sessions': ['sessions Δ', 'sessions delta', 'sessions δ', 'sessions Δ (%)', 'sessions delta (%)', 'sessions change (%)', 'sessions change'],
     }
 
     # Columns required to identify Keyword Research CSV
     keyword_research_columns = {
         'keyword': ['keyword'],
-        'difficulty': ['difficulty'],
-        'position': ['position'],
-        'previous_position': ['previous position'],
-        'position_serp_features': ['position serp features'],
         'search_vol': ['search vol.'],
-        'search_intent': ['search intent'],
-        'serp_features': ['serp features'],
-        'competition': ['competition'],
-        'cpc': ['cpc'],
+        'position': ['position'],
         'url': ['url'],
-        'traffic': ['traffic'],
-        'traffic_share': ['traffic share'],
-        'traffic_cost': ['traffic cost']
     }
 
     # Columns required to identify Backlinks CSV
     backlinks_columns = {
         'backlink_url': ['backlink url'],
-        'title': ['title'],
         'destination_url': ['destination url'],
-        'anchor': ['anchor'],
-        'image': ['image'],
-        'nofollow': ['nofollow'],
-        'pt': ['pt'],
-        'toxicity_score': ['toxicity score'],
-        'total_traffic': ['total traffic'],
-        'dt': ['dt'],
-        'first_seen': ['first seen'],
-        'last_seen': ['last seen'],
-        'disavow': ['disavow']
     }
 
     # Helper function to check if all required columns exist
     def has_columns(required_columns):
-        return all(any(col in normalized_headers for col in possible_names) for possible_names in required_columns.values())
+        for key, possible_names in required_columns.items():
+            if not any(possible_name.lower() in normalized_headers for possible_name in possible_names):
+                return False
+        return True
 
     # Check for Screaming Frog CSV
     if has_columns(screaming_frog_columns):
         return 'screaming_frog'
 
     # Check for Search Console CSV
-    if has_columns(search_console_columns):
+    elif has_columns(search_console_columns):
         return 'search_console'
 
     # Check for Google Analytics CSV
-    if has_columns(google_analytics_columns):
+    elif has_columns(google_analytics_columns):
         return 'google_analytics'
 
     # Check for Keyword Research CSV
-    if has_columns(keyword_research_columns):
+    elif has_columns(keyword_research_columns):
         return 'keyword_research'
 
     # Check for Backlinks CSV
-    if has_columns(backlinks_columns):
+    elif has_columns(backlinks_columns):
         return 'backlinks'
 
-    # Return unknown if neither type matches
-    return 'unknown'
+    # Return unknown if none match
+    else:
+        return 'unknown'
+
+def normalize_url(url):
+    # Remove protocol and www, and strip trailing slash
+    parsed_url = urllib.parse.urlparse(url)
+    netloc = parsed_url.netloc.replace('www.', '')
+    path = parsed_url.path.rstrip('/')
+    normalized = netloc + path
+    return normalized
+
+def normalize_page_path(page_path):
+    # Ensure the page_path starts with '/'
+    if not page_path.startswith('/'):
+        page_path = '/' + page_path
+    # Remove any trailing slashes
+    page_path = page_path.rstrip('/')
+    return page_path
+
+def get_page_path(url):
+    # Extract the path component from the URL
+    parsed_url = urllib.parse.urlparse(url)
+    path = parsed_url.path
+    return path

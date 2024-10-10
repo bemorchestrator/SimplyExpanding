@@ -1,25 +1,25 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-100 p-10 flex flex-col items-center">
+<div class="min-h-screen p-10 flex flex-col items-center">
     <!-- Payroll Dashboard Header with Pay Period Inputs -->
     <div class="flex justify-between items-center w-full mb-6">
         <!-- Align the header to the left -->
-        <h2 class="text-2xl font-semibold text-gray-800">Payroll Dashboard</h2>
+        <h2 class="text-lg font-semibold text-gray-200">Payroll Dashboard</h2>
 
         <!-- Align the form to the right, using flex-grow to push it to the right edge -->
         <form method="POST" class="flex space-x-4 items-center ml-auto">
             {% csrf_token %}
             <div>
-                <label for="pay_period_start" class="block text-sm font-medium text-gray-700">Pay Period Start:</label>
-                <input type="date" name="pay_period_start" id="pay_period_start" value="{{ pay_period_start }}" class="form-input block w-full">
+                <label for="pay_period_start" class="block text-sm font-medium text-gray-400">Pay Period Start:</label>
+                <input type="date" name="pay_period_start" id="pay_period_start" value="{{ pay_period_start }}" class="form-input block w-full bg-gray-800 text-gray-200 border-gray-600 text-sm">
             </div>
             <div>
-                <label for="pay_period_end" class="block text-sm font-medium text-gray-700">Pay Period End:</label>
-                <input type="date" name="pay_period_end" id="pay_period_end" value="{{ pay_period_end }}" class="form-input block w-full">
+                <label for="pay_period_end" class="block text-sm font-medium text-gray-400">Pay Period End:</label>
+                <input type="date" name="pay_period_end" id="pay_period_end" value="{{ pay_period_end }}" class="form-input block w-full bg-gray-800 text-gray-200 border-gray-600 text-sm">
             </div>
             <div class="pt-6">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
                     Update Pay Period
                 </button>
             </div>
@@ -27,11 +27,11 @@
     </div>
 
     <!-- Payroll Records Table -->
-    <div class="bg-white shadow-md rounded-lg p-8 w-full mt-6">
+    <div class="rounded-lg p-8 w-full mt-6">
         <div class="overflow-x-auto">
-            <table class="w-full bg-white rounded-lg">
+            <table class="w-full bg-gray-800 rounded-lg">
                 <thead>
-                    <tr class="text-left text-gray-600">
+                    <tr class="text-left text-gray-400 text-sm">
                         <th class="py-3 px-4">Employee</th>
                         <th class="py-3 px-4">Pay Period</th>
                         <th class="py-3 px-4">Total Income</th>
@@ -43,19 +43,19 @@
                 </thead>
                 <tbody>
                     {% for payroll in payroll_data %}
-                        <tr class="border-t">
-                            <td class="py-3 px-4">{{ payroll.employee }}</td>
-                            <td class="py-3 px-4">{{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}</td>
-                            <td class="py-3 px-4">Php {{ payroll.total_income|floatformat:2 }}</td>
+                        <tr class="border-t border-gray-700 text-sm">
+                            <td class="py-3 px-4 text-gray-200">{{ payroll.employee }}</td>
+                            <td class="py-3 px-4 text-gray-200">{{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}</td>
+                            <td class="py-3 px-4 text-gray-200">Php {{ payroll.total_income|floatformat:2 }}</td>
                             <td class="py-3 px-4">
                                 {% if payroll.status == 'pending' %}
-                                    <span class="bg-orange-100 text-orange-600 font-semibold px-4 py-2 rounded-full">Pending</span>
+                                    <span class=" text-orange-200 font-semibold px-4 py-2 rounded-full">Pending</span>
                                 {% elif payroll.status == 'paid' %}
-                                    <span class="bg-green-100 text-green-600 font-semibold px-4 py-2 rounded-full">Paid</span>
+                                    <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
                                 {% elif payroll.status == 'no_income' %}
-                                    <span>No Income</span>
+                                    <span class="text-gray-400">No Income</span>
                                 {% else %}
-                                    <span>{{ payroll.status_display }}</span>
+                                    <span class="text-gray-400">{{ payroll.status_display }}</span>
                                 {% endif %}
                             </td>
                             
@@ -64,7 +64,7 @@
                                     <img 
                                         src="{{ payroll.payment_proof }}" 
                                         alt="Proof of Payment" 
-                                        class="w-8 h-8 object-cover rounded cursor-pointer" 
+                                        class="w-6 h-6 object-cover rounded cursor-pointer" 
                                         onclick="openModal('{{ payroll.payment_proof }}')"
                                     >
                                 {% else %}
@@ -72,7 +72,7 @@
                                 {% endif %}
                             </td>
                             
-                            <td class="py-3 px-4">
+                            <td class="py-3 px-4 text-gray-200">
                                 {% if payroll.date_processed %}
                                     {{ payroll.date_processed|date:"Y-m-d" }}
                                 {% else %}
@@ -82,16 +82,16 @@
                             <td class="py-3 px-4">
                                 {% if payroll.status == 'pending' %}
                                     {% if payroll.id %}
-                                        <a href="{% url 'process_payroll' payroll.id %}" class="bg-orange-100 text-orange-600 font-semibold px-4 py-2 rounded hover:bg-orange-200">Process</a>
+                                        <a href="{% url 'process_payroll' payroll.id %}" class="bg-orange-600 text-orange-200 font-semibold px-4 py-2 rounded hover:bg-orange-700">Process</a>
                                     {% else %}
-                                        <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" class="bg-orange-100 text-orange-600 font-semibold px-4 py-2 rounded hover:bg-orange-200">Initiate Payroll</a>
+                                        <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" class="bg-orange-600 text-orange-200 font-semibold px-4 py-2 rounded hover:bg-orange-700">Initiate Payroll</a>
                                     {% endif %}
                                 {% elif payroll.status == 'paid' %}
-                                    <span class="bg-green-100 text-green-600 font-semibold px-4 py-2 rounded-full">Paid</span>
+                                    <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
                                 {% elif payroll.status == 'no_income' %}
-                                    <span>No Income</span>
+                                    <span class="text-gray-400">No Income</span>
                                 {% else %}
-                                    <span>{{ payroll.status_display }}</span>
+                                    <span class="text-gray-400">{{ payroll.status_display }}</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -106,11 +106,11 @@
     </div>
 
     <!-- Modal Structure -->
-    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg overflow-hidden shadow-lg max-w-3xl w-full">
+    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden">
+        <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg max-w-3xl w-full">
             <div class="flex justify-end p-2">
-                <button onclick="closeModal()" class="text-gray-700 hover:text-gray-900">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>

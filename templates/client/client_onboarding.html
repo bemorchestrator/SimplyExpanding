@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="flex justify-center bg-gray-100 py-10 px-4">
-    <div class="w-full max-w-4xl rounded-lg p-8 overflow-auto ">
+<div class="flex justify-center py-10 px-4">
+    <div class="w-full max-w-4xl rounded-lg p-8 overflow-auto bg-gray-800">
         <!-- Dynamic Page Title -->
         {% if action == 'Create' %}
-            <h2 class="text-3xl font-semibold text-gray-800 text-center mb-8">Client Onboarding</h2>
+            <h2 class="text-3xl font-semibold text-white text-center mb-8">Client Onboarding</h2>
         {% elif action == 'Update' %}
-            <h2 class="text-3xl font-semibold text-gray-800 text-center mb-8">Update Client: {{ client.business_name }}</h2>
+            <h2 class="text-3xl font-semibold text-white text-center mb-8">Update Client: {{ client.business_name }}</h2>
         {% endif %}
 
         <!-- Form -->
@@ -16,12 +16,12 @@
 
             <!-- Basic Information Section -->
             <section class="mb-12">
-                <h3 class="text-2xl font-medium mb-6 text-gray-800">Basic Information</h3>
+                <h3 class="text-2xl font-medium mb-6 text-white">Basic Information</h3>
 
                 <!-- Business Name -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_business_name">Business Name *</label>
-                    <input type="text" name="business_name" id="id_business_name" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Enter your business name" value="{{ form.business_name.value|default_if_none:'' }}" required>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_business_name">Business Name *</label>
+                    <input type="text" name="business_name" id="id_business_name" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Enter your business name" value="{{ form.business_name.value|default_if_none:'' }}" required>
                     {% if form.business_name.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.business_name.errors }}</p>
                     {% endif %}
@@ -29,8 +29,8 @@
 
                 <!-- Business Description -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_business_description">Business Description</label>
-                    <textarea name="business_description" id="id_business_description" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" rows="4" placeholder="Brief description of your business">{{ form.business_description.value|default_if_none:'' }}</textarea>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_business_description">Business Description</label>
+                    <textarea name="business_description" id="id_business_description" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" rows="4" placeholder="Brief description of your business">{{ form.business_description.value|default_if_none:'' }}</textarea>
                     {% if form.business_description.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.business_description.errors }}</p>
                     {% endif %}
@@ -38,8 +38,8 @@
 
                 <!-- Website URL -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_website_url">Website URL *</label>
-                    <input type="url" name="website_url" id="id_website_url" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Enter your website URL" value="{{ form.website_url.value|default_if_none:'' }}" required>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_website_url">Website URL *</label>
+                    <input type="url" name="website_url" id="id_website_url" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Enter your website URL" value="{{ form.website_url.value|default_if_none:'' }}" required>
                     {% if form.website_url.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.website_url.errors }}</p>
                     {% endif %}
@@ -47,8 +47,8 @@
 
                 <!-- Contact Person -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_contact_person">Contact Person *</label>
-                    <input type="text" name="contact_person" id="id_contact_person" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Name of the main contact person" value="{{ form.contact_person.value|default_if_none:'' }}" required>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_contact_person">Contact Person *</label>
+                    <input type="text" name="contact_person" id="id_contact_person" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Name of the main contact person" value="{{ form.contact_person.value|default_if_none:'' }}" required>
                     {% if form.contact_person.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.contact_person.errors }}</p>
                     {% endif %}
@@ -56,8 +56,8 @@
 
                 <!-- Email -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_email">Email *</label>
-                    <input type="email" name="email" id="id_email" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Enter a valid email address" value="{{ form.email.value|default_if_none:'' }}" required>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_email">Email *</label>
+                    <input type="email" name="email" id="id_email" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Enter a valid email address" value="{{ form.email.value|default_if_none:'' }}" required>
                     {% if form.email.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.email.errors }}</p>
                     {% endif %}
@@ -65,8 +65,8 @@
 
                 <!-- Phone Number -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_phone_number">Phone Number</label>
-                    <input type="text" name="phone_number" id="id_phone_number" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Enter phone number" value="{{ form.phone_number.value|default_if_none:'' }}">
+                    <label class="block text-gray-300 font-medium mb-2" for="id_phone_number">Phone Number</label>
+                    <input type="text" name="phone_number" id="id_phone_number" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Enter phone number" value="{{ form.phone_number.value|default_if_none:'' }}">
                     {% if form.phone_number.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.phone_number.errors }}</p>
                     {% endif %}
@@ -75,12 +75,12 @@
 
             <!-- Project Details Section -->
             <section class="mb-12">
-                <h3 class="text-2xl font-medium mb-6 text-gray-800">Project Details</h3>
+                <h3 class="text-2xl font-medium mb-6 text-white">Project Details</h3>
 
                 <!-- Business Goals -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_business_goals">Business Goals *</label>
-                    <textarea name="business_goals" id="id_business_goals" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" rows="4" placeholder="State the business goals for SEO" required>{{ form.business_goals.value|default_if_none:'' }}</textarea>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_business_goals">Business Goals *</label>
+                    <textarea name="business_goals" id="id_business_goals" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" rows="4" placeholder="State the business goals for SEO" required>{{ form.business_goals.value|default_if_none:'' }}</textarea>
                     {% if form.business_goals.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.business_goals.errors }}</p>
                     {% endif %}
@@ -88,8 +88,8 @@
 
                 <!-- Target Keywords -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_target_keywords">Target Keywords</label>
-                    <textarea name="target_keywords" id="id_target_keywords" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" rows="3" placeholder="List target keywords, separated by commas">{{ form.target_keywords.value|default_if_none:'' }}</textarea>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_target_keywords">Target Keywords</label>
+                    <textarea name="target_keywords" id="id_target_keywords" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" rows="3" placeholder="List target keywords, separated by commas">{{ form.target_keywords.value|default_if_none:'' }}</textarea>
                     {% if form.target_keywords.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.target_keywords.errors }}</p>
                     {% endif %}
@@ -97,8 +97,8 @@
 
                 <!-- CMS Type -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_cms_type">CMS Type</label>
-                    <input type="text" name="cms_type" id="id_cms_type" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="CMS type (WordPress, Shopify, etc.)" value="{{ form.cms_type.value|default_if_none:'' }}">
+                    <label class="block text-gray-300 font-medium mb-2" for="id_cms_type">CMS Type</label>
+                    <input type="text" name="cms_type" id="id_cms_type" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="CMS type (WordPress, Shopify, etc.)" value="{{ form.cms_type.value|default_if_none:'' }}">
                     {% if form.cms_type.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.cms_type.errors }}</p>
                     {% endif %}
@@ -106,8 +106,8 @@
 
                 <!-- Start Date -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_start_date">Start Date *</label>
-                    <input type="date" name="start_date" id="id_start_date" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Project start date" value="{{ form.start_date.value|default_if_none:'' }}" required>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_start_date">Start Date *</label>
+                    <input type="date" name="start_date" id="id_start_date" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Project start date" value="{{ form.start_date.value|default_if_none:'' }}" required>
                     {% if form.start_date.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.start_date.errors }}</p>
                     {% endif %}
@@ -115,8 +115,8 @@
 
                 <!-- End Date -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_end_date">End Date *</label>
-                    <input type="date" name="end_date" id="id_end_date" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Project end date" value="{{ form.end_date.value|default_if_none:'' }}" required>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_end_date">End Date *</label>
+                    <input type="date" name="end_date" id="id_end_date" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Project end date" value="{{ form.end_date.value|default_if_none:'' }}" required>
                     {% if form.end_date.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.end_date.errors }}</p>
                     {% endif %}
@@ -125,12 +125,12 @@
 
             <!-- Tool Logins Section -->
             <section class="mb-12">
-                <h3 class="text-2xl font-medium mb-6 text-gray-800">Tool Logins</h3>
+                <h3 class="text-2xl font-medium mb-6 text-white">Tool Logins</h3>
 
                 <!-- G4A Login -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_g4a_login">G4A Login Details</label>
-                    <input type="text" name="g4a_login" id="id_g4a_login" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="G4A login details (if applicable)" value="{{ form.g4a_login.value|default_if_none:'' }}">
+                    <label class="block text-gray-300 font-medium mb-2" for="id_g4a_login">G4A Login Details</label>
+                    <input type="text" name="g4a_login" id="id_g4a_login" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="G4A login details (if applicable)" value="{{ form.g4a_login.value|default_if_none:'' }}">
                     {% if form.g4a_login.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.g4a_login.errors }}</p>
                     {% endif %}
@@ -138,8 +138,8 @@
 
                 <!-- Google Search Console Login -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_google_search_console_login">Google Search Console Login Details</label>
-                    <input type="text" name="google_search_console_login" id="id_google_search_console_login" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Google Search Console login details (if applicable)" value="{{ form.google_search_console_login.value|default_if_none:'' }}">
+                    <label class="block text-gray-300 font-medium mb-2" for="id_google_search_console_login">Google Search Console Login Details</label>
+                    <input type="text" name="google_search_console_login" id="id_google_search_console_login" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Google Search Console login details (if applicable)" value="{{ form.google_search_console_login.value|default_if_none:'' }}">
                     {% if form.google_search_console_login.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.google_search_console_login.errors }}</p>
                     {% endif %}
@@ -147,8 +147,8 @@
 
                 <!-- Tag Manager Login -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_tag_manager_login">Tag Manager Login Details</label>
-                    <input type="text" name="tag_manager_login" id="id_tag_manager_login" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Tag Manager login details (if applicable)" value="{{ form.tag_manager_login.value|default_if_none:'' }}">
+                    <label class="block text-gray-300 font-medium mb-2" for="id_tag_manager_login">Tag Manager Login Details</label>
+                    <input type="text" name="tag_manager_login" id="id_tag_manager_login" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Tag Manager login details (if applicable)" value="{{ form.tag_manager_login.value|default_if_none:'' }}">
                     {% if form.tag_manager_login.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.tag_manager_login.errors }}</p>
                     {% endif %}
@@ -156,8 +156,8 @@
 
                 <!-- Website Login -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_website_login">Website Login Details</label>
-                    <input type="text" name="website_login" id="id_website_login" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" placeholder="Website login details (if applicable)" value="{{ form.website_login.value|default_if_none:'' }}">
+                    <label class="block text-gray-300 font-medium mb-2" for="id_website_login">Website Login Details</label>
+                    <input type="text" name="website_login" id="id_website_login" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" placeholder="Website login details (if applicable)" value="{{ form.website_login.value|default_if_none:'' }}">
                     {% if form.website_login.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.website_login.errors }}</p>
                     {% endif %}
@@ -166,12 +166,12 @@
 
             <!-- Competitors Section -->
             <section class="mb-12">
-                <h3 class="text-2xl font-medium mb-6 text-gray-800">Competitors</h3>
+                <h3 class="text-2xl font-medium mb-6 text-white">Competitors</h3>
 
                 <!-- Competitor URLs -->
                 <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2" for="id_competitor_urls">Competitor URLs</label>
-                    <textarea name="competitor_urls" id="id_competitor_urls" class="w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-3 text-lg focus:border-blue-500 focus:ring-blue-500" rows="4" placeholder="List competitor URLs, separated by commas">{{ form.competitor_urls.value|default_if_none:'' }}</textarea>
+                    <label class="block text-gray-300 font-medium mb-2" for="id_competitor_urls">Competitor URLs</label>
+                    <textarea name="competitor_urls" id="id_competitor_urls" class="w-full bg-gray-700 border border-gray-600 rounded-lg shadow-sm px-4 py-3 text-lg text-white focus:border-blue-500 focus:ring-blue-500" rows="4" placeholder="List competitor URLs, separated by commas">{{ form.competitor_urls.value|default_if_none:'' }}</textarea>
                     {% if form.competitor_urls.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ form.competitor_urls.errors }}</p>
                     {% endif %}

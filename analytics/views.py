@@ -47,6 +47,38 @@ def format_duration(duration):
 
 
 # Fetch Google Analytics data view
+def get_date_range(preset):
+    today = datetime.date.today()
+    if preset == 'last_7_days':
+        return today - datetime.timedelta(days=7), today
+    elif preset == 'last_14_days':
+        return today - datetime.timedelta(days=14), today
+    elif preset == 'last_28_days':
+        return today - datetime.timedelta(days=28), today
+    elif preset == 'last_90_days':
+        return today - datetime.timedelta(days=90), today
+    elif preset == 'last_12_months':
+        return today - datetime.timedelta(days=365), today
+    else:
+        return None, None
+
+# Google Analytics authentication view
+def authenticate_ga4(request):
+    return authenticate_user(request, 'ga')
+
+# Callback view for OAuth2
+def google_oauth2_callback(request):
+    return oauth2_callback(request, 'ga')
+
+def format_duration(duration):
+    try:
+        minutes = int(duration) // 60
+        seconds = int(duration) % 60
+        return f'{minutes}:{seconds:02}'
+    except (ValueError, TypeError):
+        return '0:00'  # Changed from 'N/A' to '0:00'
+
+# Fetch Google Analytics data view
 def fetch_ga4_data(request):
     try:
         creds = get_credentials(request, 'ga')
@@ -107,12 +139,17 @@ def fetch_ga4_data(request):
             try:
                 response = client.run_report(request=request_body)
                 for row in response.rows:
+                    try:
+                        avg_session_duration = format_duration(float(row.metric_values[3].value))
+                    except (ValueError, TypeError):
+                        avg_session_duration = '0:00'  # Ensure zero duration
+
                     report_data.append({
                         "page_path": row.dimension_values[0].value,
-                        "total_users": int(row.metric_values[0].value),
-                        "bounce_rate": float(row.metric_values[1].value),
-                        "sessions": int(row.metric_values[2].value),
-                        "avg_session_duration": format_duration(float(row.metric_values[3].value)),
+                        "total_users": int(row.metric_values[0].value) if row.metric_values[0].value else 0,
+                        "bounce_rate": float(row.metric_values[1].value) if row.metric_values[1].value else 0.0,
+                        "sessions": int(row.metric_values[2].value) if row.metric_values[2].value else 0,
+                        "avg_session_duration": avg_session_duration,
                     })
             except Exception as e:
                 logger.error(f"Error fetching Google Analytics data: {str(e)}", exc_info=True)
@@ -145,28 +182,54 @@ def fetch_ga4_data(request):
                 try:
                     comparison_response = client.run_report(request=comparison_request_body)
                     for row in comparison_response.rows:
+                        try:
+                            avg_session_duration = format_duration(float(row.metric_values[3].value))
+                        except (ValueError, TypeError):
+                            avg_session_duration = '0:00'  # Ensure zero duration
+
                         comparison_data.append({
                             "page_path": row.dimension_values[0].value,
-                            "total_users": int(row.metric_values[0].value),
-                            "bounce_rate": float(row.metric_values[1].value),
-                            "sessions": int(row.metric_values[2].value),
-                            "avg_session_duration": format_duration(float(row.metric_values[3].value)),
+                            "total_users": int(row.metric_values[0].value) if row.metric_values[0].value else 0,
+                            "bounce_rate": float(row.metric_values[1].value) if row.metric_values[1].value else 0.0,
+                            "sessions": int(row.metric_values[2].value) if row.metric_values[2].value else 0,
+                            "avg_session_duration": avg_session_duration,
                         })
                 except Exception as e:
                     logger.error(f"Error fetching comparison data: {str(e)}", exc_info=True)
                     return HttpResponseBadRequest(f"Error fetching comparison data: {str(e)}")
 
+                # Create a dictionary for quick lookup of comparison data by page_path
+                comparison_dict = {data["page_path"]: data for data in comparison_data}
+
                 # Calculate differences
                 for main_data in report_data:
-                    for comp_data in comparison_data:
-                        if main_data["page_path"] == comp_data["page_path"]:
-                            main_data["total_users_diff"] = main_data["total_users"] - comp_data["total_users"]
-                            main_data["bounce_rate_diff"] = main_data["bounce_rate"] - comp_data["bounce_rate"]
-                            main_data["sessions_diff"] = main_data["sessions"] - comp_data["sessions"]
-                            main_data["avg_session_duration_diff"] = format_duration(
-                                float(main_data["avg_session_duration"].split(":")[0]) * 60 + float(main_data["avg_session_duration"].split(":")[1]) -
-                                (float(comp_data["avg_session_duration"].split(":")[0]) * 60 + float(comp_data["avg_session_duration"].split(":")[1]))
-                            )
+                    comp_data = comparison_dict.get(main_data["page_path"], None)
+                    if comp_data:
+                        main_data["total_users_diff"] = main_data["total_users"] - comp_data["total_users"]
+                        main_data["bounce_rate_diff"] = main_data["bounce_rate"] - comp_data["bounce_rate"]
+                        main_data["sessions_diff"] = main_data["sessions"] - comp_data["sessions"]
+
+                        # Calculate avg_session_duration_diff in seconds
+                        try:
+                            main_seconds = int(main_data["avg_session_duration"].split(":")[0]) * 60 + int(main_data["avg_session_duration"].split(":")[1])
+                        except (IndexError, ValueError):
+                            main_seconds = 0
+
+                        try:
+                            comp_seconds = int(comp_data["avg_session_duration"].split(":")[0]) * 60 + int(comp_data["avg_session_duration"].split(":")[1])
+                        except (IndexError, ValueError):
+                            comp_seconds = 0
+
+                        diff_seconds = main_seconds - comp_seconds
+                        if diff_seconds < 0:
+                            diff_seconds = 0  # Prevent negative durations if needed
+                        main_data["avg_session_duration_diff"] = format_duration(diff_seconds)
+                    else:
+                        # If no comparison data exists for this page_path, set differences to zero
+                        main_data["total_users_diff"] = 0
+                        main_data["bounce_rate_diff"] = 0.0
+                        main_data["sessions_diff"] = 0
+                        main_data["avg_session_duration_diff"] = '0:00'
 
             return render(request, 'analytics/ga4_data.html', {
                 'report_data': report_data,
