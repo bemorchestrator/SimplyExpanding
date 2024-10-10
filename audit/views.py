@@ -583,7 +583,7 @@ def process_csv_file(file):
         # Decode and split the CSV file for processing
         decoded_file = file.read().decode('utf-8-sig').splitlines()  # Handles BOM (\ufeff) if present
         logging.debug(f"CSV File Content: {decoded_file[:5]}")  # Log the first few lines for sanity check
-        
+
         if not decoded_file:
             logging.error("The CSV file is empty.")
             return []
@@ -593,130 +593,272 @@ def process_csv_file(file):
         if headers is None:
             logging.error("No headers found in the CSV file.")
             return []
-        
-        logging.debug(f"CSV Headers: {headers}")  # Log headers for debugging
-        
-        audit_data = []
 
-        # Determine the type of CSV (Screaming Frog, Search Console, or Google Analytics)
+        logging.debug(f"CSV Headers: {headers}")  # Log headers for debugging
+
+        # Determine the type of CSV (Screaming Frog, Search Console, Google Analytics, or Keyword Research)
         csv_type = identify_csv_type(headers)
         logging.info(f"Detected CSV type: {csv_type}")
 
         # Dynamically map headers to relevant fields based on CSV type
         column_mapping = {}
 
+        # Normalize headers and create a mapping
+        normalized_headers = [header.strip().lower() for header in headers]
+        header_to_index = {header.strip().lower(): index for index, header in enumerate(headers)}
+
         if csv_type == 'screaming_frog':
             # Screaming Frog column mappings (dynamically locate columns by header name)
             column_mapping = {
-                'url': headers.index('Address') if 'Address' in headers else None,
-                'type': headers.index('Content Type') if 'Content Type' in headers else None,
-                'current_title': headers.index('Title 1') if 'Title 1' in headers else None,
-                'meta': headers.index('Meta Description 1') if 'Meta Description 1' in headers else None,
-                'h1': headers.index('H1-1') if 'H1-1' in headers else None,
-                'word_count': headers.index('Word Count') if 'Word Count' in headers else None,
-                'canonical_link': headers.index('Canonical Link Element 1') if 'Canonical Link Element 1' in headers else None,
-                'status_code': headers.index('Status Code') if 'Status Code' in headers else None,
-                'index_status': headers.index('Indexability') if 'Indexability' in headers else None,
-                'inlinks': headers.index('Inlinks') if 'Inlinks' in headers else None,
-                'outlinks': headers.index('Outlinks') if 'Outlinks' in headers else None,
-                'crawl_depth': headers.index('Crawl Depth') if 'Crawl Depth' in headers else None
+                'url': header_to_index.get('address'),
+                'type': header_to_index.get('content type'),
+                'current_title': header_to_index.get('title 1'),
+                'meta': header_to_index.get('meta description 1'),
+                'h1': header_to_index.get('h1-1'),
+                'word_count': header_to_index.get('word count'),
+                'canonical_link': header_to_index.get('canonical link element 1'),
+                'status_code': header_to_index.get('status code'),
+                'index_status': header_to_index.get('indexability'),
+                'inlinks': header_to_index.get('inlinks'),
+                'outlinks': header_to_index.get('outlinks'),
+                'crawl_depth': header_to_index.get('crawl depth')
             }
 
-        elif csv_type == 'search_console':
-            # Search Console column mappings (adjust as per your Search Console headers)
+            # Read all rows
+            rows = list(reader)
+
+            for row in rows:
+                logging.debug(f"Processing row: {row}")  # Log each row being processed
+
+                if not row:  # Skip empty rows
+                    logging.warning("Empty row encountered, skipping.")
+                    continue
+
+                try:
+                    # Extract Screaming Frog CSV data based on dynamic mapping
+                    url = row[column_mapping['url']] if column_mapping['url'] is not None else None
+                    page_path = get_page_path(url) if url else '/'
+
+                    uploaded_file = UploadedFile(
+                        url=url,
+                        page_path=page_path,
+                        type=row[column_mapping['type']] if column_mapping['type'] is not None else None,
+                        current_title=row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
+                        meta=row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
+                        h1=row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
+                        word_count=int(row[column_mapping['word_count']]) if column_mapping['word_count'] is not None and row[column_mapping['word_count']].isdigit() else 0,
+                        canonical_link=row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
+                        status_code=row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
+                        index_status=row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
+                        inlinks=int(row[column_mapping['inlinks']]) if column_mapping['inlinks'] is not None and row[column_mapping['inlinks']].isdigit() else 0,
+                        outlinks=int(row[column_mapping['outlinks']]) if column_mapping['outlinks'] is not None and row[column_mapping['outlinks']].isdigit() else 0,
+                        crawl_depth=int(row[column_mapping['crawl_depth']]) if column_mapping['crawl_depth'] is not None and row[column_mapping['crawl_depth']].isdigit() else 0
+                    )
+                    uploaded_file.save()
+                    logging.info(f"Saved UploadedFile for URL: {url}")
+
+                except IndexError as e:
+                    logging.error(f"IndexError while processing row: {row} - {e}")
+                except ValueError as e:
+                    logging.error(f"ValueError while converting data: {row} - {e}")
+                except Exception as e:
+                    logging.error(f"Unexpected error while processing row: {row} - {e}")
+
+            # After processing Screaming Frog CSV, update the 'in_sitemap' status
+            update_in_sitemap_status()  # Call the function to update 'in_sitemap' field
+
+        elif csv_type == 'keyword_research':
+            # Keyword Research CSV column mappings
             column_mapping = {
-                'url': headers.index('Top pages') if 'Top pages' in headers else None,
-                'impressions': headers.index('Impressions') if 'Impressions' in headers else None,
-                'ctr': headers.index('CTR') if 'CTR' in headers else None
+                'url': header_to_index.get('url'),
+                'keyword': header_to_index.get('keyword'),
+                'search_vol': header_to_index.get('search vol.'),
+                'position': header_to_index.get('position')
             }
+
+            # Check if all required columns are present
+            required_columns = ['url', 'keyword', 'search_vol', 'position']
+            missing_columns = [col for col in required_columns if column_mapping[col] is None]
+            if missing_columns:
+                logging.error(f"Missing required columns in CSV: {missing_columns}")
+                return []
+
+            # Dictionary to store data for each URL
+            url_data = {}
+
+            # Read all rows
+            rows = list(reader)  # Need to read all rows for keyword_research
+
+            for row in rows:
+                logging.debug(f"Processing row: {row}")  # Log each row being processed
+
+                if not row:  # Skip empty rows
+                    logging.warning("Empty row encountered, skipping.")
+                    continue
+
+                try:
+                    # Extract data for each URL and associated keyword
+                    url = row[column_mapping['url']].strip() if column_mapping['url'] is not None else None
+                    keyword = row[column_mapping['keyword']].strip() if column_mapping['keyword'] is not None else None
+                    search_vol_str = row[column_mapping['search_vol']].replace(',', '').strip() if column_mapping['search_vol'] is not None else '0'
+                    position_str = row[column_mapping['position']].strip() if column_mapping['position'] is not None else '0'
+
+                    search_vol = int(search_vol_str) if search_vol_str.isdigit() else 0
+                    position = int(position_str) if position_str.isdigit() else float('inf')  # Use infinity if position is not a number
+
+                    if url:
+                        if url not in url_data:
+                            url_data[url] = {
+                                'main_kw': keyword,
+                                'kw_volume': search_vol,
+                                'kw_ranking': position,
+                                'best_kw': keyword,
+                                'best_kw_volume': search_vol,
+                                'best_kw_ranking': position
+                            }
+                        else:
+                            # Update the main keyword if the current keyword has a higher search volume
+                            if search_vol > url_data[url]['kw_volume']:
+                                url_data[url]['main_kw'] = keyword
+                                url_data[url]['kw_volume'] = search_vol
+                                url_data[url]['kw_ranking'] = position
+
+                            # Update the best keyword if the current keyword has a better ranking (lower position value)
+                            if position < url_data[url]['best_kw_ranking']:
+                                url_data[url]['best_kw'] = keyword
+                                url_data[url]['best_kw_volume'] = search_vol
+                                url_data[url]['best_kw_ranking'] = position
+
+                except IndexError as e:
+                    logging.error(f"IndexError while processing row: {row} - {e}")
+                except ValueError as e:
+                    logging.error(f"ValueError while converting data: {row} - {e}")
+
+            # Now update the Django table with the processed data
+            for url, data in url_data.items():
+                try:
+                    # Look for the corresponding entry in the Django table by URL
+                    uploaded_file = UploadedFile.objects.filter(url=url).first()
+                    if uploaded_file:
+                        # Update the relevant fields in the Django table
+                        uploaded_file.main_kw = data['main_kw']
+                        uploaded_file.kw_volume = data['kw_volume']
+                        uploaded_file.kw_ranking = data['kw_ranking']
+                        uploaded_file.best_kw = data['best_kw']
+                        uploaded_file.best_kw_volume = data['best_kw_volume']
+                        uploaded_file.best_kw_ranking = data['best_kw_ranking']
+                        uploaded_file.save()
+                        logging.info(f"Updated data for URL: {url}")
+                    else:
+                        logging.warning(f"No match found for URL: {url}")
+
+                except Exception as e:
+                    logging.error(f"Error updating data for URL {url}: {e}")
+
+        elif csv_type == 'search_console':
+            # Search Console column mappings
+            column_mapping = {
+                'url': header_to_index.get('top pages'),
+                'impressions': header_to_index.get('impressions'),
+                'ctr': header_to_index.get('ctr')
+            }
+
+            # Read all rows
+            rows = list(reader)
+
+            for row in rows:
+                logging.debug(f"Processing row: {row}")  # Log each row being processed
+
+                if not row:  # Skip empty rows
+                    logging.warning("Empty row encountered, skipping.")
+                    continue
+
+                try:
+                    # Extract Search Console CSV data based on dynamic mapping
+                    url = row[column_mapping['url']] if column_mapping['url'] is not None else None
+                    page_path = get_page_path(url) if url else '/'
+
+                    impressions_str = row[column_mapping['impressions']].replace(',', '') if column_mapping['impressions'] is not None else '0'
+                    ctr_str = row[column_mapping['ctr']].replace('%', '') if column_mapping['ctr'] is not None else '0'
+
+                    impressions = int(impressions_str) if impressions_str.isdigit() else 0
+                    serp_ctr = float(ctr_str) if ctr_str else 0.0
+
+                    # Match the page_path with the page_path column in the UploadedFile model
+                    uploaded_file = UploadedFile.objects.filter(page_path=page_path).first()
+                    if uploaded_file:
+                        # Update the relevant fields
+                        uploaded_file.impressions = impressions
+                        uploaded_file.serp_ctr = serp_ctr
+                        uploaded_file.save()
+                        logging.info(f"Updated data for page_path: {page_path}")
+                    else:
+                        logging.warning(f"No match found for page_path: {page_path}")
+
+                except IndexError as e:
+                    logging.error(f"IndexError while processing row: {row} - {e}")
+                except ValueError as e:
+                    logging.error(f"ValueError while converting data: {row} - {e}")
+                except Exception as e:
+                    logging.error(f"Unexpected error while processing row: {row} - {e}")
 
         elif csv_type == 'google_analytics':
             # Google Analytics column mappings
             column_mapping = {
-                'page_path': headers.index('Page path and screen class') if 'Page path and screen class' in headers else None,
-                'sessions': headers.index('Sessions') if 'Sessions' in headers else None,
-                'bounce_rate': headers.index('Bounce rate') if 'Bounce rate' in headers else None,
-                'avg_session_duration': headers.index('Average session duration') if 'Average session duration' in headers else None,
+                'page_path': header_to_index.get('page path and screen class'),
+                'sessions': header_to_index.get('sessions'),
+                'bounce_rate': header_to_index.get('bounce rate'),
+                'avg_session_duration': header_to_index.get('average session duration'),
             }
 
-        for row in reader:
-            logging.debug(f"Processing row: {row}")  # Log each row being processed
-            
-            if not row:  # Skip empty rows
-                logging.warning("Empty row encountered, skipping.")
-                continue
+            # Read all rows
+            rows = list(reader)
 
-            try:
-                if csv_type == 'screaming_frog':
-                    # Extract Screaming Frog CSV data based on dynamic mapping
-                    url = row[column_mapping['url']] if column_mapping['url'] is not None else None
-                    page_path = get_page_path(url) if url else '/'
-                    
-                    audit_data.append({
-                        'url': url,
-                        'type': row[column_mapping['type']] if column_mapping['type'] is not None else None,
-                        'current_title': row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
-                        'meta': row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
-                        'h1': row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
-                        'word_count': int(row[column_mapping['word_count']]) if row[column_mapping['word_count']].isdigit() else 0,
-                        'canonical_link': row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
-                        'status_code': row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
-                        'index_status': row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
-                        'inlinks': int(row[column_mapping['inlinks']]) if row[column_mapping['inlinks']].isdigit() else 0,
-                        'outlinks': int(row[column_mapping['outlinks']]) if row[column_mapping['outlinks']].isdigit() else 0,
-                        'crawl_depth': int(row[column_mapping['crawl_depth']]) if row[column_mapping['crawl_depth']].isdigit() else 0,
-                        'page_path': page_path  # Include the extracted page path
-                    })
+            for row in rows:
+                logging.debug(f"Processing row: {row}")  # Log each row being processed
 
-                elif csv_type == 'search_console':
-                    # Extract Search Console CSV data based on dynamic mapping
-                    url = row[column_mapping['url']] if column_mapping['url'] is not None else None
-                    page_path = get_page_path(url) if url else '/'
-                    
-                    audit_data.append({
-                        'url': url,
-                        'impressions': int(row[column_mapping['impressions']]) if row[column_mapping['impressions']].isdigit() else 0,
-                        'serp_ctr': float(row[column_mapping['ctr']].replace('%', '')) if row[column_mapping['ctr']] else 0.0,
-                        'page_path': page_path  # Include the extracted page path
-                    })
+                if not row:  # Skip empty rows
+                    logging.warning("Empty row encountered, skipping.")
+                    continue
 
-                elif csv_type == 'google_analytics':
-                    # Extract Google Analytics CSV data based on dynamic mapping
+                try:
                     page_path = row[column_mapping['page_path']] if column_mapping['page_path'] is not None else None
-                    sessions = int(row[column_mapping['sessions']]) if column_mapping['sessions'] is not None and row[column_mapping['sessions']].isdigit() else 0
-                    bounce_rate = float(row[column_mapping['bounce_rate']].replace('%', '')) if row[column_mapping['bounce_rate']] else 0.0
+                    sessions_str = row[column_mapping['sessions']].replace(',', '') if column_mapping['sessions'] is not None else '0'
+                    bounce_rate_str = row[column_mapping['bounce_rate']].replace('%', '') if column_mapping['bounce_rate'] is not None else '0'
                     avg_session_duration = row[column_mapping['avg_session_duration']] if column_mapping['avg_session_duration'] is not None else None
 
+                    sessions = int(sessions_str) if sessions_str.isdigit() else 0
+                    bounce_rate = float(bounce_rate_str) if bounce_rate_str else 0.0
+
                     # Match the page_path with the page_path column in the UploadedFile model
-                    try:
-                        uploaded_file = UploadedFile.objects.filter(page_path=page_path).first()
-                        if uploaded_file:
-                            # Update the relevant fields
-                            uploaded_file.sessions = sessions
-                            uploaded_file.bounce_rate = bounce_rate
-                            uploaded_file.avg_time_on_page = avg_session_duration
-                            uploaded_file.save()
+                    uploaded_file = UploadedFile.objects.filter(page_path=page_path).first()
+                    if uploaded_file:
+                        # Update the relevant fields
+                        uploaded_file.sessions = sessions
+                        uploaded_file.bounce_rate = bounce_rate
+                        uploaded_file.avg_time_on_page = avg_session_duration
+                        uploaded_file.save()
+                        logging.info(f"Updated data for page_path: {page_path}")
+                    else:
+                        logging.warning(f"No match found for page_path: {page_path}")
 
-                            logging.info(f"Updated data for page_path: {page_path}")
-                        else:
-                            logging.warning(f"No match found for page_path: {page_path}")
+                except IndexError as e:
+                    logging.error(f"IndexError while processing row: {row} - {e}")
+                except ValueError as e:
+                    logging.error(f"ValueError while converting data: {row} - {e}")
+                except Exception as e:
+                    logging.error(f"Unexpected error while processing row: {row} - {e}")
 
-                    except Exception as e:
-                        logging.error(f"Error updating data for page_path {page_path}: {e}")
+        else:
+            logging.error(f"Unknown CSV type: {csv_type}")
+            return []
 
-            except IndexError as e:
-                logging.error(f"IndexError while processing row: {row} - {e}")
-            except ValueError as e:
-                logging.error(f"ValueError while converting data: {row} - {e}")
-
-        logging.info(f"CSV processing complete. Total rows processed: {len(audit_data)}")
-        return audit_data
+        logging.info("CSV processing complete.")
+        return []
 
     except Exception as e:
         logging.error(f"Error while processing CSV file: {e}")
         return []
-
-
 
 
 

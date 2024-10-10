@@ -140,11 +140,34 @@ class UploadedFileTable(tables.Table):
 
     # Keyword Performance Columns
     main_kw = tables.Column(verbose_name='Main KW', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_main_kw(self, value, record):
+        return value if value else '-'
+
     kw_volume = tables.Column(verbose_name='Volume', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_kw_volume(self, value, record):
+        return value if value else '-'
+
     kw_ranking = tables.Column(verbose_name='Ranking', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_kw_ranking(self, value, record):
+        return value if value else '-'
+
     best_kw = tables.Column(verbose_name='Best KW', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_best_kw(self, value, record):
+        return value if value else '-'
+
     best_kw_volume = tables.Column(verbose_name='Best KW Volume', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_best_kw_volume(self, value, record):
+        return value if value else '-'
+
     best_kw_ranking = tables.Column(verbose_name='Best KW Ranking', attrs={"td": {"style": "white-space: nowrap;"}})
+
+    def render_best_kw_ranking(self, value, record):
+        return value if value else '-'
 
     # Page Performance Columns
     impressions = tables.Column(verbose_name='Impressions', attrs={"td": {"style": "white-space: nowrap;"}})
