@@ -2,83 +2,135 @@
 {% load render_table from django_tables2 %}
 
 {% block content %}
-<div class="mt-10 px-8 h-screen flex flex-col">
-    <div class="bg-gray-800 rounded px-8 py-6 flex-1 flex flex-col">
+    <!-- Bootstrap Icons CSS (Only for Icons) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
-        <!-- Header Section -->
-        <div class="flex justify-between items-center mb-5">
-            <h2 class="text-xl font-semibold text-white">Website Audit Dashboard</h2>
+    <div class="mt-10 px-8 h-screen flex flex-col">
+        <div class="bg-gray-800 rounded px-8 py-6 flex-1 flex flex-col">
 
-            <!-- Action Buttons -->
-            <div class="flex items-center space-x-2">
-                <!-- Upload Button -->
-                <button id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded">
-                    <i class="bi bi-upload"></i>
-                </button>
+            <!-- Header Section -->
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-xl font-semibold text-white">Website Audit Dashboard</h2>
 
-                <!-- Fetch Google Search Console Data -->
-                <form action="{% url 'fetch_search_console_data' %}" method="POST">
-                    {% csrf_token %}
-                    <button type="submit" class="bg-yellow-500 text-white py-2 px-4 rounded">
-                        <i class="bi bi-google"></i> <!-- Google Icon -->
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-2">
+                    <!-- Upload Button -->
+                    <button id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">
+                        <i class="bi bi-upload text-lg"></i>
                     </button>
-                </form>
 
-                <!-- Crawl Sitemap -->
-                <form action="/audit/crawl-sitemaps/" method="POST">
-                    {% csrf_token %}
-                    <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded">
-                        <i class="bi bi-bug"></i>
+                    <!-- Fetch Google Search Console Data -->
+                    <form action="{% url 'fetch_search_console_data' %}" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition">
+                            <i class="bi bi-google text-lg"></i> <!-- Google Icon -->
+                        </button>
+                    </form>
+
+                    <!-- Crawl Sitemap -->
+                    <form action="/audit/crawl-sitemaps/" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
+                            <i class="bi bi-bug text-lg"></i>
+                        </button>
+                    </form>
+
+                    <!-- Save Button (Triggers the Modal) -->
+                    <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
+                        <i class="bi bi-cloud-upload text-lg"></i> <!-- Save Icon -->
                     </button>
-                </form>
 
-                <!-- Delete Button -->
-                <button id="delete-all-btn" class="bg-red-500 text-white py-2 px-4 rounded">
-                    <i class="bi bi-trash"></i>
-                </button>
+                    <!-- Delete Button -->
+                    <button id="delete-all-btn" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition"
+                    {% if dashboard %}
+                        data-dashboard-id="{{ dashboard.id }}"
+                    {% endif %}>
+                    <i class="bi bi-trash text-lg"></i>
+                    </button>
+
+
+                </div>
+            </div>
+
+            <!-- Table Rendering using django-tables2 -->
+            <div class="table-container overflow-y-auto flex-1">
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    {% render_table table %}  <!-- Render the table using Django Tables2 -->
+                </form>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination mt-4 text-center">
+                <span class="step-links">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">&laquo; First</a>
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">Previous</a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <span class="current-page px-3 py-2 bg-blue-500 text-white rounded">{{ num }}</span>
+                        {% else %}
+                            <a href="?page={{ num }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">Next</a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">Last &raquo;</a>
+                    {% endif %}
+                </span>
             </div>
         </div>
+    </div>
 
-        <!-- Table Rendering using django-tables2 -->
-        <div class="table-container overflow-y-auto flex-1">
-            <form method="POST" action="">
-                {% csrf_token %}
-                {% render_table table %}  <!-- Render the table using Django Tables2 -->
-            </form>
-        </div>
-
-        <!-- Pagination Controls -->
-        <div class="pagination mt-4 text-center">
-            <span class="step-links">
-                {% if page_obj.has_previous %}
-                    <a href="?page=1" class="px-3 py-2 bg-gray-700 text-white rounded">&laquo; First</a>
-                    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded">Previous</a>
-                {% endif %}
-
-                <!-- Display page numbers -->
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                        <span class="current-page px-3 py-2 bg-blue-500 text-white rounded">{{ num }}</span>
-                    {% else %}
-                        <a href="?page={{ num }}" class="px-3 py-2 bg-gray-700 text-white rounded">{{ num }}</a>
-                    {% endif %}
-                {% endfor %}
-
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded">Next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 bg-gray-700 text-white rounded">Last &raquo;</a>
-                {% endif %}
-            </span>
+    <!-- Save Dashboard Modal (Tailwind CSS - Dark Mode) -->
+    <div id="saveDashboardModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-gray-800 rounded-lg w-full max-w-md mx-4 shadow-lg">
+            <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                <h5 class="text-lg font-semibold text-white" id="saveDashboardModalLabel">Save Dashboard</h5>
+                <button id="closeSaveModal" class="text-gray-300 hover:text-white focus:outline-none">
+                    <!-- Close Icon (SVG) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4">
+                <form method="POST" action="{% url 'save_audit_dashboard' %}">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label for="dashboardName" class="block text-gray-300 mb-2">Dashboard Name</label>
+                        <input type="text" name="name" id="dashboardName" class="w-full px-3 py-2 border border-gray-700 rounded bg-gray-700 text-white focus:outline-none focus:ring focus:border-blue-500" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="dashboardDescription" class="block text-gray-300 mb-2">Description (optional)</label>
+                        <textarea name="description" id="dashboardDescription" class="w-full px-3 py-2 border border-gray-700 rounded bg-gray-700 text-white focus:outline-none focus:ring focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex items-center mb-4">
+                        <input class="mr-2 leading-tight text-blue-500" type="checkbox" name="overwrite_existing" id="overwriteExisting">
+                        <label class="text-gray-300" for="overwriteExisting">
+                            Overwrite existing dashboard
+                        </label>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">Save Dashboard</button>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- SweetAlert2 script -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <!-- SweetAlert2 Script -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+
+
+<!-- Tailwind-Compatible Modal Script -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Delete All Button Functionality
         const deleteBtn = document.getElementById('delete-all-btn');
+        const dashboardId = deleteBtn ? deleteBtn.getAttribute('data-dashboard-id') : null;
+
         if (deleteBtn) {
             deleteBtn.addEventListener('click', function(event) {
                 event.preventDefault();
@@ -96,9 +148,15 @@
                     if (result.isConfirmed) {
                         console.log("User confirmed deletion.");
                         const csrftoken = getCookie('csrftoken');
-                        
+
+                        // Determine the correct URL for deletion
+                        let url = "{% url 'delete_uploaded_files' %}";
+                        if (dashboardId) {
+                            url = "{% url 'delete_uploaded_files_with_id' 0 %}".replace('/0/', `/${dashboardId}/`);
+                        }
+
                         // Make an AJAX request to delete data
-                        fetch("{% url 'delete_uploaded_files' %}", {
+                        fetch(url, {
                             method: 'POST',
                             headers: {
                                 'X-CSRFToken': csrftoken,
@@ -117,7 +175,7 @@
                             if (data.success) {
                                 Swal.fire(
                                     'Deleted!',
-                                    'All data has been deleted.',
+                                    data.deleted_count > 0 ? `Deleted ${data.deleted_count} record(s).` : 'No records were deleted.',
                                     'success'
                                 ).then(() => {
                                     window.location.reload();
@@ -131,6 +189,7 @@
                             }
                         })
                         .catch(error => {
+                            console.error('Error:', error);
                             Swal.fire(
                                 'Error!',
                                 'There was an issue deleting the data.',
@@ -150,6 +209,37 @@
             });
         }
 
+        // Modal Functionality
+        const openModalBtn = document.getElementById('openSaveModal');
+        const closeModalBtn = document.getElementById('closeSaveModal');
+        const modal = document.getElementById('saveDashboardModal');
+
+        if (openModalBtn && modal) {
+            openModalBtn.addEventListener('click', function() {
+                modal.classList.remove('hidden');
+            });
+        }
+
+        if (closeModalBtn && modal) {
+            closeModalBtn.addEventListener('click', function() {
+                modal.classList.add('hidden');
+            });
+        }
+
+        // Close modal when clicking outside the modal content
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        // Optional: Close modal with Esc key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                modal.classList.add('hidden');
+            }
+        });
+
         // Cookie function to get CSRF token
         function getCookie(name) {
             let cookieValue = null;
@@ -167,5 +257,4 @@
         }
     });
 </script>
-
 {% endblock %}

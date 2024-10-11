@@ -23,8 +23,8 @@ from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_protect
 
 from .filters import UploadedFileFilter 
-from .forms import FileUploadForm, SitemapForm, UploadedFileForm
-from .models import UploadedFile, SitemapURL, Sitemap
+from .forms import AuditDashboardForm, FileUploadForm, SitemapForm, UploadedFileForm
+from .models import AuditDashboard, UploadedFile, SitemapURL, Sitemap
 from .google_drive_utils import upload_file_to_drive
 from google_auth import get_credentials
 from googleapiclient.discovery import build
@@ -41,6 +41,8 @@ from django.contrib import messages
 import logging
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google_auth import get_credentials
+from django.views.decorators.http import require_POST
+from django.db.models import ProtectedError
 
 
 logger = logging.getLogger(__name__)
@@ -998,20 +1000,29 @@ def audit_dashboard(request):
 
 
 @csrf_protect
-def delete_uploaded_files(request):
-    if request.method == 'POST':
-        logging.info("Received POST request to delete uploaded files.")
-        try:
-            # Delete all UploadedFile records
-            count, _ = UploadedFile.objects.all().delete()
-            logging.info(f"Deleted {count} UploadedFile records.")
-            return JsonResponse({'success': True})
-        except Exception as e:
-            logging.error(f"Error deleting UploadedFile records: {e}")
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+@require_POST
+def delete_uploaded_files(request, dashboard_id=None):
+    if dashboard_id:
+        logging.info(f"Attempting to delete UploadedFiles for dashboard ID: {dashboard_id}")
     else:
-        logging.warning("Received non-POST request to delete_uploaded_files.")
-        return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+        logging.info("Attempting to delete all unsaved UploadedFiles.")
+
+    try:
+        if dashboard_id:
+            dashboard = get_object_or_404(AuditDashboard, id=dashboard_id)
+            files_to_delete = UploadedFile.objects.filter(dashboard=dashboard)
+            count, _ = files_to_delete.delete()
+            logging.info(f"Deleted {count} UploadedFile records from dashboard '{dashboard.name}'.")
+        else:
+            files_to_delete = UploadedFile.objects.filter(dashboard__isnull=True)
+            count, _ = files_to_delete.delete()
+            logging.info(f"Deleted {count} unsaved UploadedFile records from the main dashboard.")
+
+        return JsonResponse({'success': True, 'deleted_count': count})
+    except Exception as e:
+        logging.error(f"Error deleting UploadedFile records: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 
 
 
@@ -1067,4 +1078,150 @@ def update_category(request):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
 
+
+def save_audit_dashboard(request):
+    if request.method == 'POST':
+        form = AuditDashboardForm(request.POST)
+        
+        if form.is_valid():
+            dashboard_name = form.cleaned_data['name']
+            overwrite = form.cleaned_data.get('overwrite_existing', False)
+            
+            # Check if a dashboard with the same name already exists
+            existing_dashboard = AuditDashboard.objects.filter(name=dashboard_name).first()
+            
+            if existing_dashboard:
+                if overwrite:
+                    # If overwriting is allowed, delete the old dashboard
+                    existing_dashboard.delete()
+                    messages.success(request, f"Dashboard '{dashboard_name}' was overwritten.")
+                else:
+                    # If not overwriting, ask the user to provide a new name
+                    messages.error(request, f"A dashboard with the name '{dashboard_name}' already exists. Please choose a new name or select 'Overwrite existing dashboard'.")
+                    return redirect('audit_dashboard')  # Redirect back to main dashboard for the name input
+
+            # Create the new dashboard
+            dashboard = AuditDashboard.objects.create(
+                user=request.user,  # Associate the dashboard with the current user
+                name=dashboard_name,
+                description=form.cleaned_data.get('description', '')
+            )
+
+            # Clone the current data to the new dashboard
+            uploaded_files = UploadedFile.objects.filter(dashboard__isnull=True)  # Current unsaved data
+            for file in uploaded_files:
+                # Clone each file for the new dashboard
+                UploadedFile.objects.create(
+                    category=file.category,
+                    file_name=file.file_name,
+                    drive_file_id=file.drive_file_id,
+                    drive_file_link=file.drive_file_link,
+                    url=file.url,
+                    type=file.type,
+                    current_title=file.current_title,
+                    meta=file.meta,
+                    h1=file.h1,
+                    word_count=file.word_count,
+                    canonical_link=file.canonical_link,
+                    status_code=file.status_code,
+                    index_status=file.index_status,
+                    last_modified=file.last_modified,
+                    inlinks=file.inlinks,
+                    outlinks=file.outlinks,
+                    page_path=file.page_path,
+                    crawl_depth=file.crawl_depth,
+                    action_choice=file.action_choice,
+                    main_kw=file.main_kw,
+                    kw_volume=file.kw_volume,
+                    kw_ranking=file.kw_ranking,
+                    best_kw=file.best_kw,
+                    best_kw_volume=file.best_kw_volume,
+                    best_kw_ranking=file.best_kw_ranking,
+                    impressions=file.impressions,
+                    sessions=file.sessions,
+                    percent_change_sessions=file.percent_change_sessions,
+                    bounce_rate=file.bounce_rate,
+                    avg_time_on_page=file.avg_time_on_page,
+                    losing_traffic=file.losing_traffic,
+                    links=file.links,
+                    serp_ctr=file.serp_ctr,
+                    in_sitemap=file.in_sitemap,
+                    dashboard=dashboard  # Associate cloned data with the new dashboard
+                )
+
+            # Redirect to the list of saved dashboards
+            return redirect('list_dashboard')
+
+    # If not POST, redirect back to the dashboard page
+    return redirect('audit_dashboard')
+    
+
+def list_dashboard(request):
+    dashboards = AuditDashboard.objects.all()  # Fetch all saved dashboards
+    return render(request, 'audit/list_dashboards.html', {'dashboards': dashboards})
+
+def load_dashboard(request, id):
+    # Get the specific dashboard
+    dashboard = get_object_or_404(AuditDashboard, id=id)
+    
+    # Filter uploaded files related only to this specific dashboard
+    uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
+    
+    # Pagination Logic
+    page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
+    rows_per_page = 15  # Set the same number of rows per page as in audit_dashboard
+
+    paginator = Paginator(uploaded_files, rows_per_page)  # Paginate the data with 15 rows per page
+
+    try:
+        page_obj = paginator.get_page(page_number)  # Get the current page of data
+    except PageNotAnInteger:
+        page_obj = paginator.get_page(1)  # If page is not an integer, return the first page
+    except EmptyPage:
+        page_obj = paginator.get_page(paginator.num_pages)  # If page is out of range, return the last page
+
+    # Initialize the table with paginated data
+    table = UploadedFileTable(page_obj)
+    RequestConfig(request, paginate=False).configure(table)  # Set paginate=False to prevent Django Tables2 from auto-paginating
+
+    # Render the template with the paginated table
+    return render(request, 'audit/audit_dashboard.html', {
+        'dashboard': dashboard,
+        'table': table,  # Pass the paginated table to the template
+        'page_obj': page_obj,  # Pass the page object for pagination controls
+    })
+
+
+
+
+@csrf_protect
+def delete_dashboard(request, id):
+    # Fetch the dashboard with the given ID
+    dashboard = get_object_or_404(AuditDashboard, id=id)
+
+    if request.method == 'POST':
+        try:
+            # Delete the dashboard
+            dashboard_name = dashboard.name
+            dashboard.delete()
+
+            # Log and add a success message for the user
+            logging.info(f"Dashboard '{dashboard_name}' deleted successfully.")
+            messages.success(request, f"Dashboard '{dashboard_name}' has been deleted successfully.")
+        
+        except ProtectedError as e:
+            # Handle protected relationships
+            logging.error(f"ProtectedError: Cannot delete dashboard '{dashboard.name}' due to related records.")
+            messages.error(request, f"Cannot delete dashboard '{dashboard.name}' because it has related records.")
+        
+        except Exception as e:
+            # Log the error and add an error message for the user
+            logging.error(f"Error deleting dashboard '{dashboard.name}': {e}")
+            messages.error(request, f"Failed to delete dashboard '{dashboard.name}': {e}")
+        
+        # Redirect to the list of saved dashboards
+        return redirect('list_dashboard')
+    
+    # Handle GET requests or other methods by redirecting to the dashboard list
+    return redirect('list_dashboard')
 

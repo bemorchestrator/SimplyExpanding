@@ -1,6 +1,15 @@
-# models.py
-
 from django.db import models
+from django.contrib.auth.models import User  # If you want to track which user created the dashboard
+
+class AuditDashboard(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Optional, to track who created the dashboard
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)  # Optional description of the dashboard
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
 
 class UploadedFile(models.Model):
     ACTION_CHOICES = [
@@ -14,7 +23,6 @@ class UploadedFile(models.Model):
         ('content_audit', 'Content Audit'),
         ('merge', 'Merge'),
     ]
-
 
     CATEGORY_CHOICES = [
         ('Product Page', 'Product Page'),
@@ -30,31 +38,31 @@ class UploadedFile(models.Model):
     ]
     
     category = models.CharField(max_length=255, choices=CATEGORY_CHOICES, blank=True, null=True)
-    file_name = models.CharField(max_length=2000, default='unknown_file')  # Increased from 255
-    drive_file_id = models.CharField(max_length=2000, default='unknown_id')  # Increased from 255
-    drive_file_link = models.URLField(max_length=2000, null=True, blank=True)  # Increased from 500
+    file_name = models.CharField(max_length=2000, default='unknown_file')
+    drive_file_id = models.CharField(max_length=2000, default='unknown_id')
+    drive_file_link = models.URLField(max_length=2000, null=True, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    url = models.URLField(default='http://example.com', max_length=2000, unique=False)  # Ensure enough space for long URLs and enforce uniqueness
-    type = models.CharField(max_length=2000, default='text/html; charset=UTF-8')  # Increased from 100
-    current_title = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
-    meta = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
-    h1 = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
+    url = models.URLField(default='http://example.com', max_length=2000, unique=False)
+    type = models.CharField(max_length=2000, default='text/html; charset=UTF-8')
+    current_title = models.CharField(max_length=2000, null=True, blank=True)
+    meta = models.CharField(max_length=2000, null=True, blank=True)
+    h1 = models.CharField(max_length=2000, null=True, blank=True)
     word_count = models.IntegerField(null=True, blank=True)
-    canonical_link = models.URLField(null=True, blank=True, max_length=2000)  # Increased from the default length
-    status_code = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 10
-    index_status = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 50
-    last_modified = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 100
+    canonical_link = models.URLField(null=True, blank=True, max_length=2000)
+    status_code = models.CharField(max_length=2000, null=True, blank=True)
+    index_status = models.CharField(max_length=2000, null=True, blank=True)
+    last_modified = models.CharField(max_length=2000, null=True, blank=True)
     inlinks = models.IntegerField(null=True, blank=True)
     outlinks = models.IntegerField(null=True, blank=True)
-    page_path = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
+    page_path = models.CharField(max_length=2000, null=True, blank=True)
     crawl_depth = models.IntegerField(null=True, blank=True)
-    action_choice = models.CharField(max_length=2000, choices=ACTION_CHOICES, default='leave')  # Increased from 50
+    action_choice = models.CharField(max_length=2000, choices=ACTION_CHOICES, default='leave')
 
     # New fields based on your tables.py
-    main_kw = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
+    main_kw = models.CharField(max_length=2000, null=True, blank=True)
     kw_volume = models.IntegerField(null=True, blank=True)
     kw_ranking = models.IntegerField(null=True, blank=True)
-    best_kw = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 255
+    best_kw = models.CharField(max_length=2000, null=True, blank=True)
     best_kw_volume = models.IntegerField(null=True, blank=True)
     best_kw_ranking = models.IntegerField(null=True, blank=True)
     impressions = models.IntegerField(null=True, blank=True)
@@ -70,22 +78,26 @@ class UploadedFile(models.Model):
     links = models.IntegerField(null=True, blank=True)
     serp_ctr = models.FloatField(null=True, blank=True)
     in_sitemap = models.BooleanField(default=False)
-   
+
+    # New ForeignKey linking this file to an AuditDashboard instance
+    dashboard = models.ForeignKey(AuditDashboard, on_delete=models.CASCADE, related_name="audit_data", null=True, blank=True)
 
     def __str__(self):
         return self.file_name
 
+
 class Sitemap(models.Model):
-    url = models.URLField(default='http://example.com/sitemap.xml', max_length=2000)  # Increased from default length
+    url = models.URLField(default='http://example.com/sitemap.xml', max_length=2000)
     added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.url
 
+
 class SitemapURL(models.Model):
     sitemap = models.ForeignKey(Sitemap, on_delete=models.CASCADE, related_name='urls')
-    url = models.URLField(max_length=2000, default='http://example.com/page')  # Increased from 2000
-    status = models.CharField(max_length=2000, null=True, blank=True)  # Increased from 50
+    url = models.URLField(max_length=2000, default='http://example.com/page')
+    status = models.CharField(max_length=2000, null=True, blank=True)
     added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

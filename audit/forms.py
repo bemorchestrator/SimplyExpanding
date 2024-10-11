@@ -1,5 +1,5 @@
 from django import forms
-from .models import UploadedFile
+from .models import AuditDashboard, UploadedFile
 
 
 class UploadedFileForm(forms.ModelForm):
@@ -21,3 +21,9 @@ class SitemapForm(forms.Form):
         label='Sitemap URLs',
         help_text='Enter one or more sitemap URLs, each on a new line.'
     )
+
+class AuditDashboardForm(forms.ModelForm):
+    overwrite_existing = forms.BooleanField(required=False, label="Overwrite existing dashboard")
+    class Meta:
+        model = AuditDashboard
+        fields = ['name', 'description']
