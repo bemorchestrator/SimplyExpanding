@@ -136,7 +136,7 @@
                                 {{ row.total_users_diff }}
                             </span>
                         {% else %}
-                            N/A
+                            0
                         {% endif %}
                     </td>
                     <td class="px-4 py-2">
@@ -145,7 +145,7 @@
                                 {{ row.sessions_diff }}
                             </span>
                         {% else %}
-                            N/A
+                            0
                         {% endif %}
                     </td>
                     <td class="px-4 py-2">
@@ -154,7 +154,7 @@
                                 {{ row.bounce_rate_diff|floatformat:2 }}
                             </span>
                         {% else %}
-                            N/A
+                            0
                         {% endif %}
                     </td>
                     <td class="px-4 py-2">
@@ -163,9 +163,10 @@
                                 {{ row.avg_session_duration_diff }}
                             </span>
                         {% else %}
-                            N/A
+                            0
                         {% endif %}
                     </td>
+                    
                     {% endif %}
                 </tr>
                 {% endfor %}

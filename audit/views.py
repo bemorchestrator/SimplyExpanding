@@ -47,21 +47,17 @@ from django.db.models import ProtectedError
 
 logger = logging.getLogger(__name__)
 
-# Configure logging: log DEBUG and above messages to a file, and only ERROR messages to the console
-file_handler = logging.FileHandler('audit_log.log', mode='a', encoding='utf-8')  # Specify utf-8 encoding
-
+# Configure logging: log only to the console and show only ERROR messages
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.ERROR)  # Only show top-level errors in the terminal
 
 # Set the logging format
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
 console_handler.setFormatter(formatter)
 
 # Get the root logger and configure it
 root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)  # Log all levels to the file
-root_logger.addHandler(file_handler)
+root_logger.setLevel(logging.DEBUG)  # You can adjust this level if needed
 root_logger.addHandler(console_handler)
 
 
@@ -438,13 +434,14 @@ def crawl_sitemaps(request):
                             new_sitemaps.append(sitemap)
                             crawled_results[sitemap_url] = normalized_urls
                             logging.info(f"Sitemap URLs stored for: {sitemap_url}")
+
+                            # Step 1: Update the 'In Sitemap' status for crawled URLs
+                            update_in_sitemap_status()
+
                         else:
                             failed_sitemaps.append(sitemap_url)
                             crawled_results[sitemap_url] = 'Failed to crawl the sitemap.'
                             logging.warning(f"Failed to crawl sitemap: {sitemap_url}")
-
-                # Step 1: Update the 'In Sitemap' status after the sitemap crawl
-                update_in_sitemap_status()  # This checks and updates the 'in_sitemap' field
 
                 # Fetch the updated sitemaps list
                 sitemaps = Sitemap.objects.all().order_by('-added_at')
@@ -513,6 +510,7 @@ def crawl_sitemaps(request):
 
 
 
+
 @csrf_protect
 def delete_sitemap(request, sitemap_id):
     if request.method == 'POST':
@@ -546,21 +544,35 @@ def delete_sitemap(request, sitemap_id):
 
 
 def update_in_sitemap_status():
-    """Updates the 'in_sitemap' field in UploadedFile by checking
-    if the 'url' exists in the crawled SitemapURL entries."""
-    
-    # Fetch all uploaded file entries and sitemap URLs
-    audit_files = UploadedFile.objects.all()
+    """
+    Updates the 'in_sitemap' field in UploadedFile by checking
+    if the 'url' exists in the crawled SitemapURL entries.
+    """
+    # Fetch all sitemap URLs and normalize them for comparison
     sitemap_urls = SitemapURL.objects.values_list('url', flat=True)
-
-    # Normalize sitemap URLs for comparison
     normalized_sitemap_urls = set(normalize_url(url) for url in sitemap_urls)
 
-    # Compare audit URLs with normalized sitemap URLs
+    # Fetch all audit files that are not yet flagged as in_sitemap (to minimize unnecessary updates)
+    audit_files = UploadedFile.objects.all()
+
+    # Batch update to avoid too many save() calls in a loop
+    bulk_updates = []
+
     for audit_file in audit_files:
         normalized_audit_url = normalize_url(audit_file.url)
-        audit_file.in_sitemap = normalized_audit_url in normalized_sitemap_urls
-        audit_file.save()
+
+        # If the audit file URL is in the normalized sitemap URLs, mark it as 'in_sitemap'
+        new_in_sitemap_status = normalized_audit_url in normalized_sitemap_urls
+
+        # Only update if there is a change to avoid unnecessary saves
+        if audit_file.in_sitemap != new_in_sitemap_status:
+            audit_file.in_sitemap = new_in_sitemap_status
+            bulk_updates.append(audit_file)
+
+    # Use Django's bulk_update to update all files in a single query
+    if bulk_updates:
+        UploadedFile.objects.bulk_update(bulk_updates, ['in_sitemap'])
+
 
 
 
@@ -961,9 +973,13 @@ def process_csv_file(file):
 
 @csrf_protect
 def audit_dashboard(request):
-    audit_data_qs = UploadedFile.objects.all().order_by('id')  # Retrieve and order audit data by 'id'
+    # Ensure that the 'in_sitemap' status is always updated when the dashboard is loaded
+    update_in_sitemap_status()  # This will update the in_sitemap field for all uploaded files
 
-    # Pagination Logic
+    # Only retrieve unsaved files (those with no associated dashboard)
+    audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True).order_by('id')
+
+    # Pagination logic
     page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
     rows_per_page = 15  # Set the number of rows per page
 
@@ -986,6 +1002,8 @@ def audit_dashboard(request):
         if form.is_valid():
             form.save()  # Save the updated form fields
             return JsonResponse({'success': True, 'message': 'Form submitted successfully.'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid form data.'}, status=400)
 
     else:
         form = UploadedFileForm()
@@ -996,6 +1014,7 @@ def audit_dashboard(request):
         'form': form,  # Pass the form to the template
         'page_obj': page_obj,  # Pass the page object for pagination controls in the template
     })
+
 
 
 
@@ -1079,6 +1098,7 @@ def update_category(request):
 
 
 
+@csrf_protect
 def save_audit_dashboard(request):
     if request.method == 'POST':
         form = AuditDashboardForm(request.POST)
@@ -1098,7 +1118,7 @@ def save_audit_dashboard(request):
                 else:
                     # If not overwriting, ask the user to provide a new name
                     messages.error(request, f"A dashboard with the name '{dashboard_name}' already exists. Please choose a new name or select 'Overwrite existing dashboard'.")
-                    return redirect('audit_dashboard')  # Redirect back to main dashboard for the name input
+                    return redirect('audit_dashboard')  # Redirect back to the audit dashboard for name input
 
             # Create the new dashboard
             dashboard = AuditDashboard.objects.create(
@@ -1107,53 +1127,20 @@ def save_audit_dashboard(request):
                 description=form.cleaned_data.get('description', '')
             )
 
-            # Clone the current data to the new dashboard
+            # Move current unsaved data (those without a dashboard) to the new dashboard
             uploaded_files = UploadedFile.objects.filter(dashboard__isnull=True)  # Current unsaved data
-            for file in uploaded_files:
-                # Clone each file for the new dashboard
-                UploadedFile.objects.create(
-                    category=file.category,
-                    file_name=file.file_name,
-                    drive_file_id=file.drive_file_id,
-                    drive_file_link=file.drive_file_link,
-                    url=file.url,
-                    type=file.type,
-                    current_title=file.current_title,
-                    meta=file.meta,
-                    h1=file.h1,
-                    word_count=file.word_count,
-                    canonical_link=file.canonical_link,
-                    status_code=file.status_code,
-                    index_status=file.index_status,
-                    last_modified=file.last_modified,
-                    inlinks=file.inlinks,
-                    outlinks=file.outlinks,
-                    page_path=file.page_path,
-                    crawl_depth=file.crawl_depth,
-                    action_choice=file.action_choice,
-                    main_kw=file.main_kw,
-                    kw_volume=file.kw_volume,
-                    kw_ranking=file.kw_ranking,
-                    best_kw=file.best_kw,
-                    best_kw_volume=file.best_kw_volume,
-                    best_kw_ranking=file.best_kw_ranking,
-                    impressions=file.impressions,
-                    sessions=file.sessions,
-                    percent_change_sessions=file.percent_change_sessions,
-                    bounce_rate=file.bounce_rate,
-                    avg_time_on_page=file.avg_time_on_page,
-                    losing_traffic=file.losing_traffic,
-                    links=file.links,
-                    serp_ctr=file.serp_ctr,
-                    in_sitemap=file.in_sitemap,
-                    dashboard=dashboard  # Associate cloned data with the new dashboard
-                )
+            uploaded_files.update(dashboard=dashboard)  # Associate the files with the new dashboard
+
+            # Notify the user that the audit has been saved and the workspace cleared
+            messages.success(request, "Audit saved successfully. The working area has been cleared.")
 
             # Redirect to the list of saved dashboards
             return redirect('list_dashboard')
 
     # If not POST, redirect back to the dashboard page
     return redirect('audit_dashboard')
+
+
     
 
 def list_dashboard(request):
