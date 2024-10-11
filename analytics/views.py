@@ -2,7 +2,7 @@ import json
 import logging
 import datetime
 from django.shortcuts import redirect, render
-from django.http import HttpResponseBadRequest, HttpResponseServerError
+from django.http import HttpResponseBadRequest, HttpResponseServerError, JsonResponse
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.admin_v1alpha import AnalyticsAdminServiceClient
 from google_auth import get_credentials, authenticate_user, oauth2_callback  # Import from google_auth
@@ -35,45 +35,13 @@ def authenticate_ga4(request):
 def google_oauth2_callback(request):
     return oauth2_callback(request, 'ga')
 
-
-
 def format_duration(duration):
     try:
-        minutes = int(duration) // 60
-        seconds = int(duration) % 60
-        return f'{minutes}:{seconds:02}'
-    except (ValueError, TypeError):
-        return 'N/A'
-
-
-# Fetch Google Analytics data view
-def get_date_range(preset):
-    today = datetime.date.today()
-    if preset == 'last_7_days':
-        return today - datetime.timedelta(days=7), today
-    elif preset == 'last_14_days':
-        return today - datetime.timedelta(days=14), today
-    elif preset == 'last_28_days':
-        return today - datetime.timedelta(days=28), today
-    elif preset == 'last_90_days':
-        return today - datetime.timedelta(days=90), today
-    elif preset == 'last_12_months':
-        return today - datetime.timedelta(days=365), today
-    else:
-        return None, None
-
-# Google Analytics authentication view
-def authenticate_ga4(request):
-    return authenticate_user(request, 'ga')
-
-# Callback view for OAuth2
-def google_oauth2_callback(request):
-    return oauth2_callback(request, 'ga')
-
-def format_duration(duration):
-    try:
-        minutes = int(duration) // 60
-        seconds = int(duration) % 60
+        duration = int(duration)
+        if duration < 0:
+            duration = 0
+        minutes = duration // 60
+        seconds = duration % 60
         return f'{minutes}:{seconds:02}'
     except (ValueError, TypeError):
         return '0:00'  # Changed from 'N/A' to '0:00'
@@ -86,24 +54,21 @@ def fetch_ga4_data(request):
             return redirect('authenticate_ga4')
 
         client = BetaAnalyticsDataClient(credentials=creds)
-        admin_client = AnalyticsAdminServiceClient(credentials=creds)
 
-        # Fetch all properties associated with the authenticated user
-        accounts = admin_client.list_account_summaries()
-        properties = [
-            {
-                'property_id': property_summary.property.split('/')[-1],
-                'display_name': property_summary.display_name
-            }
-            for account in accounts
-            for property_summary in account.property_summaries
-        ]
+        report_data = []
+        property_id = None
+        start_date = None
+        end_date = None
+        row_limit = 10
+        date_range = None
+        comparison_range = 'none'
+        compare = None
 
         if request.method == 'POST':
             property_id = request.POST.get('property_id')
             date_range = request.POST.get('date_range')
             row_limit = request.POST.get('row_limit', 10)
-            compare = request.POST.get('compare')
+            compare = request.POST.get('compare') == 'true'
             comparison_range = request.POST.get('comparison_range')
 
             # Handle custom date selection or preset date ranges
@@ -113,10 +78,16 @@ def fetch_ga4_data(request):
                 if not start_date or not end_date:
                     return HttpResponseBadRequest("Please provide valid start and end dates.")
             else:
-                start_date, end_date = get_date_range(date_range)
+                start_date_obj, end_date_obj = get_date_range(date_range)
+                start_date = start_date_obj.strftime('%Y-%m-%d')
+                end_date = end_date_obj.strftime('%Y-%m-%d')
 
             if not property_id or not start_date or not end_date or not row_limit:
                 return HttpResponseBadRequest("Please provide valid inputs.")
+
+            # Remove the 'properties/' prefix if it exists
+            if property_id.startswith("properties/"):
+                property_id = property_id.replace("properties/", "")
 
             # Construct the main request body
             request_body = {
@@ -159,16 +130,18 @@ def fetch_ga4_data(request):
             if compare and comparison_range != 'none':
                 # Get comparison date ranges based on the selected option
                 comparison_start_date, comparison_end_date = None, None
+                start_date_obj = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date_obj = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
                 if comparison_range == 'preceding_period':
-                    delta = end_date - start_date
-                    comparison_start_date = (start_date - delta).strftime('%Y-%m-%d')
-                    comparison_end_date = (end_date - delta).strftime('%Y-%m-%d')
+                    delta = end_date_obj - start_date_obj
+                    comparison_start_date = (start_date_obj - delta).strftime('%Y-%m-%d')
+                    comparison_end_date = (end_date_obj - delta).strftime('%Y-%m-%d')
                 elif comparison_range == 'preceding_period_match_day':
-                    comparison_start_date = (start_date - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-                    comparison_end_date = (end_date - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+                    comparison_start_date = (start_date_obj - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+                    comparison_end_date = (end_date_obj - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
                 elif comparison_range == 'same_period_last_year':
-                    comparison_start_date = (start_date - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
-                    comparison_end_date = (end_date - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
+                    comparison_start_date = (start_date_obj - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
+                    comparison_end_date = (end_date_obj - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
 
                 comparison_request_body = {
                     'property': f'properties/{property_id}',
@@ -211,42 +184,80 @@ def fetch_ga4_data(request):
 
                         # Calculate avg_session_duration_diff in seconds
                         try:
-                            main_seconds = int(main_data["avg_session_duration"].split(":")[0]) * 60 + int(main_data["avg_session_duration"].split(":")[1])
+                            main_minutes, main_seconds = map(int, main_data["avg_session_duration"].split(":"))
+                            main_total_seconds = main_minutes * 60 + main_seconds
                         except (IndexError, ValueError):
-                            main_seconds = 0
+                            main_total_seconds = 0
 
                         try:
-                            comp_seconds = int(comp_data["avg_session_duration"].split(":")[0]) * 60 + int(comp_data["avg_session_duration"].split(":")[1])
+                            comp_minutes, comp_seconds = map(int, comp_data["avg_session_duration"].split(":"))
+                            comp_total_seconds = comp_minutes * 60 + comp_seconds
                         except (IndexError, ValueError):
-                            comp_seconds = 0
+                            comp_total_seconds = 0
 
-                        diff_seconds = main_seconds - comp_seconds
-                        if diff_seconds < 0:
-                            diff_seconds = 0  # Prevent negative durations if needed
+                        diff_seconds = main_total_seconds - comp_total_seconds
                         main_data["avg_session_duration_diff"] = format_duration(diff_seconds)
                     else:
-                        # If no comparison data exists for this page_path, set differences to zero
-                        main_data["total_users_diff"] = 0
-                        main_data["bounce_rate_diff"] = 0.0
-                        main_data["sessions_diff"] = 0
-                        main_data["avg_session_duration_diff"] = '0:00'
+                        # If no comparison data exists for this page_path, set differences to None
+                        main_data["total_users_diff"] = None
+                        main_data["bounce_rate_diff"] = None
+                        main_data["sessions_diff"] = None
+                        main_data["avg_session_duration_diff"] = None
+
+            else:
+                # If not comparing, ensure difference fields are None
+                for main_data in report_data:
+                    main_data["total_users_diff"] = None
+                    main_data["bounce_rate_diff"] = None
+                    main_data["sessions_diff"] = None
+                    main_data["avg_session_duration_diff"] = None
 
             return render(request, 'analytics/ga4_data.html', {
                 'report_data': report_data,
-                'properties': properties,
                 'property_id': property_id,
                 'start_date': start_date,
                 'end_date': end_date,
                 'row_limit': row_limit,
                 'date_range': date_range,  # Pass the selected date range to the template
                 'comparison_range': comparison_range,  # Pass the selected comparison range to the template
+                'compare': compare,  # Pass compare flag to the template
             })
 
-        return render(request, 'analytics/ga4_data.html', {
-            'report_data': None,
-            'properties': properties,
-        })
+        else:
+            return render(request, 'analytics/ga4_data.html', {
+                'report_data': None,
+                'property_id': None,
+                'compare': None,
+                'comparison_range': 'none',
+            })
 
     except Exception as e:
         logger.error("Error in fetch_ga4_data view:", exc_info=True)
         return HttpResponseServerError(f"Error in fetch_ga4_data view: {str(e)}")
+
+def get_ga4_properties(request):
+    try:
+        # Authenticate and get credentials
+        creds = get_credentials(request, 'ga')
+        if not creds:
+            return redirect('authenticate_ga4')
+
+        # Create a client for Analytics Admin API
+        admin_client = AnalyticsAdminServiceClient(credentials=creds)
+
+        # Fetch the GA4 properties
+        properties = []
+        accounts = admin_client.list_account_summaries()
+        for account in accounts:
+            for property_summary in account.property_summaries:
+                properties.append({
+                    'property_id': property_summary.property,
+                    'display_name': property_summary.display_name
+                })
+
+        # Return the properties as JSON
+        return JsonResponse({'properties': properties})
+
+    except Exception as e:
+        logger.error(f"Error fetching GA4 properties: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)

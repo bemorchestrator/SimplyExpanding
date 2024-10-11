@@ -14,20 +14,20 @@
             <div class="flex-grow md:flex-1">
                 <label class="block text-gray-300 text-sm font-bold mb-2" for="property_id">Select GA4 Property</label>
                 <select name="property_id" id="property_id" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" required>
-                    {% if properties %}
-                        {% for property in properties %}
-                            <option value="{{ property.property_id }}" {% if property_id == property.property_id %}selected{% endif %}>{{ property.display_name }}</option>
-                        {% endfor %}
+                    <!-- Include the selected property as an option -->
+                    {% if property_id and property_display_name %}
+                        <option value="{{ property_id }}" selected>{{ property_display_name }}</option>
                     {% else %}
-                        <option value="">No GA4 properties found</option>
+                        <option value="" disabled selected>Select a Property</option>
                     {% endif %}
+                    <!-- Options will be populated via JavaScript when dropdown is focused -->
                 </select>
             </div>
 
             <!-- Date Range Preset Dropdown -->
             <div class="flex-grow md:flex-1">
                 <label class="block text-gray-300 text-sm font-bold mb-2" for="date_range">Date Range</label>
-                <select name="date_range" id="date_range" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" onchange="toggleCustomDateInput()">
+                <select name="date_range" id="date_range" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" onchange="toggleCustomDateInput()" required>
                     <option value="last_7_days" {% if date_range == "last_7_days" %}selected{% endif %}>Last 7 days</option>
                     <option value="last_14_days" {% if date_range == "last_14_days" %}selected{% endif %}>Last 14 days</option>
                     <option value="last_28_days" {% if date_range == "last_28_days" %}selected{% endif %}>Last 28 days</option>
@@ -68,7 +68,7 @@
 
             <!-- Submit Button -->
             <div>
-                <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline" type="submit">Fetch</button>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline" type="submit" name="compare" value="false">Fetch</button>
             </div>
 
             <!-- Comparison Button -->
@@ -111,7 +111,7 @@
                     <th class="px-4 py-2 text-left">Average Session Duration</th>
 
                     <!-- Only show delta columns if comparison is selected -->
-                    {% if comparison_range and comparison_range != 'none' %}
+                    {% if compare and comparison_range and comparison_range != 'none' %}
                     <th class="px-4 py-2 text-left">Total Users Δ</th>
                     <th class="px-4 py-2 text-left">Sessions Δ</th>
                     <th class="px-4 py-2 text-left">Bounce Rate Δ (%)</th>
@@ -129,7 +129,7 @@
                     <td class="px-4 py-2">{{ row.avg_session_duration }}</td>
 
                     <!-- Only show delta data if comparison is selected -->
-                    {% if comparison_range and comparison_range != 'none' %}
+                    {% if compare and comparison_range and comparison_range != 'none' %}
                     <td class="px-4 py-2">
                         {% if row.total_users_diff is not None %}
                             <span class="{% if row.total_users_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
@@ -150,7 +150,7 @@
                     </td>
                     <td class="px-4 py-2">
                         {% if row.bounce_rate_diff is not None %}
-                            <span class="{% if row.bounce_rate_diff >= 0 %}text-red-500{% else %}text-green-500{% endif %}">
+                            <span class="{% if row.bounce_rate_diff <= 0 %}text-green-500{% else %}text-red-500{% endif %}">
                                 {{ row.bounce_rate_diff|floatformat:2 }}
                             </span>
                         {% else %}
@@ -159,7 +159,7 @@
                     </td>
                     <td class="px-4 py-2">
                         {% if row.avg_session_duration_diff is not None %}
-                            <span class="{% if row.avg_session_duration_diff >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
+                            <span class="{% if row.avg_session_duration_diff >= '0:00' %}text-green-500{% else %}text-red-500{% endif %}">
                                 {{ row.avg_session_duration_diff }}
                             </span>
                         {% else %}
@@ -188,6 +188,47 @@
             customDateInput.style.display = 'none';
         }
     }
+
+    // JavaScript to fetch properties via AJAX when the dropdown gains focus
+    document.addEventListener('DOMContentLoaded', function() {
+        const propertySelect = document.getElementById('property_id');
+        let propertiesLoaded = false;
+
+        // Fetch properties only when the dropdown gains focus
+        propertySelect.addEventListener('focus', function() {
+            if (!propertiesLoaded) {
+                fetchProperties();
+                propertiesLoaded = true;
+            }
+        });
+
+        function fetchProperties() {
+            fetch("{% url 'get_ga4_properties' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.properties) {
+                    // Get the selected property ID
+                    const selectedPropertyId = "{{ property_id|default:''|escapejs }}";
+
+                    // Keep the existing options (selected property), and add new options
+                    data.properties.forEach(function(property) {
+                        // Skip adding the already selected property to avoid duplicates
+                        if (property.property_id !== selectedPropertyId) {
+                            const option = document.createElement('option');
+                            option.value = property.property_id;
+                            option.text = property.display_name;
+                            propertySelect.add(option);
+                        }
+                    });
+                } else {
+                    alert('Error fetching properties: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching properties:', error);
+            });
+        }
+    });
 
     // Export table data to CSV
     function exportToCSV() {
@@ -261,6 +302,8 @@
     }
 
     // Ensure the custom date input is displayed correctly on page load
-    document.addEventListener('DOMContentLoaded', toggleCustomDateInput);
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleCustomDateInput();
+    });
 </script>
 {% endblock %}
