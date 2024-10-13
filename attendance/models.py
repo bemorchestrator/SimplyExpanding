@@ -5,6 +5,7 @@ from datetime import timedelta, datetime, time
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
 import logging
+from django.utils.timezone import make_aware, now
 
 # Configure logging for the attendance app
 logger = logging.getLogger('attendance')
@@ -259,15 +260,24 @@ class Attendance(models.Model):
 
     def get_scheduled_start_time(self):
         """Retrieve the scheduled start time for the employee."""
-        # Check if employee has a specific scheduled_start_time
+        # Get today's date or the clock-in date if available
+        current_date = self.clock_in_time.date() if self.clock_in_time else now().date()
+
+        # Check if the employee has a specific scheduled start time
         if hasattr(self.employee, 'scheduled_start_time') and self.employee.scheduled_start_time:
-            return timezone.make_aware(datetime.combine(self.clock_in_time.date(), self.employee.scheduled_start_time))
-        # Else, get from GlobalSettings
-        global_settings = GlobalSettings.objects.first()
-        if global_settings:
-            return timezone.make_aware(datetime.combine(self.clock_in_time.date(), global_settings.scheduled_start_time))
-        # Default scheduled time if not set
-        return timezone.make_aware(datetime.combine(self.clock_in_time.date(), time(9, 0)))
+            scheduled_time = self.employee.scheduled_start_time
+        else:
+            # Retrieve the global scheduled start time from settings
+            global_settings = GlobalSettings.objects.first()
+            if global_settings and global_settings.scheduled_start_time:
+                scheduled_time = global_settings.scheduled_start_time
+            else:
+                # Default to 9:00 AM if no global or employee-specific time is set
+                scheduled_time = time(9, 0)
+
+        # Combine the date and time, ensuring the datetime is timezone-aware
+        scheduled_datetime = datetime.combine(current_date, scheduled_time)
+        return make_aware(scheduled_datetime)
 
     def apply_lateness_deduction(self, lateness):
         """
@@ -378,19 +388,44 @@ class Attendance(models.Model):
     def calculate_total_hours(self):
         """
         Calculate total hours worked excluding break durations.
+        If the employee clocked in earlier than the scheduled start time,
+        working hours start from the scheduled start time.
         """
         if self.clock_in_time and self.clock_out_time:
-            total_duration = self.total_time  # Calculate total working duration
-            logger.debug(f"Calculated total duration: {total_duration}")
-            if total_duration:
-                self.total_hours = (Decimal(total_duration.total_seconds()) / Decimal('3600')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                logger.debug(f"Total hours worked: {self.total_hours}")
-            else:
+            # Ensure clock-in and clock-out times are timezone-aware
+            actual_clock_in = timezone.localtime(self.clock_in_time)
+            actual_clock_out = timezone.localtime(self.clock_out_time)
+
+            # Get the scheduled start time
+            try:
+                scheduled_start = timezone.localtime(self.get_scheduled_start_time())
+            except Exception as e:
+                logger.error(f"Error getting scheduled start time: {e}")
                 self.total_hours = Decimal('0.00')
-                logger.debug("Total duration is 0. Total hours set to 0.00")
+                return
+
+            # Determine the effective start time (whichever is later)
+            start_time = max(scheduled_start, actual_clock_in)
+
+            # Calculate total working duration from start to clock-out
+            total_duration = actual_clock_out - start_time
+
+            # Subtract break durations if any
+            total_duration -= self.break_duration
+
+            # Ensure the total duration is not negative
+            if total_duration < timedelta(0):
+                total_duration = timedelta(0)
+
+            # Convert total duration to decimal hours
+            self.total_hours = Decimal(total_duration.total_seconds() / 3600).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+            logger.debug(f"Total hours worked: {self.total_hours}")
         else:
-            self.total_hours = None
-            logger.debug("Clock-in or clock-out time not set. Total hours set to None.")
+            # If either clock-in or clock-out time is missing, set total hours to 0
+            self.total_hours = Decimal('0.00')
+            logger.debug("Clock-in or clock-out time missing. Total hours set to 0.")
 
     def save(self, *args, **kwargs):
         """
