@@ -4,8 +4,8 @@
 <div class="container mx-auto p-4">
   <div class="flex space-x-8">
     <!-- Form Section -->
-    <div class="w-1/2 bg-white shadow-md rounded-lg p-6 overflow-auto" style="max-height: 90vh;">
-      <h2 class="text-2xl font-semibold mb-6">
+    <div class="w-1/2 bg-gray-800 shadow-md rounded-lg p-6 overflow-auto" style="max-height: 90vh;">
+      <h2 class="text-2xl font-semibold text-white mb-6">
         {% if is_edit %}
             Edit Invoice #{{ invoice.id }}
         {% else %}
@@ -15,7 +15,7 @@
       
       <!-- Display Form Errors -->
       {% if form.errors %}
-        <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div class="mb-6 bg-red-600 border border-red-800 text-white px-4 py-3 rounded">
           <strong>There were some errors with your submission:</strong>
           <ul class="mt-2 list-disc list-inside">
             {% for field in form %}
@@ -35,14 +35,14 @@
         
         <!-- Invoice Number -->
         <div class="mb-4">
-          <label for="{{ form.invoice_number.id_for_label }}" class="block text-sm font-medium text-gray-700">Invoice Number</label>
+          <label for="{{ form.invoice_number.id_for_label }}" class="block text-sm font-medium text-gray-300">Invoice Number</label>
           <input 
             type="text" 
             name="{{ form.invoice_number.html_name }}" 
             id="{{ form.invoice_number.id_for_label }}" 
             value="{{ form.invoice_number.value }}" 
             {% if form.invoice_number.field.required %}required{% endif %}
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {% if form.invoice_number.errors %}
             <p class="text-red-500 text-sm mt-1">{{ form.invoice_number.errors }}</p>
@@ -51,12 +51,12 @@
 
         <!-- Select Client -->
         <div class="mb-4">
-          <label for="{{ form.client.id_for_label }}" class="block text-sm font-medium text-gray-700">Select Client</label>
+          <label for="{{ form.client.id_for_label }}" class="block text-sm font-medium text-gray-300">Select Client</label>
           <select 
             name="{{ form.client.html_name }}" 
             id="{{ form.client.id_for_label }}" 
             {% if form.client.field.required %}required{% endif %}
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">-- Select Client --</option>
             {% for client in form.client.field.queryset %}
@@ -70,12 +70,12 @@
 
         <!-- Client Address -->
         <div class="mb-4">
-          <label for="{{ form.client_address.id_for_label }}" class="block text-sm font-medium text-gray-700">Client Address</label>
+          <label for="{{ form.client_address.id_for_label }}" class="block text-sm font-medium text-gray-300">Client Address</label>
           <textarea 
             name="{{ form.client_address.html_name }}" 
             id="{{ form.client_address.id_for_label }}" 
             rows="3"
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >{{ form.client_address.value }}</textarea>
           {% if form.client_address.errors %}
             <p class="text-red-500 text-sm mt-1">{{ form.client_address.errors }}</p>
@@ -84,14 +84,14 @@
 
         <!-- Invoice Date -->
         <div class="mb-4">
-          <label for="{{ form.invoice_date.id_for_label }}" class="block text-sm font-medium text-gray-700">Invoice Date</label>
+          <label for="{{ form.invoice_date.id_for_label }}" class="block text-sm font-medium text-gray-300">Invoice Date</label>
           <input 
             type="date" 
             name="{{ form.invoice_date.html_name }}" 
             id="{{ form.invoice_date.id_for_label }}" 
             value="{{ form.invoice_date.value }}" 
             {% if form.invoice_date.field.required %}required{% endif %}
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {% if form.invoice_date.errors %}
             <p class="text-red-500 text-sm mt-1">{{ form.invoice_date.errors }}</p>
@@ -100,14 +100,14 @@
 
         <!-- Due Date -->
         <div class="mb-4">
-          <label for="{{ form.due_date.id_for_label }}" class="block text-sm font-medium text-gray-700">Due Date</label>
+          <label for="{{ form.due_date.id_for_label }}" class="block text-sm font-medium text-gray-300">Due Date</label>
           <input 
             type="date" 
             name="{{ form.due_date.html_name }}" 
             id="{{ form.due_date.id_for_label }}" 
             value="{{ form.due_date.value }}" 
             {% if form.due_date.field.required %}required{% endif %}
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {% if form.due_date.errors %}
             <p class="text-red-500 text-sm mt-1">{{ form.due_date.errors }}</p>
@@ -116,11 +116,11 @@
 
         <!-- Status -->
         <div class="mb-4">
-          <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700">Status</label>
+          <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-300">Status</label>
           <select 
             name="{{ form.status.html_name }}" 
             id="{{ form.status.id_for_label }}" 
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {% for choice in form.status.field.choices %}
               <option value="{{ choice.0 }}" {% if form.status.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
@@ -133,11 +133,11 @@
 
         <!-- Currency -->
         <div class="mb-4">
-          <label for="{{ form.currency.id_for_label }}" class="block text-sm font-medium text-gray-700">Currency</label>
+          <label for="{{ form.currency.id_for_label }}" class="block text-sm font-medium text-gray-300">Currency</label>
           <select 
             name="{{ form.currency.html_name }}" 
             id="{{ form.currency.id_for_label }}" 
-            class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {% for choice in form.currency.field.choices %}
               <option value="{{ choice.0 }}" {% if form.currency.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
@@ -148,59 +148,57 @@
           {% endif %}
         </div>
 
-
         <!-- Invoice Items -->
-        <h3 class="text-xl font-semibold mb-4">Invoice Items</h3>
-        <div class="invoice-item mb-6 p-4 border border-gray-300 rounded-lg">
+        <h3 class="text-xl font-semibold text-white mb-4">Invoice Items</h3>
+        <div class="invoice-item mb-6 p-4 border border-gray-600 rounded-lg bg-gray-700">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Description</label>
+            <label class="block text-sm font-medium text-gray-300">Description</label>
             <input 
               type="text" 
               name="description" 
               id="id_description" 
-              class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
               placeholder="Item Description"
               value="{% if is_edit %}{{ invoice_item_data.description }}{% else %}{{ request.POST.description }}{% endif %}"
             >
           </div>
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Quantity</label>
+            <label class="block text-sm font-medium text-gray-300">Quantity</label>
             <input 
               type="number" 
               name="quantity" 
               id="id_quantity" 
               min="1" 
-              class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
               placeholder="Quantity"
               value="{% if is_edit %}{{ invoice_item_data.quantity }}{% else %}{{ request.POST.quantity }}{% endif %}"
             >
           </div>
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Rate</label>
+            <label class="block text-sm font-medium text-gray-300">Rate</label>
             <input 
               type="number" 
               name="rate" 
               id="id_rate" 
               min="0" 
               step="0.01" 
-              class="mt-1 block w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
               placeholder="Item Price"
               value="{% if is_edit %}{{ invoice_item_data.rate }}{% else %}{{ request.POST.rate }}{% endif %}"
             >
           </div>
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Amount</label>
+            <label class="block text-sm font-medium text-gray-300">Amount</label>
             <input 
               type="text" 
               name="amount" 
               id="id_amount" 
               readonly 
-              class="mt-1 block w-full border border-gray-300 p-2 rounded-md bg-gray-100" 
+              class="mt-1 block w-full border border-gray-600 p-2 rounded-md bg-gray-800 text-white" 
               value="{% if is_edit %}{{ invoice_item_data.amount }}{% else %}0.00{% endif %}"
             >
           </div>
         </div>
-
 
         <button 
           type="submit" 
@@ -216,44 +214,44 @@
     </div>
 
     <!-- Invoice Preview Section -->
-    <div class="w-1/2 bg-gray-100 shadow-md rounded-lg p-6 overflow-auto" style="max-height: 90vh;">
-      <h2 class="text-2xl font-semibold mb-6">Invoice Preview</h2>
-      <div class="bg-white shadow-sm rounded-lg p-6">
+    <div class="w-1/2 bg-gray-800 shadow-md rounded-lg p-6 overflow-auto" style="max-height: 90vh;">
+      <h2 class="text-2xl font-semibold text-white mb-6">Invoice Preview</h2>
+      <div class="bg-gray-700 shadow-sm rounded-lg p-6">
         <div class="mb-6">
-          <h3 class="text-xl font-bold">Invoice #<span id="preview_invoice_number">N/A</span></h3>
+          <h3 class="text-xl font-bold text-white">Invoice #<span id="preview_invoice_number">N/A</span></h3>
         </div>
         <div class="mb-6">
-          <h4 class="text-xl font-bold">Client: <span id="preview_client">N/A</span></h4>
-          <p id="preview_client_address" class="mt-2 text-gray-700">N/A</p>
+          <h4 class="text-xl font-bold text-white">Client: <span id="preview_client">N/A</span></h4>
+          <p id="preview_client_address" class="mt-2 text-gray-300">N/A</p>
         </div>
         <div class="mb-6">
-          <p><strong>Invoice Date:</strong> <span id="preview_invoice_date">N/A</span></p>
-          <p><strong>Due Date:</strong> <span id="preview_due_date">N/A</span></p>
+          <p class="text-gray-300"><strong>Invoice Date:</strong> <span id="preview_invoice_date">N/A</span></p>
+          <p class="text-gray-300"><strong>Due Date:</strong> <span id="preview_due_date">N/A</span></p>
         </div>
         <div class="mb-6">
           <table class="w-full table-auto border-collapse">
             <thead>
               <tr>
-                <th class="px-4 py-2 border">Description</th>
-                <th class="px-4 py-2 border">Quantity</th>
-                <th class="px-4 py-2 border">Rate</th>
-                <th class="px-4 py-2 border">Amount</th>
+                <th class="px-4 py-2 border text-gray-300">Description</th>
+                <th class="px-4 py-2 border text-gray-300">Quantity</th>
+                <th class="px-4 py-2 border text-gray-300">Rate</th>
+                <th class="px-4 py-2 border text-gray-300">Amount</th>
               </tr>
             </thead>
             <tbody id="preview_items">
               <tr>
-                <td id="preview_item_description" class="px-4 py-2 border">N/A</td>
-                <td id="preview_item_quantity" class="px-4 py-2 border">N/A</td>
-                <td id="preview_item_rate" class="px-4 py-2 border">N/A</td>
-                <td id="preview_item_amount" class="px-4 py-2 border">0.00</td>
+                <td id="preview_item_description" class="px-4 py-2 border text-gray-300">N/A</td>
+                <td id="preview_item_quantity" class="px-4 py-2 border text-gray-300">N/A</td>
+                <td id="preview_item_rate" class="px-4 py-2 border text-gray-300">N/A</td>
+                <td id="preview_item_amount" class="px-4 py-2 border text-gray-300">0.00</td>
               </tr>
             </tbody>
           </table>
         </div>
-        <hr class="mb-6">
+        <hr class="mb-6 border-gray-600">
         <div>
-          <h4 class="text-xl font-bold">Simply Expanding Digital Marketing Services</h4>
-          <p class="mt-2 text-gray-700">#23 Ground Floor Jomabo Building Kadulasan Street, Dadiangas East,<br> General Santos City 9500 Philippines</p>
+          <h4 class="text-xl font-bold text-white">Simply Expanding Digital Marketing Services</h4>
+          <p class="mt-2 text-gray-300">#23 Ground Floor Jomabo Building Kadulasan Street, Dadiangas East,<br> General Santos City 9500 Philippines</p>
         </div>
       </div>
     </div>

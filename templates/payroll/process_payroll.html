@@ -1,28 +1,28 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-100 p-10 flex flex-row justify-center space-x-8">
+<div class="min-h-screen bg-gray-900 p-10 flex flex-row justify-center space-x-8">
     <!-- Left Card: Process Payroll Form -->
-    <div class="bg-white shadow-md rounded-lg p-8 w-full md:w-1/2 lg:w-1/3">
-        <h2 class="text-xl font-semibold text-gray-800 mb-6">Process Payroll for {{ employee.first_name }} {{ employee.last_name }}</h2>
+    <div class=" rounded-lg p-8 w-full md:w-1/2 lg:w-1/3">
+        <h2 class="text-xl font-semibold text-white mb-6">Process Payroll for {{ employee.first_name }} {{ employee.last_name }}</h2>
 
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
 
             <!-- Pay Period Info -->
-            <p>Pay Period: {{ pay_period_start }} to {{ pay_period_end }}</p>
-            <p>Total Income: Php {{ total_income|floatformat:2 }}</p>
+            <p class="text-gray-300">Pay Period: {{ pay_period_start }} to {{ pay_period_end }}</p>
+            <p class="text-gray-300">Total Income: Php {{ total_income|floatformat:2 }}</p>
 
             <!-- Referral Code Input -->
             <div class="mb-4">
-                <label for="referral_code" class="block text-gray-700">Referral Code</label>
-                <input type="text" id="referral_code" name="referral_code" class="bg-white border border-gray-300 rounded-md py-2 px-3 w-full" placeholder="Enter referral code">
+                <label for="referral_code" class="block text-gray-400">Referral Code</label>
+                <input type="text" id="referral_code" name="referral_code" class="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 w-full text-white" placeholder="Enter referral code">
             </div>
 
             <!-- Payment Platform Selection -->
             <div class="mb-4">
-                <label for="payment_platform" class="block text-gray-700">Payment Platform</label>
-                <select id="payment_platform" name="payment_platform" class="bg-white border border-gray-300 rounded-md py-2 px-3 w-full">
+                <label for="payment_platform" class="block text-gray-400">Payment Platform</label>
+                <select id="payment_platform" name="payment_platform" class="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 w-full text-white">
                     <option value="">Select a payment platform</option>
                     <option value="gcash">GCash</option>
                     <option value="bank_transfer">Bank Transfer</option>
@@ -33,14 +33,14 @@
 
             <!-- Other Payment Platform Input (shown only if "Other" is selected) -->
             <div id="other_payment_platform_container" class="mb-4" style="display: none;">
-                <label for="other_payment_platform" class="block text-gray-700">Other Payment Platform</label>
-                <input type="text" id="other_payment_platform" name="other_payment_platform" class="bg-white border border-gray-300 rounded-md py-2 px-3 w-full" placeholder="Specify other payment platform">
+                <label for="other_payment_platform" class="block text-gray-400">Other Payment Platform</label>
+                <input type="text" id="other_payment_platform" name="other_payment_platform" class="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 w-full text-white" placeholder="Specify other payment platform">
             </div>
 
             <!-- File Upload for Payment Proof -->
             <div class="mb-4">
-                <label for="payment_proof" class="block text-gray-700">Upload Payment Proof</label>
-                <input type="file" id="payment_proof" name="payment_proof" accept="image/*" class="bg-white border border-gray-300 rounded-md py-2 px-3 w-full">
+                <label for="payment_proof" class="block text-gray-400">Upload Payment Proof</label>
+                <input type="file" id="payment_proof" name="payment_proof" accept="image/*" class="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 w-full text-white">
             </div>
 
             <!-- Submit Button -->
@@ -51,21 +51,21 @@
     </div>
 
     <!-- Right Card: Display Proof of Payment -->
-    <div class="bg-white shadow-md rounded-lg p-8 w-full md:w-1/2 lg:w-1/3 h-128 overflow-auto">
-        <h2 class="text-xl font-semibold text-gray-800 mb-6">Proof of Payment</h2>
+    <div class="bg-gray-800 shadow-md rounded-lg p-8 w-full md:w-1/2 lg:w-1/3 h-128 overflow-auto">
+        <h2 class="text-xl font-semibold text-white mb-6">Proof of Payment</h2>
 
         <!-- Existing Payment Proof from the server -->
         <div id="existing_payment_proof" class="mb-4">
             {% if payroll_record.payment_proof %}
                 <img src="{{ payroll_record.payment_proof.url }}" alt="Payment Proof" class="w-full h-auto rounded-lg shadow-md">
             {% else %}
-                <p class="text-gray-600">No proof of payment uploaded yet.</p>
+                <p class="text-gray-400">No proof of payment uploaded yet.</p>
             {% endif %}
         </div>
 
         <!-- New Payment Proof Preview -->
         <div id="new_payment_proof_preview" class="mb-4" style="display: none;">
-            <h3 class="text-lg font-medium text-gray-700 mb-2">New Payment Proof Preview:</h3>
+            <h3 class="text-lg font-medium text-gray-400 mb-2">New Payment Proof Preview:</h3>
             <img id="payment_proof_image" src="#" alt="New Payment Proof" class="w-full h-auto rounded-lg shadow-md">
         </div>
     </div>
