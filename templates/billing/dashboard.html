@@ -33,7 +33,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for entry in income_per_day %}
+                        {% for entry in page_obj_day %}
                         <tr>
                             <td class="py-3 px-4 text-gray-300">{{ entry.date|date:"Y-m-d" }}</td>
                             <td class="py-3 px-4 text-gray-300">Php{{ entry.daily_income|floatformat:2 }}</td>
@@ -46,6 +46,20 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination Controls for Income per Day -->
+            {% if paginator_day.num_pages > 1 %}
+                <div class="mt-4">
+                    <span class="text-gray-400">Page {{ page_obj_day.number }} of {{ paginator_day.num_pages }}</span>
+                    <div class="inline-flex mt-2">
+                        {% if page_obj_day.has_previous %}
+                            <a href="?page_day={{ page_obj_day.previous_page_number }}" class="px-3 py-2 bg-blue-500 text-white rounded-md">Previous</a>
+                        {% endif %}
+                        {% if page_obj_day.has_next %}
+                            <a href="?page_day={{ page_obj_day.next_page_number }}" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded-md">Next</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
 
         <!-- Income per Week -->
@@ -60,7 +74,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for entry in income_per_week %}
+                        {% for entry in page_obj_week %}
                         <tr>
                             <td class="py-3 px-4 text-gray-300">{{ entry.week|date:"Y-m-d" }}</td>
                             <td class="py-3 px-4 text-gray-300">Php{{ entry.weekly_income|floatformat:2 }}</td>
@@ -73,6 +87,20 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination Controls for Income per Week -->
+            {% if paginator_week.num_pages > 1 %}
+                <div class="mt-4">
+                    <span class="text-gray-400">Page {{ page_obj_week.number }} of {{ paginator_week.num_pages }}</span>
+                    <div class="inline-flex mt-2">
+                        {% if page_obj_week.has_previous %}
+                            <a href="?page_week={{ page_obj_week.previous_page_number }}" class="px-3 py-2 bg-blue-500 text-white rounded-md">Previous</a>
+                        {% endif %}
+                        {% if page_obj_week.has_next %}
+                            <a href="?page_week={{ page_obj_week.next_page_number }}" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded-md">Next</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -88,7 +116,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for entry in income_per_month %}
+                    {% for entry in page_obj_month %}
                     <tr>
                         <td class="py-3 px-4 text-gray-300">{{ entry.month|date:"Y-m" }}</td>
                         <td class="py-3 px-4 text-gray-300">Php{{ entry.monthly_income|floatformat:2 }}</td>
@@ -101,6 +129,20 @@
                 </tbody>
             </table>
         </div>
+        <!-- Pagination Controls for Income per Month -->
+        {% if paginator_month.num_pages > 1 %}
+            <div class="mt-4">
+                <span class="text-gray-400">Page {{ page_obj_month.number }} of {{ paginator_month.num_pages }}</span>
+                <div class="inline-flex mt-2">
+                    {% if page_obj_month.has_previous %}
+                        <a href="?page_month={{ page_obj_month.previous_page_number }}" class="px-3 py-2 bg-blue-500 text-white rounded-md">Previous</a>
+                    {% endif %}
+                    {% if page_obj_month.has_next %}
+                        <a href="?page_month={{ page_obj_month.next_page_number }}" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded-md">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
     </div>
 
 </div>
@@ -137,33 +179,9 @@
         }
 
         updateIncome();
-        setInterval(updateIncome, 1000);
+        setInterval(updateIncome, 60000);  // Update every minute
     });
 </script>
 {% endif %}
 
-{% endblock %}
-
-<!-- Include Flatpickr CSS and JS -->
-{% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        flatpickr("#date_range", {
-            mode: "range",
-            dateFormat: "Y-m-d",
-            defaultDate: [
-                "{{ selected_start_date|default:'' }}",
-                "{{ selected_end_date|default:'' }}"
-            ],
-            locale: {
-                rangeSeparator: " to "
-            }
-        });
-    });
-</script>
 {% endblock %}

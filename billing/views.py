@@ -9,24 +9,18 @@ from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 from django.forms import inlineformset_factory
 from django.template.loader import get_template, render_to_string
 from weasyprint import HTML
-from django.core.mail import send_mail, EmailMessage
-from django.utils.html import strip_tags
+from django.core.mail import EmailMessage
 from django.conf import settings
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 from decimal import Decimal
 import json
 from datetime import timedelta
+from django.core.paginator import Paginator  # Import Paginator
 
 from employees.models import Employee
 from attendance.models import Attendance
 from holidays.models import Holiday
 from .models import BillingRecord, Invoice, InvoiceItem
 from .forms import InvoiceForm
-
-
-
-
 
 @login_required
 def billing_dashboard(request):
@@ -83,14 +77,16 @@ def billing_dashboard(request):
         now = timezone.now()
         elapsed_duration = now - clock_in_time
 
-        # Calculate total hours worked so far, considering allocated break
+        # Calculate total hours worked so far
         total_seconds = elapsed_duration.total_seconds()
         total_hours = Decimal(total_seconds / 3600).quantize(Decimal('0.0001'))
 
-        # Deduct allocated break time (1 hour) from total_hours
-        adjusted_hours = total_hours - Decimal('1.0')
-        if adjusted_hours < 0:
+        # Adjust total_hours if on break
+        if is_on_break:
+            # Assuming breaks are not paid, set current session income to 0
             adjusted_hours = Decimal('0.0')
+        else:
+            adjusted_hours = total_hours
 
         current_session_income = (per_day_rate / standard_hours_per_day) * adjusted_hours
         current_session_income = current_session_income.quantize(Decimal('0.01'))
@@ -103,21 +99,36 @@ def billing_dashboard(request):
         date=TruncDate('clock_in_time')
     ).values('date').annotate(
         daily_income=Sum('income')
-    ).order_by('date')
+    ).order_by('-date')
 
     # Income per week
     income_per_week = recent_records.annotate(
         week=TruncWeek('clock_in_time')
     ).values('week').annotate(
         weekly_income=Sum('income')
-    ).order_by('week')
+    ).order_by('-week')
 
     # Income per month
     income_per_month = attendance_records.annotate(
         month=TruncMonth('clock_in_time')
     ).values('month').annotate(
         monthly_income=Sum('income')
-    ).order_by('month')
+    ).order_by('-month')
+
+    # Pagination for income per day
+    paginator_day = Paginator(income_per_day, 10)
+    page_number_day = request.GET.get('page_day')
+    page_obj_day = paginator_day.get_page(page_number_day)
+
+    # Pagination for income per week
+    paginator_week = Paginator(income_per_week, 10)
+    page_number_week = request.GET.get('page_week')
+    page_obj_week = paginator_week.get_page(page_number_week)
+
+    # Pagination for income per month
+    paginator_month = Paginator(income_per_month, 10)
+    page_number_month = request.GET.get('page_month')
+    page_obj_month = paginator_month.get_page(page_number_month)
 
     # Prepare JavaScript data
     js_data = json.dumps({
@@ -131,9 +142,12 @@ def billing_dashboard(request):
         'attendance_records': attendance_records,
         'total_income': total_income,
         'current_session_income': current_session_income,
-        'income_per_day': income_per_day,
-        'income_per_week': income_per_week,
-        'income_per_month': income_per_month,
+        'page_obj_day': page_obj_day,
+        'paginator_day': paginator_day,
+        'page_obj_week': page_obj_week,
+        'paginator_week': paginator_week,
+        'page_obj_month': page_obj_month,
+        'paginator_month': paginator_month,
         'is_clocked_in': is_clocked_in,
         'clock_in_time': clock_in_time,
         'is_on_break': is_on_break,
@@ -144,9 +158,9 @@ def billing_dashboard(request):
 
     return render(request, 'billing/dashboard.html', context)
 
+# ... rest of your views remain unchanged ...
 
-
-
+@login_required
 def invoice_list(request):
     invoices = Invoice.objects.all().order_by('-invoice_date')
     context = {
@@ -154,7 +168,7 @@ def invoice_list(request):
     }
     return render(request, 'billing/invoice_list.html', context)
 
-
+@login_required
 def create_invoice(request):
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
@@ -206,15 +220,10 @@ def create_invoice(request):
         'invoice_item_data': {}  # Empty dict for consistency
     })
 
-
-
-
 # Create an inline formset for handling Invoice Items
 InvoiceItemFormSet = inlineformset_factory(Invoice, InvoiceItem, fields=('description', 'quantity', 'rate'), extra=1, can_delete=True)
 
-
-
-
+@login_required
 def edit_invoice(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
 
@@ -282,8 +291,7 @@ def edit_invoice(request, invoice_id):
         'invoice_item_data': invoice_item_data
     })
 
-
-
+@login_required
 def mark_invoice_paid(request, id):
     # Retrieve the invoice object
     invoice = get_object_or_404(Invoice, id=id)
@@ -296,7 +304,7 @@ def mark_invoice_paid(request, id):
     messages.success(request, 'Invoice marked as paid successfully.')
     return redirect('invoice_list')  # Adjust the redirect as needed
 
-
+@login_required
 def share_invoice(request, id):
     # Retrieve the invoice object
     invoice = get_object_or_404(Invoice, id=id)
@@ -309,8 +317,7 @@ def share_invoice(request, id):
     # Render the 'shareable_invoice.html' template
     return render(request, 'billing/shareable_invoice.html', context)
 
-
-
+@login_required
 def generate_invoice_pdf(request, id):
     # Retrieve the invoice object
     invoice = get_object_or_404(Invoice, id=id)
@@ -335,33 +342,31 @@ def generate_invoice_pdf(request, id):
 
     return response
 
-
-
+@login_required
 def email_invoice(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id) 
-    subject = f'Invoice #{invoice.invoice_number} from {settings.DEFAULT_FROM_EMAIL}' 
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    subject = f'Invoice #{invoice.invoice_number} from {settings.DEFAULT_FROM_EMAIL}'
     html_message = render_to_string('billing/shareable_invoice.html', {'invoice': invoice})
     from_email = settings.DEFAULT_FROM_EMAIL
     to_email = [invoice.client.email]  # Assuming 'client' is a field in the Invoice model
     email = EmailMessage(
-        subject,            
-        html_message,       
-        from_email,         
-        to_email            
+        subject,
+        html_message,
+        from_email,
+        to_email
     )
-    
+
     email.content_subtype = "html"
-    
+
     try:
         email.send()
         messages.success(request, f"Invoice #{invoice.invoice_number} has been sent to {invoice.client.email}")
     except Exception as e:
         messages.error(request, f"Error sending invoice: {str(e)}")
-    
+
     return redirect('invoice_list')
 
-
-
+@login_required
 def delete_invoice(request, id):
     # Retrieve the invoice object by its ID
     invoice = get_object_or_404(Invoice, id=id)
