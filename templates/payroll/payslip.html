@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payslip</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 11px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 700px;
+            margin: 10px auto;
+            padding: 10px;
+            background-color: white;
+        }
+
+        .company-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+        }
+
+        .company-logo {
+            width: 100px; /* Increased size for the logo */
+            margin-right: 15px;
+        }
+
+        .company-header div h1 {
+            font-size: 20px; /* Larger company name */
+            margin-bottom: 5px;
+        }
+
+        .company-header div p {
+            margin: 0;
+            font-size: 12px;
+        }
+
+        h2 {
+            font-size: 16px;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+
+        th, td {
+            padding: 4px 8px;
+            vertical-align: top;
+        }
+
+        th {
+            font-weight: bold;
+        }
+
+        .employee-details {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .details-left, .details-right {
+            width: 48%; /* Ensures equal width */
+        }
+
+        .align-left {
+            text-align: left;
+        }
+
+        .align-right {
+            text-align: right;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 9px;
+            color: #777;
+            padding-top: 5px;
+        }
+
+        .signature-section {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature {
+            border-top: 1px solid #000;
+            padding-top: 3px;
+            text-align: center;
+            width: 150px;
+            font-size: 10px;
+        }
+
+        @page {
+            margin: 15mm;
+        }
+
+        table, tr, td, th {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="company-header">
+            <img src="{{ logo_path }}" alt="SE Logo" class="company-logo">
+            <div>
+                <h1>SIMPLY EXPANDING</h1>
+                <p>Digital Marketing Services</p>
+                <p>#23 Ground Floor Jomabo Building, Kadulasan Street,<br>
+                   Dadiangas East, General Santos City, 9500, Philippines</p>
+            </div>
+        </div>
+
+        <h2>Employee Payslip</h2>
+        <p class="text-center">Pay Period: {{ pay_period_start }} - {{ pay_period_end }}</p>
+
+        <!-- Employee Details Section -->
+        <div class="employee-details">
+            <div class="details-left">
+                <table class="details">
+                    <tr>
+                        <th>Employee Name</th>
+                        <td class="align-left">{{ employee_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Pay Period</th>
+                        <td class="align-left">{{ pay_period_start }} to {{ pay_period_end }}</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td class="align-left">{{ status|capfirst }}</td>
+                    </tr>
+                    <tr>
+                        <th>Date Processed</th>
+                        <td class="align-left">{{ date_processed|default:"N/A" }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="details-right">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="align-right">Amount (PHP)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Basic Salary</td>
+                            <td class="align-right">PHP {{ total_income|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Bonus</td>
+                            <td class="align-right">PHP {{ bonus|floatformat:2 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Deductions</h3>
+                <table class="deductions">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="align-right">Amount (PHP)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Deductions (Tax)</td>
+                            <td class="align-right">PHP {{ deductions|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Absence Deductions</td>
+                            <td class="align-right">PHP {{ absence_deductions|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td>Other Deductions</td>
+                            <td class="align-right">PHP {{ other_deductions|floatformat:2 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h3>Average Daily Pay</h3>
+        <p>PHP {{ average_daily_pay|floatformat:2 }}</p>
+
+        <h3>Remarks</h3>
+        <p>{{ remarks|default:"N/A" }}</p>
+
+        <h3>Net Pay</h3>
+        <p>PHP {{ payroll.total_income|floatformat:2 }}</p>
+
+        <div class="signature-section">
+            <div class="signature">
+                Fernan Globen S. Talonding<br>
+                CEO
+            </div>
+            <div class="signature">
+                Employee Signature<br>
+                (__________________)
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>This payslip is an official document generated by the Simply Expanding App.</p>
+        </div>
+    </div>
+</body>
+</html>

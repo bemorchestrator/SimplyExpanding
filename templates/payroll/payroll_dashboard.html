@@ -1,37 +1,87 @@
+<!-- payroll_dashboard.html -->
+
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="min-h-screen p-10 flex flex-col items-center">
-    <!-- Payroll Dashboard Header with Pay Period Inputs -->
-    <div class="flex justify-between items-center w-full mb-6">
-        <!-- Align the header to the left -->
-        <h2 class="text-lg font-semibold text-gray-200">Payroll Dashboard</h2>
-
-        <!-- Align the form to the right, using flex-grow to push it to the right edge -->
-        <form method="POST" class="flex space-x-4 items-center ml-auto">
-            {% csrf_token %}
+<div class="min-h-screen p-10 flex flex-col items-center ">
+    <!-- Payroll Dashboard Header -->
+    <div class="w-full mb-6 flex justify-between items-center">
+        <h2 class="text-2xl font-semibold text-gray-200">Payroll Dashboard</h2>
+        
+        <!-- Date Range Dropdown -->
+        <div class="relative inline-block text-left">
             <div>
-                <label for="pay_period_start" class="block text-sm font-medium text-gray-400">Pay Period Start:</label>
-                <input type="date" name="pay_period_start" id="pay_period_start" value="{{ pay_period_start }}" class="form-input block w-full bg-gray-800 text-gray-200 border-gray-600 text-sm">
-            </div>
-            <div>
-                <label for="pay_period_end" class="block text-sm font-medium text-gray-400">Pay Period End:</label>
-                <input type="date" name="pay_period_end" id="pay_period_end" value="{{ pay_period_end }}" class="form-input block w-full bg-gray-800 text-gray-200 border-gray-600 text-sm">
-            </div>
-            <div class="pt-6">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
-                    Update Pay Period
+                <button type="button" id="dateRangeDropdownButton" class="
+                    inline-flex justify-between items-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none
+                " aria-haspopup="true" aria-expanded="false" onclick="toggleDropdown()">
+                    {{ current_preset_label }}
+                    <!-- Dropdown Icon -->
+                    <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.585l3.71-3.355a.75.75 0 111.04 1.08l-4.25 3.85a.75.75 0 01-1.04 0l-4.25-3.85a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                    </svg>
                 </button>
             </div>
-        </form>
+
+            <!-- Dropdown Menu -->
+            <div id="dateRangeDropdownMenu" class="
+                origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-20 hidden
+            " role="menu" aria-orientation="vertical" aria-labelledby="dateRangeDropdownButton">
+                <div class="py-1" role="none">
+                    {% for key, preset in preset_ranges.items %}
+                        {% if key != 'custom' %}
+                            <a href="?date_range={{ key }}" class="
+                                block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 hover:text-white
+                            " role="menuitem">{{ preset.label }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    <button type="button" id="customRangeButton" class="
+                        w-full text-left block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 hover:text-white
+                    " role="menuitem">
+                        Custom Range
+                    </button>
+                    
+                    <!-- Custom Range Form -->
+                    <div id="customRangeForm" class="px-4 py-2 {% if current_range != 'custom' %}hidden{% endif %}">
+                        <form method="GET" class="flex flex-col space-y-4">
+                            <!-- Include 'date_range=custom' in the form -->
+                            <input type="hidden" name="date_range" value="custom">
+                            
+                            <div>
+                                <label for="id_pay_period_start" class="block text-sm text-gray-200">{{ form.pay_period_start.label }}</label>
+                                {{ form.pay_period_start }}
+                                {% if form.pay_period_start.errors %}
+                                    <div class="text-red-500 text-xs">
+                                        {{ form.pay_period_start.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="id_pay_period_end" class="block text-sm text-gray-200">{{ form.pay_period_end.label }}</label>
+                                {{ form.pay_period_end }}
+                                {% if form.pay_period_end.errors %}
+                                    <div class="text-red-500 text-xs">
+                                        {{ form.pay_period_end.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="submit" class="
+                                bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm
+                            ">
+                                Apply
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Payroll Records Table -->
-    <div class="rounded-lg p-8 w-full mt-6">
+    <div class="rounded-lg p-6 w-full">
         <div class="overflow-x-auto">
-            <table class="w-full bg-gray-800 rounded-lg">
+            <table class="w-full text-left">
                 <thead>
-                    <tr class="text-left text-gray-400 text-sm">
+                    <tr class="text-gray-400 text-sm border-b border-gray-700">
                         <th class="py-3 px-4">Employee</th>
                         <th class="py-3 px-4">Pay Period</th>
                         <th class="py-3 px-4">Total Income</th>
@@ -49,7 +99,7 @@
                             <td class="py-3 px-4 text-gray-200">Php {{ payroll.total_income|floatformat:2 }}</td>
                             <td class="py-3 px-4">
                                 {% if payroll.status == 'pending' %}
-                                    <span class=" text-orange-200 font-semibold px-4 py-2 rounded-full">Pending</span>
+                                    <span class="text-orange-200 font-semibold px-4 py-2 rounded-full">Pending</span>
                                 {% elif payroll.status == 'paid' %}
                                     <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
                                 {% elif payroll.status == 'no_income' %}
@@ -58,7 +108,6 @@
                                     <span class="text-gray-400">{{ payroll.status_display }}</span>
                                 {% endif %}
                             </td>
-                            
                             <td class="py-3 px-4">
                                 {% if payroll.status == 'paid' and payroll.payment_proof %}
                                     <img 
@@ -71,7 +120,6 @@
                                     <span class="text-gray-500">N/A</span>
                                 {% endif %}
                             </td>
-                            
                             <td class="py-3 px-4 text-gray-200">
                                 {% if payroll.date_processed %}
                                     {{ payroll.date_processed|date:"Y-m-d" }}
@@ -82,9 +130,20 @@
                             <td class="py-3 px-4">
                                 {% if payroll.status == 'pending' %}
                                     {% if payroll.id %}
-                                        <a href="{% url 'process_payroll' payroll.id %}" class="bg-orange-600 text-orange-200 font-semibold px-4 py-2 rounded hover:bg-orange-700">Process</a>
+                                        <a href="{% url 'edit_payslip' payroll.id %}" class="
+                                            bg-orange-600 text-orange-200 
+                                            font-semibold px-4 py-2 rounded hover:bg-orange-700
+                                        ">
+                                            Edit Payslip
+                                        </a>
                                     {% else %}
-                                        <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" class="bg-orange-600 text-orange-200 font-semibold px-4 py-2 rounded hover:bg-orange-700">Initiate Payroll</a>
+                                        <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" 
+                                           class="
+                                               bg-orange-600 text-orange-200 
+                                               font-semibold px-4 py-2 rounded hover:bg-orange-700
+                                           ">
+                                            Initiate Payroll
+                                        </a>
                                     {% endif %}
                                 {% elif payroll.status == 'paid' %}
                                     <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
@@ -106,7 +165,7 @@
     </div>
 
     <!-- Modal Structure -->
-    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden">
+    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-30">
         <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg max-w-3xl w-full">
             <div class="flex justify-end p-2">
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-200">
@@ -121,8 +180,9 @@
         </div>
     </div>
 
-    <!-- JavaScript for Modal Functionality -->
+    <!-- JavaScript for Modal and Dropdown Functionality -->
     <script>
+        // Modal Functions
         function openModal(imageSrc) {
             document.getElementById('modalImage').src = imageSrc;
             document.getElementById('imageModal').classList.remove('hidden');
@@ -139,6 +199,37 @@
                 closeModal();
             }
         }
+
+        // Dropdown Functions
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dateRangeDropdownMenu');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown if clicked outside
+        window.onclick = function(event) {
+            const dropdownButton = document.getElementById('dateRangeDropdownButton');
+            const dropdownMenu = document.getElementById('dateRangeDropdownMenu');
+            const customRangeForm = document.getElementById('customRangeForm');
+            const isClickInsideDropdown = dropdownButton.contains(event.target) || dropdownMenu.contains(event.target);
+
+            if (!isClickInsideDropdown) {
+                dropdownMenu.classList.add('hidden');
+            }
+
+            const modal = document.getElementById('imageModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Handle Custom Range Button Click
+        document.getElementById('customRangeButton').addEventListener('click', function() {
+            const dropdownMenu = document.getElementById('dateRangeDropdownMenu');
+            const customRangeForm = document.getElementById('customRangeForm');
+            dropdownMenu.classList.add('hidden');
+            customRangeForm.classList.toggle('hidden');
+        });
     </script>
 </div>
 {% endblock %}

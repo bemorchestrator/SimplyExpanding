@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen p-10 flex flex-col items-center">
+    <h2 class="text-lg font-semibold text-gray-200 mb-6">Your Payroll Records</h2>
+
+    <div class="rounded-lg p-8 w-full">
+        <div class="overflow-x-auto">
+            <table class="w-full bg-gray-800 rounded-lg">
+                <thead>
+                    <tr class="text-left text-gray-400 text-sm">
+                        <th class="py-3 px-4">Pay Period</th>
+                        <th class="py-3 px-4">Total Income</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Date Processed</th>
+                        <th class="py-3 px-4">Payslip</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payroll in payroll_records %}
+                    <tr class="border-t border-gray-700 text-sm">
+                        <td class="py-3 px-4 text-gray-200">
+                            {{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}
+                        </td>
+                        <td class="py-3 px-4 text-gray-200">
+                            Php {{ payroll.total_income|floatformat:2 }}
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="{% if payroll.status == 'paid' %}bg-green-600 text-green-200{% else %}bg-orange-500 text-orange-200{% endif %} font-semibold px-4 py-2 rounded-full">
+                                {{ payroll.status|capfirst }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-gray-200">
+                            {{ payroll.date_processed|default:"N/A" }}
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if payroll.status == 'paid' %}
+                                <a href="{% url 'download_payslip' payroll.id %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
+                                    Download Payslip
+                                </a>
+                            {% else %}
+                                <span class="text-gray-500">Not available</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-6 text-gray-500">
+                            You don't have any payroll records yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

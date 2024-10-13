@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container min-h-screen p-10 flex text-white space-x-6">
+    <!-- Left Column: Form Section -->
+    <div class="form-container w-1/2 bg-gray-800 p-6 shadow-lg rounded-lg">
+        <h2 class="text-xl font-semibold mb-6">Edit Payslip</h2>
+        
+        <!-- Display form errors -->
+        {% if form.errors %}
+            <div class="mb-4 p-4 bg-red-600 rounded">
+                <h3 class="font-semibold">Please fix the following errors:</h3>
+                <ul class="list-disc list-inside">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        <!-- Render the form -->
+        <form method="POST" enctype="multipart/form-data" action="{% url 'edit_payslip' payroll.id %}">
+            {% csrf_token %}
+            
+            <!-- Employee Name (Read-Only) -->
+            <div class="form-group mb-4">
+                <label for="employee-name" class="block font-medium mb-1">Employee Name</label>
+                <input type="text" id="employee-name" name="employee_name" 
+                       value="{{ payroll.employee.user.get_full_name }}" 
+                       class="w-full p-2 border border-gray-700 rounded bg-gray-700 text-white" readonly>
+            </div>
+
+            <!-- Pay Period Start (Editable) -->
+            <div class="form-group mb-4">
+                <label for="{{ form.pay_period_start.id_for_label }}" class="block font-medium mb-1">Pay Period Start</label>
+                {{ form.pay_period_start }}
+            </div>
+
+            <!-- Pay Period End (Editable) -->
+            <div class="form-group mb-4">
+                <label for="{{ form.pay_period_end.id_for_label }}" class="block font-medium mb-1">Pay Period End</label>
+                {{ form.pay_period_end }}
+            </div>
+
+            <!-- Basic Salary -->
+            <div class="form-group mb-4">
+                <label for="{{ form.total_income.id_for_label }}" class="block font-medium mb-1">Basic Salary</label>
+                {{ form.total_income }}
+            </div>
+
+            <!-- Bonus -->
+            <div class="form-group mb-4">
+                <label for="{{ form.bonus.id_for_label }}" class="block font-medium mb-1">Bonus</label>
+                {{ form.bonus }}
+            </div>
+
+            <!-- Deductions (Tax) -->
+            <div class="form-group mb-4">
+                <label for="{{ form.deductions.id_for_label }}" class="block font-medium mb-1">Deductions (Tax)</label>
+                {{ form.deductions }}
+            </div>
+
+            <!-- Absence Deductions -->
+            <div class="form-group mb-4">
+                <label for="{{ form.absence_deductions.id_for_label }}" class="block font-medium mb-1">Absence Deductions</label>
+                {{ form.absence_deductions }}
+            </div>
+
+            <!-- Other Deductions -->
+            <div class="form-group mb-4">
+                <label for="{{ form.other_deductions.id_for_label }}" class="block font-medium mb-1">Other Deductions</label>
+                {{ form.other_deductions }}
+            </div>
+
+            <!-- Average Daily Pay -->
+            <div class="form-group mb-4">
+                <label for="{{ form.average_daily_pay.id_for_label }}" class="block font-medium mb-1">Average Daily Pay</label>
+                {{ form.average_daily_pay }}
+            </div>
+
+            <!-- Remarks -->
+            <div class="form-group mb-4">
+                <label for="{{ form.remarks.id_for_label }}" class="block font-medium mb-1">Remarks</label>
+                {{ form.remarks }}
+            </div>
+
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Save Changes
+            </button>
+        </form>
+    </div>
+
+    <!-- Right Column: Preview Section -->
+    <div class="preview-container w-1/2 bg-gray-800 p-6 shadow-lg rounded-lg">
+        <div class="header text-center mb-6">
+            <img src="{% static 'images/se_logo.png' %}" alt="Company Logo" class="mx-auto h-32">
+            <h1 class="text-2xl font-bold mt-4">SIMPLY EXPANDING</h1>
+            <p class="text-sm text-gray-400">Digital Marketing Services</p>
+            <p class="text-sm text-gray-400">#23 Ground Floor Jomabo Building, <br>Kadulasan Street, Dadiangas East, <br>General Santos City, 9500, Philippines</p>
+        </div>
+
+        <table class="w-full border-collapse text-white">
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Name of Employee:</th>
+                <td id="preview-employee-name" class="py-2 border-b border-gray-700">
+                    {{ payroll.employee.user.get_full_name }}
+                </td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Pay Period:</th>
+                <td id="preview-pay-period" class="py-2 border-b border-gray-700">
+                    {{ payroll.pay_period_start }} to {{ payroll.pay_period_end }}
+                </td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Basic Salary:</th>
+                <td id="preview-basic-salary" class="py-2 border-b border-gray-700">PHP {{ payroll.total_income|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Bonus:</th>
+                <td id="preview-bonus" class="py-2 border-b border-gray-700">PHP {{ payroll.bonus|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Deductions (Tax):</th>
+                <td id="preview-deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.deductions|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Absence Deductions:</th>
+                <td id="preview-absence-deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.absence_deductions|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Other Deductions:</th>
+                <td id="preview-other_deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.other_deductions|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Average Daily Pay:</th>
+                <td id="preview-average-daily-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.average_daily_pay|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Remarks:</th>
+                <td id="preview-remarks" class="py-2 border-b border-gray-700">{{ payroll.remarks|default:"N/A" }}</td>
+            </tr>
+            <!-- Net Pay -->
+            <tr>
+                <th class="text-left py-2 border-b border-gray-700">Net Pay:</th>
+                <td id="preview-net-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.total_income|floatformat:2 }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updatePreview() {
+        // Retrieve form values using form field IDs
+        const basicSalary = parseFloat(document.getElementById('{{ form.total_income.id_for_label }}').value) || 0;
+        const bonus = parseFloat(document.getElementById('{{ form.bonus.id_for_label }}').value) || 0;
+        const deductions = parseFloat(document.getElementById('{{ form.deductions.id_for_label }}').value) || 0;
+        const absenceDeductions = parseFloat(document.getElementById('{{ form.absence_deductions.id_for_label }}').value) || 0;
+        const otherDeductions = parseFloat(document.getElementById('{{ form.other_deductions.id_for_label }}').value) || 0;
+        const averageDailyPay = parseFloat(document.getElementById('{{ form.average_daily_pay.id_for_label }}').value) || 0;
+        const remarks = document.getElementById('{{ form.remarks.id_for_label }}').value || 'N/A';
+
+        // Retrieve Pay Period Start and End
+        const payPeriodStart = document.getElementById('{{ form.pay_period_start.id_for_label }}').value;
+        const payPeriodEnd = document.getElementById('{{ form.pay_period_end.id_for_label }}').value;
+
+        // Update preview fields
+        document.getElementById('preview-basic-salary').innerText = 'PHP ' + basicSalary.toFixed(2);
+        document.getElementById('preview-bonus').innerText = 'PHP ' + bonus.toFixed(2);
+        document.getElementById('preview-deductions').innerText = 'PHP ' + deductions.toFixed(2);
+        document.getElementById('preview-absence-deductions').innerText = 'PHP ' + absenceDeductions.toFixed(2);
+        document.getElementById('preview-other_deductions').innerText = 'PHP ' + otherDeductions.toFixed(2);
+        document.getElementById('preview-average-daily-pay').innerText = 'PHP ' + averageDailyPay.toFixed(2);
+        document.getElementById('preview-remarks').innerText = remarks;
+
+        // Update Pay Period in Preview
+        document.getElementById('preview-pay-period').innerText = payPeriodStart + ' to ' + payPeriodEnd;
+
+        // Calculate Net Pay
+        const netPay = basicSalary + bonus - (deductions + absenceDeductions + otherDeductions);
+        document.getElementById('preview-net-pay').innerText = 'PHP ' + netPay.toFixed(2);
+    }
+
+    // Attach event listeners to all form fields
+    document.querySelectorAll('input, textarea').forEach(element => {
+        element.addEventListener('input', updatePreview);
+    });
+
+    // Initialize preview on page load
+    document.addEventListener('DOMContentLoaded', updatePreview);
+</script>
+{% endblock %}

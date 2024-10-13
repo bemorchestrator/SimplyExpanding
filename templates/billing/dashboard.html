@@ -158,8 +158,8 @@
         }
 
         var clockInTime = new Date(data.clock_in_time);
-        var perDayRate = data.per_day_rate;
-        var standardHoursPerDay = data.standard_hours_per_day;
+        var perDayRate = parseFloat(data.per_day_rate);
+        var standardHoursPerDay = parseFloat(data.standard_hours_per_day);
         var isOnBreak = data.is_on_break;
 
         if (isOnBreak) {
@@ -167,19 +167,54 @@
             return;
         }
 
-        function updateIncome() {
+        var currentIncomeElement = document.getElementById('current-income');
+        var lastIncome = 0;
+
+        function calculateIncome() {
             var now = new Date();
             var elapsedMilliseconds = now - clockInTime;
             var elapsedSeconds = elapsedMilliseconds / 1000;
             var elapsedHours = elapsedSeconds / 3600;
             var fractionOfDay = elapsedHours / standardHoursPerDay;
             var income = perDayRate * fractionOfDay;
-            var incomeFormatted = income.toFixed(2);
-            document.getElementById('current-income').innerText = 'Php' + incomeFormatted;
+            return income;
         }
 
-        updateIncome();
-        setInterval(updateIncome, 60000);  // Update every minute
+        function animateValue(element, start, end, duration) {
+            var range = end - start;
+            var current = start;
+            var increment = range / (duration / 50); // Update every 50ms
+            var startTime = null;
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                var progress = timestamp - startTime;
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    element.innerText = 'Php' + end.toFixed(2);
+                    return;
+                }
+                element.innerText = 'Php' + current.toFixed(2);
+                window.requestAnimationFrame(step);
+            }
+
+            window.requestAnimationFrame(step);
+        }
+
+        function updateIncome() {
+            var newIncome = calculateIncome();
+            if (newIncome !== lastIncome) {
+                animateValue(currentIncomeElement, lastIncome, newIncome, 500); // 500ms animation
+                lastIncome = newIncome;
+            }
+        }
+
+        // Initialize lastIncome
+        lastIncome = calculateIncome();
+        currentIncomeElement.innerText = 'Php' + lastIncome.toFixed(2);
+
+        // Update income every second for smoother real-time updates
+        setInterval(updateIncome, 1000);  // Update every second
     });
 </script>
 {% endif %}
