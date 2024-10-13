@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from employees.models import Employee
@@ -36,13 +37,37 @@ def clock_in(request):
         )
 
         if is_primary:
-            attendance.calculate_lateness_and_deduction()
+            # Adjust timezone consistency
+            scheduled_time = timezone.localtime(attendance.get_scheduled_start_time())
+            clock_in_time_local = timezone.localtime(attendance.clock_in_time)
+
+            # Apply grace period
+            grace_period = (
+                employee.lateness_rules.first().grace_period 
+                if employee.lateness_rules.exists() 
+                else timedelta(minutes=5)
+            )
+
+            lateness = clock_in_time_local - scheduled_time
+
+            # Check if lateness exceeds the grace period
+            if lateness > grace_period:
+                attendance.lateness = lateness
+                attendance.apply_lateness_deduction(lateness)
+                attendance.lateness_calculated = True
+                messages.success(request, 'Successfully clocked in with lateness calculation applied.')
+            else:
+                attendance.lateness = timedelta(0)
+                attendance.lateness_deduction = Decimal('0.00')
+                attendance.lateness_calculated = False
+                messages.success(request, 'Successfully clocked in on time.')
+
             attendance.save()  # Ensure changes are saved
-            messages.success(request, 'Successfully clocked in with lateness calculation applied.')
         else:
             messages.success(request, 'Successfully clocked in without lateness calculation.')
 
     return redirect('clock_in_out_page')
+
 
 @login_required
 def clock_out(request):
