@@ -31,7 +31,7 @@
                     </form>
 
                     <!-- Crawl Sitemap -->
-                    <form action="/audit/crawl-sitemaps/" method="POST">
+                    <form action="{% url 'crawl_sitemaps' %}" method="POST">
                         {% csrf_token %}
                         <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
                             <i class="bi bi-bug text-lg"></i>
@@ -86,11 +86,13 @@
                     </button>
 
                     <!-- Delete Button -->
-                    <button id="delete-all-btn" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition"
-                    {% if dashboard %}
-                        data-dashboard-id="{{ dashboard.id }}"
-                    {% endif %}>
-                    <i class="bi bi-trash text-lg"></i>
+                    <button id="delete-all-btn"
+                            class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition"
+                            data-base-url="{% url 'delete_uploaded_files' %}"
+                            {% if dashboard %}
+                                data-dashboard-id="{{ dashboard.id }}"
+                            {% endif %}>
+                        <i class="bi bi-trash text-lg"></i>
                     </button>
                 </div>
             </div>
@@ -163,11 +165,15 @@
         </div>
     </div>
 
+    <!-- Include SweetAlert2 -->
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Delete All Button Functionality
             const deleteBtn = document.getElementById('delete-all-btn');
+            const baseUrl = deleteBtn ? deleteBtn.getAttribute('data-base-url') : '';
             const dashboardId = deleteBtn ? deleteBtn.getAttribute('data-dashboard-id') : null;
 
             if (deleteBtn) {
@@ -184,9 +190,9 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             const csrftoken = getCookie('csrftoken');
-                            let url = "{% url 'delete_uploaded_files' %}";
+                            let url = baseUrl;
                             if (dashboardId) {
-                                url = "{% url 'delete_uploaded_files_with_id' 0 %}".replace('/0/', `/${dashboardId}/`);
+                                url = `${baseUrl}${dashboardId}/`;
                             }
 
                             fetch(url, {

@@ -1021,28 +1021,35 @@ def audit_dashboard(request):
 @csrf_protect
 @require_POST
 def delete_uploaded_files(request, dashboard_id=None):
-    if dashboard_id:
-        logging.info(f"Attempting to delete UploadedFiles for dashboard ID: {dashboard_id}")
-    else:
-        logging.info("Attempting to delete all unsaved UploadedFiles.")
-
+    logger.info(f"delete_uploaded_files called with dashboard_id: {dashboard_id}")
     try:
         if dashboard_id:
+            # If dashboard_id is provided, delete files associated with the dashboard
+            logger.info(f"Attempting to delete UploadedFiles for dashboard ID: {dashboard_id}")
             dashboard = get_object_or_404(AuditDashboard, id=dashboard_id)
             files_to_delete = UploadedFile.objects.filter(dashboard=dashboard)
-            count, _ = files_to_delete.delete()
-            logging.info(f"Deleted {count} UploadedFile records from dashboard '{dashboard.name}'.")
         else:
+            # If no dashboard_id, delete files not associated with any dashboard
+            logger.info("Attempting to delete all unsaved UploadedFiles (those without a dashboard).")
             files_to_delete = UploadedFile.objects.filter(dashboard__isnull=True)
-            count, _ = files_to_delete.delete()
-            logging.info(f"Deleted {count} unsaved UploadedFile records from the main dashboard.")
 
+        # Delete files and count the number of deletions
+        count = files_to_delete.count()
+        files_to_delete.delete()
+        logger.info(f"Deleted {count} UploadedFile records.")
+
+        # Return a successful response with the count of deleted files
         return JsonResponse({'success': True, 'deleted_count': count})
+
+    except AuditDashboard.DoesNotExist:
+        # If the dashboard is not found, return an error
+        logger.error(f"Dashboard with ID {dashboard_id} not found.")
+        return JsonResponse({'success': False, 'error': 'Dashboard not found.'}, status=404)
+
     except Exception as e:
-        logging.error(f"Error deleting UploadedFile records: {e}")
+        # Catch any other exceptions and return a generic error response
+        logger.error(f"Error deleting UploadedFile records: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
 
 
 
