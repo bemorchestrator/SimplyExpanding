@@ -1,0 +1,276 @@
+{% extends 'audit/shared_base.html' %}
+{% load render_table from django_tables2 %}
+
+{% block head %}
+    <!-- Bootstrap Icons CSS (Only for Icons) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN (Ensure Tailwind is included if not already in base.html) -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Additional CSS to adjust the main content area when sidebar is hidden -->
+    <style>
+        /* Adjust the main content area to full width when the sidebar is hidden */
+        .content-wrapper {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        /* Ensure the table container fills the available width */
+        .table-container {
+            width: 100%;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="mt-10 px-8 h-screen flex flex-col content-wrapper">
+        <div class="bg-gray-800 rounded px-8 py-6 flex-1 flex flex-col">
+
+            <!-- Header Section -->
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-xl font-semibold text-white">{{ dashboard.name }}</h2>
+
+                <!-- Only the Column Filter Button with Dropdown -->
+                <div class="flex items-center space-x-2 relative">
+                    <!-- Column Filter Button with Dropdown -->
+                    <div class="relative">
+                        <button type="button" id="openColumnFilter" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition">
+                            <i class="bi bi-columns-gap text-lg"></i> <!-- Filter Icon -->
+                        </button>
+
+                        <!-- Column Filter Dropdown (Initially hidden) -->
+                        <div id="columnFilterMenu" class="absolute left-1/2 transform -translate-x-1/2 mt-2 w-72 bg-gray-700 rounded shadow-lg p-4 text-white opacity-0 scale-95 transition-all duration-200 origin-top-left pointer-events-none z-50 max-h-80 overflow-y-auto">
+                            <div class="py-1 space-y-2">
+                                <!-- Action Choice -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="1" checked>
+                                    <span class="ml-2">Action Choice</span>
+                                </label>
+                                <!-- URL -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="2" checked>
+                                    <span class="ml-2">URL</span>
+                                </label>
+                                <!-- Page Path -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="3" checked>
+                                    <span class="ml-2">Page Path</span>
+                                </label>
+                                <!-- Crawl Depth -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="4" checked>
+                                    <span class="ml-2">Crawl Depth</span>
+                                </label>
+                                <!-- Category -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="5" checked>
+                                    <span class="ml-2">Category</span>
+                                </label>
+                                <!-- In Sitemap -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="6" checked>
+                                    <span class="ml-2">In Sitemap</span>
+                                </label>
+                                <!-- Main KW -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="7" checked>
+                                    <span class="ml-2">Main KW</span>
+                                </label>
+                                <!-- Volume -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="8" checked>
+                                    <span class="ml-2">Volume</span>
+                                </label>
+                                <!-- Ranking -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="9" checked>
+                                    <span class="ml-2">Ranking</span>
+                                </label>
+                                <!-- Best KW -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="10" checked>
+                                    <span class="ml-2">Best KW</span>
+                                </label>
+                                <!-- Best KW Volume -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="11" checked>
+                                    <span class="ml-2">Best KW Volume</span>
+                                </label>
+                                <!-- Best KW Ranking -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="12" checked>
+                                    <span class="ml-2">Best KW Ranking</span>
+                                </label>
+                                <!-- Impressions -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="13" checked>
+                                    <span class="ml-2">Impressions</span>
+                                </label>
+                                <!-- Sessions -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="14" checked>
+                                    <span class="ml-2">Sessions</span>
+                                </label>
+                                <!-- % Change Sessions -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="15" checked>
+                                    <span class="ml-2">% Change Sessions</span>
+                                </label>
+                                <!-- Bounce Rate -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="16" checked>
+                                    <span class="ml-2">Bounce Rate</span>
+                                </label>
+                                <!-- Avg Time on Page -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="17" checked>
+                                    <span class="ml-2">Avg Time on Page</span>
+                                </label>
+                                <!-- Losing Traffic -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="18" checked>
+                                    <span class="ml-2">Losing Traffic</span>
+                                </label>
+                                <!-- Links -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="19" checked>
+                                    <span class="ml-2">Links</span>
+                                </label>
+                                <!-- SERP CTR -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="20" checked>
+                                    <span class="ml-2">SERP CTR</span>
+                                </label>
+                                <!-- Type -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="21" checked>
+                                    <span class="ml-2">Type</span>
+                                </label>
+                                <!-- Current Title -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="22" checked>
+                                    <span class="ml-2">Current Title</span>
+                                </label>
+                                <!-- Meta -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="23" checked>
+                                    <span class="ml-2">Meta</span>
+                                </label>
+                                <!-- H1 -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="24" checked>
+                                    <span class="ml-2">H1</span>
+                                </label>
+                                <!-- Word Count -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="25" checked>
+                                    <span class="ml-2">Word Count</span>
+                                </label>
+                                <!-- Canonical Link -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="26" checked>
+                                    <span class="ml-2">Canonical Link</span>
+                                </label>
+                                <!-- Status Code -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="27" checked>
+                                    <span class="ml-2">Status Code</span>
+                                </label>
+                                <!-- Index/No Index -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="28" checked>
+                                    <span class="ml-2">Index/No Index</span>
+                                </label>
+                                <!-- Inlinks -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="29" checked>
+                                    <span class="ml-2">Inlinks</span>
+                                </label>
+                                <!-- Outlinks -->
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="column-checkbox" data-column="30" checked>
+                                    <span class="ml-2">Outlinks</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Rendering using django-tables2 -->
+            <div class="table-container overflow-x-auto flex-1 w-full">
+                {% render_table table %}
+            </div>
+
+            <div class="pagination mt-4 text-center">
+                <span class="step-links">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">&laquo; First</a>
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">Previous</a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            {% if page_obj.number == num %}
+                                <span class="current-page px-3 py-2 bg-green-500 text-white rounded font-bold border-2 border-green-700">{{ num }}</span>
+                            {% else %}
+                                <a href="?page={{ num }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">{{ num }}</a>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">Next</a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">Last &raquo;</a>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include SweetAlert2 -->
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Column Filter Dropdown Toggle with Smooth Transition
+            const openColumnFilter = document.getElementById('openColumnFilter');
+            const columnFilterMenu = document.getElementById('columnFilterMenu');
+
+            if (openColumnFilter) {
+                openColumnFilter.addEventListener('click', function(event) {
+                    event.stopPropagation(); // Prevent click from bubbling up
+                    if (columnFilterMenu.classList.contains('opacity-0')) {
+                        columnFilterMenu.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                        columnFilterMenu.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+                    } else {
+                        columnFilterMenu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                        columnFilterMenu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    }
+                });
+            }
+
+            // Close the dropdown if clicked outside
+            document.addEventListener('click', function(event) {
+                if (!columnFilterMenu.contains(event.target) && !openColumnFilter.contains(event.target)) {
+                    columnFilterMenu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    columnFilterMenu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                }
+            });
+
+            // Toggle Column Visibility
+            const columnCheckboxes = document.querySelectorAll('.column-checkbox');
+            columnCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    const columnNumber = checkbox.dataset.column;
+                    const cells = document.querySelectorAll('td:nth-child(' + columnNumber + '), th:nth-child(' + columnNumber + ')');
+                    cells.forEach(function(cell) {
+                        cell.style.display = checkbox.checked ? '' : 'none';
+                    });
+                });
+            });
+        });
+    </script>
+{% endblock %}

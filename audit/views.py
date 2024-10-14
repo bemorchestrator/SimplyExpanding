@@ -1267,7 +1267,7 @@ def shared_dashboard(request, share_token):
     RequestConfig(request, paginate=False).configure(table)
     
     # Render the template with the 'is_shared_view' flag and 'hide_sidebar'
-    return render(request, 'audit/audit_dashboard.html', {
+    return render(request, 'audit/shared_dashboard.html', {
         'dashboard': dashboard,
         'table': table,
         'page_obj': page_obj,
