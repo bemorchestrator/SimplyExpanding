@@ -13,14 +13,14 @@ class UploadedFileTable(tables.Table):
                 "class": "sticky-col-1",
                 "style": (
                     "white-space: nowrap; position: sticky; left: 0; "
-                    "background-color: #2d3748; z-index: 3; width: 150px;"
+                    "background-color: #2d3748; z-index: 3; width: 120px;"
                 )
             },
             "th": {
                 "class": "sticky-col-1",
                 "style": (
                     "position: sticky; top: 0; left: 0; "
-                    "background-color: #2d3748; z-index: 5; width: 150px;"
+                    "background-color: #2d3748; z-index: 5; width: 120px;"
                 )
             }
         }
@@ -78,14 +78,14 @@ class UploadedFileTable(tables.Table):
             "td": {
                 "class": "sticky-col-2",
                 "style": (
-                    "white-space: nowrap; position: sticky; left: 152px; "
+                    "white-space: nowrap; position: sticky; left: 121px; "
                     "background-color: #2d3748; z-index: 1; width: 300px; min-height: 100px;"
                 )
             },
             "th": {
                 "class": "sticky-col-2",
                 "style": (
-                    "position: sticky; top: 0; left: 152px; "
+                    "position: sticky; top: 0; left: 121px; "
                     "background-color: #2d3748; z-index: 2; width: 300px;"
                 )
             }
