@@ -4,11 +4,12 @@ import os
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from attendance.models import Attendance
 from employees.models import Employee
 from billing.models import BillingRecord
 from django.utils.timezone import now
 from django.db.models import Sum
-from datetime import timedelta, date
+from datetime import datetime, timedelta, date
 
 from payroll.forms import PayPeriodForm, PayrollRecordForm
 from simplyexpanding import settings
@@ -18,7 +19,7 @@ from django.core.files.storage import FileSystemStorage
 from django.core.exceptions import ValidationError
 from django.template.loader import render_to_string
 from weasyprint import HTML
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 import logging
 
 
@@ -332,17 +333,36 @@ def download_payslip(request, payroll_id):
     # Convert to file URL with forward slashes
     logo_url = 'file:///' + logo_path.replace('\\', '/')
 
+    # Ensure all monetary fields have default values
+    average_daily_pay = payroll.average_daily_pay or Decimal('0.00')
+    num_days = (payroll.pay_period_end - payroll.pay_period_start).days + 1
+    basic_salary = average_daily_pay * Decimal(num_days)
+
+    bonus = payroll.bonus or Decimal('0.00')
+    deductions = payroll.deductions or Decimal('0.00')
+    absence_deductions = payroll.absence_deductions or Decimal('0.00')
+    other_deductions = payroll.other_deductions or Decimal('0.00')
+    remarks = payroll.remarks or "N/A"
+
+    # Net pay is stored in payroll.total_income
+    net_pay = payroll.total_income or Decimal('0.00')
+
     # Render the payslip template
     html_string = render_to_string('payroll/payslip.html', {
-        'payroll': payroll,
         'employee_name': payroll.employee.user.get_full_name(),
         'pay_period_start': payroll.pay_period_start.strftime('%Y-%m-%d'),
         'pay_period_end': payroll.pay_period_end.strftime('%Y-%m-%d'),
-        'total_income': payroll.total_income,
         'date_processed': payroll.date_processed.strftime('%Y-%m-%d') if payroll.date_processed else 'N/A',
         'status': payroll.status,
-        'remarks': payroll.remarks,
         'logo_path': logo_url,
+        'net_pay': net_pay,
+        'basic_salary': basic_salary,
+        'bonus': bonus,
+        'deductions': deductions,
+        'absence_deductions': absence_deductions,
+        'other_deductions': other_deductions,
+        'average_daily_pay': average_daily_pay,
+        'remarks': remarks,
     })
 
     # Set base_url to the directory containing the logo
@@ -368,8 +388,51 @@ def edit_payslip(request, payroll_id):
     """
     payroll = get_object_or_404(PayrollRecord, pk=payroll_id)
 
+    # Fetch employee related to the payroll
+    employee = payroll.employee
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' and request.method == 'GET':
+        # This is an AJAX request, process accordingly
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        try:
+            pay_period_start = datetime.strptime(start_date, '%Y-%m-%d').date()
+            pay_period_end = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid dates provided'}, status=400)
+
+        attendance_records = Attendance.objects.filter(
+            employee=employee,
+            clock_in_time__date__range=[pay_period_start, pay_period_end]
+        )
+
+        lateness_deduction = attendance_records.aggregate(
+            total_lateness=Sum('lateness_deduction')
+        )['total_lateness'] or Decimal('0.00')
+
+        # Calculate the number of days in the pay period (inclusive)
+        num_days = (pay_period_end - pay_period_start).days + 1
+
+        # Get the per_day_rate from the employee model
+        per_day_rate = employee.per_day_rate or Decimal('0.00')
+
+        # Calculate Basic Salary
+        basic_salary = per_day_rate * Decimal(num_days)
+
+        return JsonResponse({
+            'lateness_deduction': str(lateness_deduction),
+            'basic_salary': str(basic_salary),
+            'average_daily_pay': str(per_day_rate),
+        })
+
     if request.method == 'POST':
         form = PayrollRecordForm(request.POST, instance=payroll)
+
+        # Set fields to readonly in the form
+        form.fields['total_income'].widget.attrs['readonly'] = True
+        form.fields['average_daily_pay'].widget.attrs['readonly'] = True
+
         if form.is_valid():
             # Retrieve the form data for calculations
             basic_salary = form.cleaned_data.get('total_income', Decimal('0.00'))
@@ -378,7 +441,7 @@ def edit_payslip(request, payroll_id):
             absence_deductions = form.cleaned_data.get('absence_deductions', Decimal('0.00'))
             other_deductions = form.cleaned_data.get('other_deductions', Decimal('0.00'))
 
-            # Calculate net pay: Basic Salary + Bonus - (Deductions + Absence + Other Deductions)
+            # Calculate net pay: Basic Salary + Bonus - (Deductions + Absence Deductions + Other Deductions)
             net_pay = basic_salary + bonus - (deductions + absence_deductions + other_deductions)
 
             # Save the updated payroll record with net pay
@@ -396,11 +459,38 @@ def edit_payslip(request, payroll_id):
             logger.debug("Form is invalid. Errors: %s", form.errors)
             messages.error(request, 'There was an error updating the payslip. Please see the errors below.')
     else:
-        form = PayrollRecordForm(instance=payroll)
+        # Pre-fill the "Other Deductions" field with the lateness deduction
+        attendance_records = Attendance.objects.filter(
+            employee=employee,
+            clock_in_time__date__range=[payroll.pay_period_start, payroll.pay_period_end]
+        )
+
+        # Sum up the lateness deductions from all attendance records in the period
+        lateness_deduction = attendance_records.aggregate(
+            total_lateness=Sum('lateness_deduction')
+        )['total_lateness'] or Decimal('0.00')
+
+        # Calculate the number of days in the pay period (inclusive)
+        num_days = (payroll.pay_period_end - payroll.pay_period_start).days + 1
+
+        # Get the per_day_rate from the employee model
+        per_day_rate = employee.per_day_rate or Decimal('0.00')
+
+        # Calculate Basic Salary
+        basic_salary = per_day_rate * Decimal(num_days)
+
+        form = PayrollRecordForm(instance=payroll, initial={
+            'other_deductions': lateness_deduction,
+            'average_daily_pay': per_day_rate,
+            'total_income': basic_salary,
+            # Do not set 'absence_deductions' here; leave it for manual input
+        })
+
+        # Set fields to readonly in the form
+        form.fields['total_income'].widget.attrs['readonly'] = True
+        form.fields['average_daily_pay'].widget.attrs['readonly'] = True
 
     return render(request, 'payroll/edit_payslip.html', {'form': form, 'payroll': payroll})
-
-
 
 
 @login_required

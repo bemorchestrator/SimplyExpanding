@@ -47,6 +47,10 @@
             margin-top: 5px;
         }
 
+        .text-center {
+            text-align: center;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -160,12 +164,16 @@
                     </thead>
                     <tbody>
                         <tr>
+                            <td>Average Daily Pay</td>
+                            <td class="align-right">PHP {{ average_daily_pay|default:"0.00"|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
                             <td>Basic Salary</td>
-                            <td class="align-right">PHP {{ total_income|floatformat:2 }}</td>
+                            <td class="align-right">PHP {{ basic_salary|default:"0.00"|floatformat:2 }}</td>
                         </tr>
                         <tr>
                             <td>Bonus</td>
-                            <td class="align-right">PHP {{ bonus|floatformat:2 }}</td>
+                            <td class="align-right">PHP {{ bonus|default:"0.00"|floatformat:2 }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -181,29 +189,26 @@
                     <tbody>
                         <tr>
                             <td>Deductions (Tax)</td>
-                            <td class="align-right">PHP {{ deductions|floatformat:2 }}</td>
+                            <td class="align-right">PHP {{ deductions|default:"0.00"|floatformat:2 }}</td>
                         </tr>
                         <tr>
                             <td>Absence Deductions</td>
-                            <td class="align-right">PHP {{ absence_deductions|floatformat:2 }}</td>
+                            <td class="align-right">PHP {{ absence_deductions|default:"0.00"|floatformat:2 }}</td>
                         </tr>
                         <tr>
                             <td>Other Deductions</td>
-                            <td class="align-right">PHP {{ other_deductions|floatformat:2 }}</td>
+                            <td class="align-right">PHP {{ other_deductions|default:"0.00"|floatformat:2 }}</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <h3>Average Daily Pay</h3>
-        <p>PHP {{ average_daily_pay|floatformat:2 }}</p>
-
         <h3>Remarks</h3>
         <p>{{ remarks|default:"N/A" }}</p>
 
         <h3>Net Pay</h3>
-        <p>PHP {{ payroll.total_income|floatformat:2 }}</p>
+        <p>PHP {{ net_pay|default:"0.00"|floatformat:2 }}</p>
 
         <div class="signature-section">
             <div class="signature">

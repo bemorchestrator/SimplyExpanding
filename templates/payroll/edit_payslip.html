@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block content %}
 <div class="container min-h-screen p-10 flex text-white space-x-6">
     <!-- Left Column: Form Section -->
@@ -48,10 +47,20 @@
                 {{ form.pay_period_end }}
             </div>
 
-            <!-- Basic Salary -->
+            <!-- Average Daily Pay (Read-Only) -->
+            <div class="form-group mb-4">
+                <label for="{{ form.average_daily_pay.id_for_label }}" class="block font-medium mb-1">Average Daily Pay</label>
+                <input type="text" id="{{ form.average_daily_pay.id_for_label }}" name="{{ form.average_daily_pay.name }}"
+                       value="{{ form.average_daily_pay.value }}" class="w-full p-2 border border-gray-700 rounded bg-gray-700 text-white"
+                       readonly>
+            </div>
+
+            <!-- Basic Salary (Read-Only) -->
             <div class="form-group mb-4">
                 <label for="{{ form.total_income.id_for_label }}" class="block font-medium mb-1">Basic Salary</label>
-                {{ form.total_income }}
+                <input type="text" id="{{ form.total_income.id_for_label }}" name="{{ form.total_income.name }}"
+                       value="{{ form.total_income.value }}" class="w-full p-2 border border-gray-700 rounded bg-gray-700 text-white"
+                       readonly>
             </div>
 
             <!-- Bonus -->
@@ -66,7 +75,7 @@
                 {{ form.deductions }}
             </div>
 
-            <!-- Absence Deductions -->
+            <!-- Absence Deductions (Manually Editable) -->
             <div class="form-group mb-4">
                 <label for="{{ form.absence_deductions.id_for_label }}" class="block font-medium mb-1">Absence Deductions</label>
                 {{ form.absence_deductions }}
@@ -74,14 +83,8 @@
 
             <!-- Other Deductions -->
             <div class="form-group mb-4">
-                <label for="{{ form.other_deductions.id_for_label }}" class="block font-medium mb-1">Other Deductions</label>
+                <label for="{{ form.other_deductions.id_for_label }}" class="block font-medium mb-1">Other Deductions (Auto-filled with lateness deduction)</label>
                 {{ form.other_deductions }}
-            </div>
-
-            <!-- Average Daily Pay -->
-            <div class="form-group mb-4">
-                <label for="{{ form.average_daily_pay.id_for_label }}" class="block font-medium mb-1">Average Daily Pay</label>
-                {{ form.average_daily_pay }}
             </div>
 
             <!-- Remarks -->
@@ -119,6 +122,10 @@
                 </td>
             </tr>
             <tr>
+                <th class="text-left py-2 border-b border-gray-700">Average Daily Pay:</th>
+                <td id="preview-average-daily-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.average_daily_pay|floatformat:2 }}</td>
+            </tr>
+            <tr>
                 <th class="text-left py-2 border-b border-gray-700">Basic Salary:</th>
                 <td id="preview-basic-salary" class="py-2 border-b border-gray-700">PHP {{ payroll.total_income|floatformat:2 }}</td>
             </tr>
@@ -139,10 +146,6 @@
                 <td id="preview-other_deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.other_deductions|floatformat:2 }}</td>
             </tr>
             <tr>
-                <th class="text-left py-2 border-b border-gray-700">Average Daily Pay:</th>
-                <td id="preview-average-daily-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.average_daily_pay|floatformat:2 }}</td>
-            </tr>
-            <tr>
                 <th class="text-left py-2 border-b border-gray-700">Remarks:</th>
                 <td id="preview-remarks" class="py-2 border-b border-gray-700">{{ payroll.remarks|default:"N/A" }}</td>
             </tr>
@@ -158,6 +161,42 @@
 
 {% block extra_js %}
 <script>
+    function getLatenessDeductionAndBasicSalary(start_date, end_date) {
+        // Send AJAX request to get lateness deduction and basic salary
+        const url = "{% url 'edit_payslip' payroll.id %}";
+        fetch(`${url}?start_date=${start_date}&end_date=${end_date}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.lateness_deduction !== undefined) {
+                // Update the Other Deductions field
+                const otherDeductionsField = document.getElementById('{{ form.other_deductions.id_for_label }}');
+                otherDeductionsField.value = parseFloat(data.lateness_deduction).toFixed(2);
+            }
+
+            if (data.basic_salary !== undefined) {
+                // Update the Basic Salary field
+                const basicSalaryField = document.getElementById('{{ form.total_income.id_for_label }}');
+                basicSalaryField.value = parseFloat(data.basic_salary).toFixed(2);
+            }
+
+            if (data.average_daily_pay !== undefined) {
+                // Update the Average Daily Pay field
+                const averageDailyPayField = document.getElementById('{{ form.average_daily_pay.id_for_label }}');
+                averageDailyPayField.value = parseFloat(data.average_daily_pay).toFixed(2);
+            }
+
+            // Update the preview
+            updatePreview();
+        })
+        .catch(error => {
+            console.error('Error fetching lateness deduction and basic salary:', error);
+        });
+    }
+
     function updatePreview() {
         // Retrieve form values using form field IDs
         const basicSalary = parseFloat(document.getElementById('{{ form.total_income.id_for_label }}').value) || 0;
@@ -194,7 +233,34 @@
         element.addEventListener('input', updatePreview);
     });
 
+    // Attach event listeners to Pay Period Start and End fields
+    const payPeriodStartField = document.getElementById('{{ form.pay_period_start.id_for_label }}');
+    const payPeriodEndField = document.getElementById('{{ form.pay_period_end.id_for_label }}');
+
+    payPeriodStartField.addEventListener('change', function() {
+        const start_date = payPeriodStartField.value;
+        const end_date = payPeriodEndField.value;
+        if (start_date && end_date) {
+            getLatenessDeductionAndBasicSalary(start_date, end_date);
+        }
+    });
+
+    payPeriodEndField.addEventListener('change', function() {
+        const start_date = payPeriodStartField.value;
+        const end_date = payPeriodEndField.value;
+        if (start_date && end_date) {
+            getLatenessDeductionAndBasicSalary(start_date, end_date);
+        }
+    });
+
     // Initialize preview on page load
-    document.addEventListener('DOMContentLoaded', updatePreview);
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePreview();
+        const start_date = payPeriodStartField.value;
+        const end_date = payPeriodEndField.value;
+        if (start_date && end_date) {
+            getLatenessDeductionAndBasicSalary(start_date, end_date);
+        }
+    });
 </script>
 {% endblock %}
