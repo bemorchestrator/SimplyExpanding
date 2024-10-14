@@ -50,6 +50,12 @@
         <div class="relative w-full sm:w-auto">
             <form method="get" class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-2">
                 <input type="text" id="date_range" name="date_range" class="bg-gray-700 text-gray-200 py-3 px-4 rounded-lg hover:bg-gray-600 transition duration-200 cursor-pointer w-full sm:w-auto" placeholder="Select Date Range" readonly value="{{ request.GET.date_range }}">
+                <!-- Include other GET parameters as hidden inputs -->
+                {% for key, value in current_get_parameters.items %}
+                    {% if key != 'date_range' and key != 'page' %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
+                {% endfor %}
                 <button type="submit" class="bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition duration-200 w-full sm:w-auto">
                     Apply
                 </button>
@@ -58,6 +64,12 @@
 
         <!-- Today Button -->
         <form method="get" class="w-full sm:w-auto">
+            <!-- Include other GET parameters as hidden inputs -->
+            {% for key, value in current_get_parameters.items %}
+                {% if key != 'today' and key != 'page' %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+            {% endfor %}
             <button type="submit" name="today" value="1" class="bg-gray-800 text-gray-200 py-3 px-4 rounded-lg border border-gray-600 hover:bg-gray-700 transition duration-200 w-full sm:w-auto">
                 Today
             </button>
@@ -188,22 +200,24 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="12" class="text-center py-6 text-gray-500">No records found.</td>
+                            <td colspan="14" class="text-center py-6 text-gray-500">No records found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <!-- Grand Total Row -->
                     <tr class="border-t border-gray-700 font-bold">
-                        <td class="py-3 px-4 text-sm text-gray-200" colspan="3">Grand Totals</td>
-                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_break_duration }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200" colspan="2"></td>
-                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_time }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_hours_worked }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_time_late }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200">Php {{ grand_total_deductions|floatformat:2 }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200" colspan="3"></td>
-                        <td class="py-3 px-4 text-sm text-gray-200">Php {{ grand_total_income|floatformat:2 }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" colspan="3">Grand Totals</td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_break_duration }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" colspan="2"></td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_time }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_hours_worked }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_time_late }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" style="white-space: nowrap;">
+                            Php {{ grand_total_deductions|floatformat:2 }}
+                        </td>                        
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" colspan="3"></td>
+                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">Php {{ grand_total_income|floatformat:2 }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -218,22 +232,30 @@
                 <option value="50" {% if rows_per_page == 50 %}selected{% endif %}>50</option>
                 <option value="all" {% if rows_per_page == 'all' %}selected{% endif %}>All</option>
             </select>
+            <!-- Include other GET parameters as hidden inputs -->
+            {% for key, value in current_get_parameters.items %}
+                {% if key != 'rows_per_page' and key != 'page' %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+            {% endfor %}
         </form>
 
         <!-- Pagination Controls -->
-        {% if paginator and paginator.num_pages > 1 %}
-            <div class="mt-4">
-                <span class="text-gray-400">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
-                <div class="inline-flex mt-2">
-                    {% if page_obj.has_previous %}
-                        <a href="?page={{ page_obj.previous_page_number }}&rows_per_page={{ rows_per_page }}" class="px-3 py-2 bg-blue-500 text-white rounded-md">Previous</a>
-                    {% endif %}
-                    {% if page_obj.has_next %}
-                        <a href="?page={{ page_obj.next_page_number }}&rows_per_page={{ rows_per_page }}" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded-md">Next</a>
-                    {% endif %}
+        {% with query_params=current_get_parameters.urlencode %}
+            {% if paginator and paginator.num_pages > 1 %}
+                <div class="mt-4">
+                    <span class="text-gray-400">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+                    <div class="inline-flex mt-2">
+                        {% if page_obj.has_previous %}
+                            <a href="?{{ query_params }}&page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-blue-500 text-white rounded-md">Previous</a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                            <a href="?{{ query_params }}&page={{ page_obj.next_page_number }}" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded-md">Next</a>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-        {% endif %}
+            {% endif %}
+        {% endwith %}
     </div>
 </div>
 

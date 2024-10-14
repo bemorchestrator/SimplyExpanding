@@ -199,8 +199,29 @@ def attendance_dashboard(request):
     # Redirect to the main clock in/out page
     return redirect('clock_in_out_page')
 
+from decimal import Decimal
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.core.paginator import Paginator
+from django.utils import timezone
+import json
+import logging
+from datetime import timedelta
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+
 @login_required
 def clock_in_out_page(request):
+    # Helper function to format timedelta as hh:mm:ss
+    def format_timedelta(td):
+        total_seconds = int(td.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours}:{minutes:02}:{seconds:02}"
+
     # Get the Employee instance for the logged-in user
     employee = get_object_or_404(Employee, user=request.user)
 
@@ -355,6 +376,24 @@ def clock_in_out_page(request):
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
 
+    # Grand totals calculation over displayed records
+    grand_total_break_duration_td = sum([record.break_duration for record in page_obj], timedelta(0))
+    grand_total_time_td = sum([record.total_time for record in page_obj if record.total_time], timedelta(0))
+    grand_total_hours_worked = sum([record.total_hours for record in page_obj if record.total_hours], Decimal('0.00'))
+    grand_total_time_late_td = sum([record.lateness for record in page_obj if record.lateness], timedelta(0))
+    grand_total_deductions = sum([record.lateness_deduction for record in page_obj if record.lateness_deduction], Decimal('0.00'))
+    grand_total_income = sum([record.total_income for record in page_obj if record.total_income], Decimal('0.00'))
+
+    # Format the timedelta objects
+    grand_total_break_duration = format_timedelta(grand_total_break_duration_td)
+    grand_total_time = format_timedelta(grand_total_time_td)
+    grand_total_time_late = format_timedelta(grand_total_time_late_td)
+
+    # Build the current GET parameters, excluding 'page'
+    current_get_parameters = request.GET.copy()
+    if 'page' in current_get_parameters:
+        del current_get_parameters['page']
+
     # Determine current status
     current_status = 'clocked_out'
     open_attendance = Attendance.objects.filter(employee=employee, clock_out_time__isnull=True).first()
@@ -380,14 +419,6 @@ def clock_in_out_page(request):
     else:
         js_data = {}
 
-    # Grand totals calculation
-    grand_total_break_duration = sum([record.break_duration for record in attendance_records], timedelta(0))
-    grand_total_time = sum([record.total_time for record in attendance_records if record.total_time], timedelta(0))
-    grand_total_hours_worked = sum([record.total_hours for record in attendance_records if record.total_hours], Decimal('0.00'))
-    grand_total_time_late = sum([record.lateness for record in attendance_records if record.lateness], timedelta(0))
-    grand_total_deductions = sum([record.lateness_deduction for record in attendance_records if record.lateness_deduction], Decimal('0.00'))
-    grand_total_income = sum([record.total_income for record in attendance_records if record.total_income], Decimal('0.00'))
-
     return render(request, 'attendance/clock_in_out.html', {
         'current_status': current_status,
         'attendance_records': attendance_records,
@@ -404,7 +435,10 @@ def clock_in_out_page(request):
         'grand_total_time_late': grand_total_time_late,
         'grand_total_deductions': grand_total_deductions,
         'grand_total_income': grand_total_income,
+        'current_get_parameters': current_get_parameters,
     })
+
+
 
 
 def check_for_auto_clock_out(employee):
