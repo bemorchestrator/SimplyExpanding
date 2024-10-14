@@ -23,4 +23,6 @@ urlpatterns = [
     
     path('load-dashboard/<int:id>/', views.load_dashboard, name='load_dashboard'),
     path('delete-dashboard/<int:id>/', views.delete_dashboard, name='delete_dashboard'),
+    path('generate-share-link/<int:id>/', views.generate_shareable_link, name='generate_shareable_link'),
+    path('shared-dashboard/<str:share_token>/', views.shared_dashboard, name='shared_dashboard'),
 ]

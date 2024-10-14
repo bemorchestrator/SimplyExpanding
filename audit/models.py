@@ -6,6 +6,7 @@ class AuditDashboard(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)  # Optional description of the dashboard
     created_at = models.DateTimeField(auto_now_add=True)
+    share_token = models.CharField(max_length=64, unique=True, null=True, blank=True)
 
     def __str__(self):
         return self.name

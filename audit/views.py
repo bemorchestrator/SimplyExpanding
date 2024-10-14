@@ -2,6 +2,8 @@
 import os
 import csv
 import re
+from uuid import uuid4
+from django.urls import reverse
 import requests
 import logging
 import tempfile
@@ -1150,6 +1152,9 @@ def save_audit_dashboard(request):
 
     
 
+
+    
+
 def list_dashboard(request):
     dashboards = AuditDashboard.objects.all()  # Fetch all saved dashboards
     return render(request, 'audit/list_dashboards.html', {'dashboards': dashboards})
@@ -1219,3 +1224,53 @@ def delete_dashboard(request, id):
     # Handle GET requests or other methods by redirecting to the dashboard list
     return redirect('list_dashboard')
 
+
+
+@csrf_protect
+def generate_shareable_link(request, id):
+    if request.method == 'POST':
+        dashboard = get_object_or_404(AuditDashboard, id=id)
+        # Ensure only the owner can generate the shareable link
+        if dashboard.user != request.user:
+            return JsonResponse({'success': False, 'error': 'You do not have permission to share this dashboard.'}, status=403)
+        # Generate a unique share token if not already present
+        if not dashboard.share_token:
+            dashboard.share_token = uuid4().hex
+            dashboard.save()
+        # Build the shareable link
+        shareable_link = request.build_absolute_uri(reverse('shared_dashboard', args=[dashboard.share_token]))
+        return JsonResponse({'success': True, 'shareable_link': shareable_link})
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+    
+
+    
+
+def shared_dashboard(request, share_token):
+    # Retrieve the dashboard using the share token
+    dashboard = get_object_or_404(AuditDashboard, share_token=share_token)
+    uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
+    
+    # Pagination logic (same as in your existing load_dashboard view)
+    page_number = request.GET.get('page', 1)
+    rows_per_page = 15
+    paginator = Paginator(uploaded_files, rows_per_page)
+    try:
+        page_obj = paginator.get_page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.get_page(1)
+    except EmptyPage:
+        page_obj = paginator.get_page(paginator.num_pages)
+    
+    # Initialize the table with paginated data
+    table = UploadedFileTable(page_obj)
+    RequestConfig(request, paginate=False).configure(table)
+    
+    # Render the template with the 'is_shared_view' flag and 'hide_sidebar'
+    return render(request, 'audit/audit_dashboard.html', {
+        'dashboard': dashboard,
+        'table': table,
+        'page_obj': page_obj,
+        'is_shared_view': True,  # Indicate that this is a shared view
+        'hide_sidebar': True,    # Hide the sidebar in the template
+    })
