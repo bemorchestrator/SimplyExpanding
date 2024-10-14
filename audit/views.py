@@ -973,12 +973,11 @@ def process_csv_file(file):
 
 
 
-@csrf_protect
 def audit_dashboard(request):
     # Ensure that the 'in_sitemap' status is always updated when the dashboard is loaded
     update_in_sitemap_status()  # This will update the in_sitemap field for all uploaded files
 
-    # Only retrieve unsaved files (those with no associated dashboard)
+    # Retrieve unsaved files (those with no associated dashboard) and order by 'id' for consistent ordering
     audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True).order_by('id')
 
     # Pagination logic
@@ -996,7 +995,7 @@ def audit_dashboard(request):
 
     # Initialize the table with paginated data
     table = UploadedFileTable(page_obj)
-    RequestConfig(request, paginate=False).configure(table)  # Set paginate=False as we're using manual pagination
+    RequestConfig(request, paginate=False).configure(table)  # Set paginate=False to prevent Django Tables2 from auto-paginating
 
     # Handle form submission for category and action_choice
     if request.method == 'POST':

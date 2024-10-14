@@ -26,33 +26,44 @@ class UploadedFileTable(tables.Table):
         }
     )
 
-    # Actions Column with Dropdown Rendering
     def render_action_choice(self, value, record):
         form = UploadedFileForm(instance=record)
+        options_html = ""
+        for key, choice in record.ACTION_CHOICES:
+            selected = "selected" if record.action_choice == key else ""
+            options_html += f'<option value="{key}" {selected}>{choice}</option>'
+
         return format_html(
-            '''<form method="post" class="sticky-col-1" style="position: sticky; left: 0; z-index: 3;">
-                {}
-            </form>''',
-            form['action_choice']
+            '''
+            <form method="post" class="sticky-col-1" style="position: sticky; left: 0; z-index: 3;">
+                <select name="action_choice" class="action-dropdown">
+                    {}
+                </select>
+            </form>
+            ''',
+            options_html
         )
 
-    # Category Column with Dropdown Rendering
+
     def render_category(self, value, record):
         form = UploadedFileForm(instance=record)
-        csrf_token = get_token(self.request)
-        update_url = reverse('update_category')
+        options_html = ""
+        for key, choice in record.CATEGORY_CHOICES:
+            selected = "selected" if record.category == key else ""
+            options_html += f'<option value="{key}" {selected}>{choice}</option>'
 
         return format_html(
-            '''<form method="post" action="{}">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{}">
-                <input type="hidden" name="id" value="{}">
-                {}
-            </form>''',
-            update_url,
-            csrf_token,
-            record.id,
-            form['category']
+            '''
+            <form method="post">
+                <select name="category" class="category-dropdown">
+                    {}
+                </select>
+            </form>
+            ''',
+            options_html
         )
+
+
 
     # URL Column with Custom Rendering
     def render_url(self, value, record):

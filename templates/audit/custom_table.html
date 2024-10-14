@@ -70,18 +70,36 @@
             padding-left: 50px; /* Add a gap between URL and Page Path headers */
         }
 
-        /* Style for both dropdowns */
-        .category-dropdown, .action-dropdown {
-            width: 100%;  /* Ensure they take up the full width of the cell */
-            max-width: 250px;  /* Set a maximum width */
-            background-color: #4a5568;  /* Dark background */
-            color: #fff;  /* White text */
-            border: none;
-            border-radius: 4px;
+        /* Add some styles to make dropdowns more prominent */
+        .action-dropdown, .category-dropdown {
+            width: 100%; 
+            max-width: 250px;  /* Ensure max width for both dropdowns */
+            color: #fff; 
+            border: none; 
+            border-radius: 4px; 
             padding: 0.25rem;
-            height: 38px;  /* Control the height to be consistent */
-            display: block;  /* Ensure block display to avoid inline issues */
+            height: 38px; 
+            display: block;
         }
+
+        /* Make the category dropdown wider */
+        .category-dropdown {
+            min-width: 145px; /* Increase the minimum width for category dropdown */
+        }
+
+        .action-dropdown {
+            min-width: 145px; /* Increase the minimum width for category dropdown */
+        }
+
+        /* Optional hover and focus effects */
+        .action-dropdown:hover, .category-dropdown:hover {
+            background-color: #3b3b3b; /* Darker background on hover */
+        }
+
+        .action-dropdown option, .category-dropdown option {
+            padding: 8px; /* Add padding to options */
+        }
+
 
         /* Optional: Hover effect for table rows */
         tr:hover {
@@ -183,11 +201,11 @@
                     <!-- Add Losing Traffic column data with icons -->
                     <td class="px-4 py-2">
                         {% if row.record.losing_traffic == 'up' %}
-                            <i class="fa fa-arrow-up" style="color: green;"></i>
+                            <i class="fa fa-arrow-up" style="color: rgb(95, 170, 95);"></i>
                         {% elif row.record.losing_traffic == 'down' %}
-                            <i class="fa fa-arrow-down" style="color: red;"></i>
+                            <i class="fa fa-arrow-down" style="color: rgb(168, 76, 76);"></i>
                         {% else %}
-                            <i class="fa fa-minus" style="color: orange;"></i>
+                            <i class="fa fa-minus" style="color: rgb(187, 155, 97);"></i>
                         {% endif %}
                     </td>
                 </tr>
@@ -199,22 +217,28 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const dropdowns = document.querySelectorAll('.action-dropdown, .category-dropdown');
-
+    
             dropdowns.forEach(dropdown => {
+                // Set initial background color based on the selected option
+                updateDropdownBackground(dropdown);
+    
                 dropdown.addEventListener('change', function() {
                     const form = this.closest('form');  // Get the closest form for this dropdown
                     const formData = new FormData(form); // Gather form data
                     const url = form.action;  // Get the form action URL
-
+    
+                    // Update the dropdown background after selection
+                    updateDropdownBackground(this);
+    
                     // Get CSRF token from cookie
                     function getCookie(name) {
                         let cookieValue = null;
                         if (document.cookie && document.cookie !== '') {
                             const cookies = document.cookie.split(';');
-                            for (let i=0; i<cookies.length; i++) {
+                            for (let i = 0; i < cookies.length; i++) {
                                 const cookie = cookies[i].trim();
-                                if (cookie.substring(0, name.length+1) === (name + '=')) {
-                                    cookieValue = decodeURIComponent(cookie.substring(name.length+1));
+                                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                                     break;
                                 }
                             }
@@ -222,7 +246,7 @@
                         return cookieValue;
                     }
                     const csrftoken = getCookie('csrftoken');
-
+    
                     fetch(url, {
                         method: 'POST',
                         body: formData, // Use form data
@@ -254,7 +278,94 @@
                     });
                 });
             });
+    
+            // Function to set background colors for dropdown options
+            function setOptionBackgroundColors() {
+                // Define colors for action choices
+                const actionChoiceColors = {
+                    'Leave As Is': '#9b51e0',  // Purple
+                    'Update On Page': '#f2c94c',  // Yellow
+                    'Target w/ Links': '#2d9cdb',  // Cyan
+                    '301': '#f2994a',  // Orange
+                    'Canonicalize': '#6fcf97',  // Light Teal
+                    'Block Crawl': '#e67e22',  // Darker Orange
+                    'No Index': '#eb5757',  // Red
+                    'Content Audit': '#56ccf2',  // Light Blue
+                    'Merge': '#2f80ed'  // Royal Blue
+                };
+    
+                // Define colors for category choices
+                const categoryColors = {
+                    'Product Page': '#bb6bd9',  // Light Purple (distinct from Leave As Is)
+                    'Product Category': '#f4b400',  // Deep Yellow (distinct from Update On Page)
+                    'Local Lander': '#27ae60',  // Green (completely new for category)
+                    'Lead Generation': '#ff6347',  // Tomato Red (distinct from No Index)
+                    'Blog Post': '#ffa500',  // Orange (distinct from 301 or Block Crawl)
+                    'Resource / Guide': '#ffcc00',  // Gold
+                    'Blog Category': '#1e90ff',  // Dodger Blue (darker than Cyan)
+                    'Site Info': '#4682b4',  // Steel Blue
+                    'Images': '#7dcea0',  // Soft Green (distinct from Teal)
+                    'Assets': '#af7ac5'  // Lavender (unique color)
+                };
+    
+                // Apply colors to Action Choice dropdowns
+                document.querySelectorAll('.action-dropdown').forEach(dropdown => {
+                    dropdown.querySelectorAll('option').forEach(option => {
+                        const color = actionChoiceColors[option.textContent.trim()] || '#ffffff';
+                        option.style.backgroundColor = color;
+                    });
+                });
+    
+                // Apply colors to Category dropdowns
+                document.querySelectorAll('.category-dropdown').forEach(dropdown => {
+                    dropdown.querySelectorAll('option').forEach(option => {
+                        const color = categoryColors[option.textContent.trim()] || '#ffffff';
+                        option.style.backgroundColor = color;
+                    });
+                });
+            }
+    
+            // Function to update the background of the selected dropdown based on the selected option
+            function updateDropdownBackground(dropdown) {
+                const selectedOption = dropdown.options[dropdown.selectedIndex];
+                const selectedText = selectedOption.textContent.trim();
+    
+                const actionChoiceColors = {
+                    'Leave As Is': '#9b51e0',  // Purple
+                    'Update On Page': '#f2c94c',  // Yellow
+                    'Target w/ Links': '#2d9cdb',  // Cyan
+                    '301': '#f2994a',  // Orange
+                    'Canonicalize': '#6fcf97',  // Light Teal
+                    'Block Crawl': '#e67e22',  // Darker Orange
+                    'No Index': '#eb5757',  // Red
+                    'Content Audit': '#56ccf2',  // Light Blue
+                    'Merge': '#2f80ed'  // Royal Blue
+                };
+    
+                const categoryColors = {
+                    'Product Page': '#bb6bd9',  // Light Purple (distinct from Leave As Is)
+                    'Product Category': '#f4b400',  // Deep Yellow (distinct from Update On Page)
+                    'Local Lander': '#27ae60',  // Green (completely new for category)
+                    'Lead Generation': '#ff6347',  // Tomato Red (distinct from No Index)
+                    'Blog Post': '#4682B4',  // Orange (distinct from 301 or Block Crawl)
+                    'Resource / Guide': '#ffcc00',  // Gold
+                    'Blog Category': '#1e90ff',  // Dodger Blue (darker than Cyan)
+                    'Site Info': '#4682b4',  // Steel Blue
+                    'Images': '#7dcea0',  // Steel blue
+                    'Assets': '#af7ac5'  // Lavender (unique color)
+                };
+    
+                // Get the correct color for the action or category dropdown
+                if (dropdown.classList.contains('action-dropdown')) {
+                    dropdown.style.backgroundColor = actionChoiceColors[selectedText] || '#ffffff';
+                } else if (dropdown.classList.contains('category-dropdown')) {
+                    dropdown.style.backgroundColor = categoryColors[selectedText] || '#ffffff';
+                }
+            }
+    
+            // Call the function to set background colors initially
+            setOptionBackgroundColors();
         });
-    </script>
+    </script>         
 </body>
 </html>
