@@ -22,6 +22,8 @@ from holidays.models import Holiday
 from .models import BillingRecord, Invoice, InvoiceItem
 from .forms import InvoiceForm
 
+
+
 @login_required
 def billing_dashboard(request):
     # Get the Employee instance for the logged-in user
@@ -130,6 +132,31 @@ def billing_dashboard(request):
     page_number_month = request.GET.get('page_month')
     page_obj_month = paginator_month.get_page(page_number_month)
 
+    # Calculate grand totals
+    grand_total_break_duration = attendance_records.aggregate(
+        total=Sum('break_duration')
+    )['total'] or timedelta(0)  # Assuming break_duration is a timedelta
+
+    grand_total_time = attendance_records.aggregate(
+        total=Sum('total_time')
+    )['total'] or timedelta(0)  # Assuming total_time is a timedelta
+
+    grand_total_hours_worked = attendance_records.aggregate(
+        total=Sum('total_hours')
+    )['total'] or Decimal('0.00')
+
+    grand_total_time_late = attendance_records.aggregate(
+        total=Sum('lateness_duration')
+    )['total'] or timedelta(0)  # Assuming lateness_duration is a timedelta
+
+    grand_total_deductions = attendance_records.aggregate(
+        total=Sum('lateness_deduction')
+    )['total'] or Decimal('0.00')
+
+    grand_total_income = attendance_records.aggregate(
+        total=Sum('income')
+    )['total'] or Decimal('0.00')
+
     # Prepare JavaScript data
     js_data = json.dumps({
         'clock_in_time': clock_in_time.isoformat() if clock_in_time else None,
@@ -154,11 +181,19 @@ def billing_dashboard(request):
         'per_day_rate': per_day_rate,
         'standard_hours_per_day': standard_hours_per_day,
         'js_data': js_data,
+        # Grand totals
+        'grand_total_break_duration': grand_total_break_duration,
+        'grand_total_time': grand_total_time,
+        'grand_total_hours_worked': grand_total_hours_worked,
+        'grand_total_time_late': grand_total_time_late,
+        'grand_total_deductions': grand_total_deductions,
+        'grand_total_income': grand_total_income,
     }
 
     return render(request, 'billing/dashboard.html', context)
 
-# ... rest of your views remain unchanged ...
+
+
 
 @login_required
 def invoice_list(request):

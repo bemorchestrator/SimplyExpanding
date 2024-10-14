@@ -380,6 +380,14 @@ def clock_in_out_page(request):
     else:
         js_data = {}
 
+    # Grand totals calculation
+    grand_total_break_duration = sum([record.break_duration for record in attendance_records], timedelta(0))
+    grand_total_time = sum([record.total_time for record in attendance_records if record.total_time], timedelta(0))
+    grand_total_hours_worked = sum([record.total_hours for record in attendance_records if record.total_hours], Decimal('0.00'))
+    grand_total_time_late = sum([record.lateness for record in attendance_records if record.lateness], timedelta(0))
+    grand_total_deductions = sum([record.lateness_deduction for record in attendance_records if record.lateness_deduction], Decimal('0.00'))
+    grand_total_income = sum([record.total_income for record in attendance_records if record.total_income], Decimal('0.00'))
+
     return render(request, 'attendance/clock_in_out.html', {
         'current_status': current_status,
         'attendance_records': attendance_records,
@@ -389,7 +397,15 @@ def clock_in_out_page(request):
         'paginator': paginator,
         'rows_per_page': rows_per_page,
         'js_data': json.dumps(js_data),
+        # Grand totals context
+        'grand_total_break_duration': grand_total_break_duration,
+        'grand_total_time': grand_total_time,
+        'grand_total_hours_worked': grand_total_hours_worked,
+        'grand_total_time_late': grand_total_time_late,
+        'grand_total_deductions': grand_total_deductions,
+        'grand_total_income': grand_total_income,
     })
+
 
 def check_for_auto_clock_out(employee):
     """

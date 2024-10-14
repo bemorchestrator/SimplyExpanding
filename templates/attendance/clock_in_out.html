@@ -74,7 +74,7 @@
     {% endif %}
 
     <!-- Attendance Records Dashboard -->
-    <div class=" rounded-lg p-8 w-full">
+    <div class="rounded-lg p-8 w-full">
         <h3 class="text-lg font-semibold text-gray-200 mb-6">Attendance Records</h3>
         <div class="overflow-x-auto">
             <table class="min-w-full bg-gray-800 rounded-lg">
@@ -192,6 +192,20 @@
                         </tr>
                     {% endfor %}
                 </tbody>
+                <tfoot>
+                    <!-- Grand Total Row -->
+                    <tr class="border-t border-gray-700 font-bold">
+                        <td class="py-3 px-4 text-sm text-gray-200" colspan="3">Grand Totals</td>
+                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_break_duration }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200" colspan="2"></td>
+                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_time }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_hours_worked }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200">{{ grand_total_time_late }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200">Php {{ grand_total_deductions|floatformat:2 }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-200" colspan="3"></td>
+                        <td class="py-3 px-4 text-sm text-gray-200">Php {{ grand_total_income|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
