@@ -16,6 +16,18 @@
         </div>
     {% endif %}
 
+    <!-- Admin Employee Dropdown for Attendance Selection -->
+    {% if user.is_superuser %}
+        <div class="w-full mb-4 flex justify-end">
+            <label for="employee_id" class="text-gray-400 mr-2">Select Employee:</label>
+            <select name="employee_id" id="employee_id" class="bg-gray-700 text-gray-200 py-2 px-4 rounded-lg" onchange="this.form.submit()">
+                {% for emp in employees %}
+                    <option value="{{ emp.id }}" {% if emp.id == employee.id %}selected{% endif %}>{{ emp.user.get_full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    {% endif %}
+
     <!-- Clock In/Out Buttons -->
     <div class="w-full mb-4 flex flex-col sm:flex-row items-center justify-start space-y-4 sm:space-y-0 sm:space-x-4">
         <!-- Dynamic Clock In/Out Button -->
@@ -86,13 +98,13 @@
     {% endif %}
 
     <!-- Attendance Records Dashboard -->
-    <div class="rounded-lg p-4 sm:p-8 w-full"> <!-- Changed p-8 to p-4 for mobile -->
+    <div class="rounded-lg p-4 sm:p-8 w-full">
         <h3 class="text-lg font-semibold text-gray-200 mb-6">Attendance Records</h3>
         <div class="overflow-x-auto">
             <table class="min-w-full bg-gray-800 rounded-lg">
                 <thead>
                     <tr class="text-left text-gray-400">
-                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Date</th> <!-- Reduced px from 4 to 2 on mobile -->
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Date</th>
                         <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Clock In</th>
                         <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Clock Out</th>
                         <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Total Break Duration</th>

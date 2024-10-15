@@ -199,19 +199,8 @@ def attendance_dashboard(request):
     # Redirect to the main clock in/out page
     return redirect('clock_in_out_page')
 
-from decimal import Decimal
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.core.paginator import Paginator
-from django.utils import timezone
-import json
-import logging
-from datetime import timedelta
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+
 
 @login_required
 def clock_in_out_page(request):
@@ -222,8 +211,15 @@ def clock_in_out_page(request):
         minutes, seconds = divmod(remainder, 60)
         return f"{hours}:{minutes:02}:{seconds:02}"
 
-    # Get the Employee instance for the logged-in user
-    employee = get_object_or_404(Employee, user=request.user)
+    # Admin can select an employee, or regular users will view their own records
+    if request.user.is_superuser and 'employee_id' in request.GET:
+        # Admin viewing selected employee's attendance
+        employee = get_object_or_404(Employee, pk=request.GET.get('employee_id'))
+        employees = Employee.objects.all()  # Fetch all employees for the dropdown menu
+    else:
+        # Regular user or admin viewing their own attendance
+        employee = get_object_or_404(Employee, user=request.user)
+        employees = None  # No dropdown for regular users
 
     # Automatically clock out if it's past 5 PM
     check_for_auto_clock_out(employee)
@@ -275,7 +271,7 @@ def clock_in_out_page(request):
                 if attendance:
                     attendance.clock_out_time = timezone.now()
                     attendance.status = 'clocked_out'
-                    attendance.save()  # This will trigger calculations via the overridden save method
+                    attendance.save()  # Trigger calculations via the overridden save method
 
                     # Create a billing record for the worked income and hours
                     try:
@@ -405,10 +401,7 @@ def clock_in_out_page(request):
             current_status = 'clocked_in'
 
         # Prepare data for JavaScript
-        # Define standard_hours_per_day as a constant (e.g., 8.0)
         standard_hours_per_day = 8.0
-
-        # Prepare data for JavaScript
         js_data = {
             'clock_in_time': open_attendance.clock_in_time.isoformat() if open_attendance.clock_in_time else None,
             'per_day_rate': float(open_attendance.employee.per_day_rate),
@@ -428,7 +421,7 @@ def clock_in_out_page(request):
         'paginator': paginator,
         'rows_per_page': rows_per_page,
         'js_data': json.dumps(js_data),
-        # Grand totals context
+        'employees': employees,  # Pass employee list for the admin dropdown
         'grand_total_break_duration': grand_total_break_duration,
         'grand_total_time': grand_total_time,
         'grand_total_hours_worked': grand_total_hours_worked,
@@ -437,6 +430,7 @@ def clock_in_out_page(request):
         'grand_total_income': grand_total_income,
         'current_get_parameters': current_get_parameters,
     })
+
 
 
 
