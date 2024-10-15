@@ -3,7 +3,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="min-h-screen p-10 flex flex-col items-center ">
+<div class="min-h-screen p-10 flex flex-col items-center bg-gray-900">
     <!-- Payroll Dashboard Header -->
     <div class="w-full mb-6 flex justify-between items-center">
         <h2 class="text-2xl font-semibold text-gray-200">Payroll Dashboard</h2>
@@ -76,91 +76,175 @@
         </div>
     </div>
 
-    <!-- Payroll Records Table -->
-    <div class="rounded-lg p-6 w-full">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="text-gray-400 text-sm border-b border-gray-700">
-                        <th class="py-3 px-4">Employee</th>
-                        <th class="py-3 px-4">Pay Period</th>
-                        <th class="py-3 px-4">Total Income</th>
-                        <th class="py-3 px-4">Status</th>
-                        <th class="py-3 px-4">Proof of Payment</th>
-                        <th class="py-3 px-4">Date Processed</th>
-                        <th class="py-3 px-4">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for payroll in payroll_data %}
-                        <tr class="border-t border-gray-700 text-sm">
-                            <td class="py-3 px-4 text-gray-200">{{ payroll.employee }}</td>
-                            <td class="py-3 px-4 text-gray-200">{{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}</td>
-                            <td class="py-3 px-4 text-gray-200">Php {{ payroll.total_income|floatformat:2 }}</td>
-                            <td class="py-3 px-4">
-                                {% if payroll.status == 'pending' %}
-                                    <span class="text-orange-200 font-semibold px-4 py-2 rounded-full">Pending</span>
-                                {% elif payroll.status == 'paid' %}
-                                    <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
-                                {% elif payroll.status == 'no_income' %}
-                                    <span class="text-gray-400">No Income</span>
-                                {% else %}
-                                    <span class="text-gray-400">{{ payroll.status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 px-4">
-                                {% if payroll.status == 'paid' and payroll.payment_proof %}
-                                    <img 
-                                        src="{{ payroll.payment_proof }}" 
-                                        alt="Proof of Payment" 
-                                        class="w-6 h-6 object-cover rounded cursor-pointer" 
-                                        onclick="openModal('{{ payroll.payment_proof }}')"
-                                    >
-                                {% else %}
-                                    <span class="text-gray-500">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 px-4 text-gray-200">
-                                {% if payroll.date_processed %}
-                                    {{ payroll.date_processed|date:"Y-m-d" }}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                            <td class="py-3 px-4">
-                                {% if payroll.status == 'pending' %}
-                                    {% if payroll.id %}
-                                        <a href="{% url 'edit_payslip' payroll.id %}" class="
-                                            bg-orange-600 text-orange-200 
-                                            font-semibold px-4 py-2 rounded hover:bg-orange-700
-                                        ">
-                                            Edit Payslip
-                                        </a>
+    <!-- Payroll Records Section -->
+    <div class="w-full">
+        <!-- Desktop Table View -->
+        <div class="hidden md:block rounded-lg p-6 bg-gray-800">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-gray-400 text-sm border-b border-gray-700">
+                            <th class="py-3 px-4">Employee</th>
+                            <th class="py-3 px-4">Pay Period</th>
+                            <th class="py-3 px-4">Total Income</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Proof of Payment</th>
+                            <th class="py-3 px-4">Date Processed</th>
+                            <th class="py-3 px-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payroll in payroll_data %}
+                            <tr class="border-t border-gray-700 text-sm">
+                                <td class="py-3 px-4 text-gray-200">{{ payroll.employee }}</td>
+                                <td class="py-3 px-4 text-gray-200">{{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}</td>
+                                <td class="py-3 px-4 text-gray-200">Php {{ payroll.total_income|floatformat:2 }}</td>
+                                <td class="py-3 px-4">
+                                    {% if payroll.status == 'pending' %}
+                                        <span class="text-orange-200 font-semibold px-4 py-2 rounded-full">Pending</span>
+                                    {% elif payroll.status == 'paid' %}
+                                        <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
+                                    {% elif payroll.status == 'no_income' %}
+                                        <span class="text-gray-400">No Income</span>
                                     {% else %}
-                                        <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" 
-                                           class="
-                                               bg-orange-600 text-orange-200 
-                                               font-semibold px-4 py-2 rounded hover:bg-orange-700
-                                           ">
-                                            Initiate Payroll
-                                        </a>
+                                        <span class="text-gray-400">{{ payroll.status_display }}</span>
                                     {% endif %}
-                                {% elif payroll.status == 'paid' %}
-                                    <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
-                                {% elif payroll.status == 'no_income' %}
-                                    <span class="text-gray-400">No Income</span>
-                                {% else %}
-                                    <span class="text-gray-400">{{ payroll.status_display }}</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center py-6 text-gray-500">No payroll records available.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                                </td>
+                                <td class="py-3 px-4">
+                                    {% if payroll.status == 'paid' and payroll.payment_proof %}
+                                        <img 
+                                            src="{{ payroll.payment_proof }}" 
+                                            alt="Proof of Payment" 
+                                            class="w-6 h-6 object-cover rounded cursor-pointer" 
+                                            onclick="openModal('{{ payroll.payment_proof }}')"
+                                        >
+                                    {% else %}
+                                        <span class="text-gray-500">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-4 text-gray-200">
+                                    {% if payroll.date_processed %}
+                                        {{ payroll.date_processed|date:"Y-m-d" }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-4">
+                                    {% if payroll.status == 'pending' %}
+                                        {% if payroll.id %}
+                                            <a href="{% url 'edit_payslip' payroll.id %}" class="
+                                                bg-orange-600 text-orange-200 
+                                                font-semibold px-4 py-2 rounded hover:bg-orange-700
+                                            ">
+                                                Edit Payslip
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" 
+                                               class="
+                                                   bg-orange-600 text-orange-200 
+                                                   font-semibold px-4 py-2 rounded hover:bg-orange-700
+                                               ">
+                                                Initiate Payroll
+                                            </a>
+                                        {% endif %}
+                                    {% elif payroll.status == 'paid' %}
+                                        <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full">Paid</span>
+                                    {% elif payroll.status == 'no_income' %}
+                                        <span class="text-gray-400">No Income</span>
+                                    {% else %}
+                                        <span class="text-gray-400">{{ payroll.status_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-6 text-gray-500">No payroll records available.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="md:hidden space-y-6">
+            {% for payroll in payroll_data %}
+                <div class="bg-gray-800 rounded-lg p-6 shadow-md">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-200">{{ payroll.employee }}</h3>
+                        <p class="text-sm text-gray-400">{{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}</p>
+                    </div>
+                    <div class="space-y-2">
+                        <div>
+                            <span class="font-semibold text-gray-200">Total Income:</span>
+                            <span class="text-gray-200">Php {{ payroll.total_income|floatformat:2 }}</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-200">Status:</span>
+                            {% if payroll.status == 'pending' %}
+                                <span class="text-orange-200 font-semibold px-2 py-1 rounded-full">Pending</span>
+                            {% elif payroll.status == 'paid' %}
+                                <span class="bg-green-600 text-green-200 font-semibold px-2 py-1 rounded-full">Paid</span>
+                            {% elif payroll.status == 'no_income' %}
+                                <span class="text-gray-400">No Income</span>
+                            {% else %}
+                                <span class="text-gray-400">{{ payroll.status_display }}</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-200">Proof of Payment:</span>
+                            {% if payroll.status == 'paid' and payroll.payment_proof %}
+                                <img 
+                                    src="{{ payroll.payment_proof }}" 
+                                    alt="Proof of Payment" 
+                                    class="w-8 h-8 object-cover rounded cursor-pointer" 
+                                    onclick="openModal('{{ payroll.payment_proof }}')"
+                                >
+                            {% else %}
+                                <span class="text-gray-500">N/A</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-200">Date Processed:</span>
+                            {% if payroll.date_processed %}
+                                <span class="text-gray-200">{{ payroll.date_processed|date:"Y-m-d" }}</span>
+                            {% else %}
+                                <span class="text-gray-500">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        {% if payroll.status == 'pending' %}
+                            {% if payroll.id %}
+                                <a href="{% url 'edit_payslip' payroll.id %}" class="
+                                    bg-orange-600 text-orange-200 
+                                    font-semibold px-4 py-2 rounded hover:bg-orange-700
+                                    w-full text-center
+                                ">
+                                    Edit Payslip
+                                </a>
+                            {% else %}
+                                <a href="{% url 'initiate_payroll' payroll.employee.id payroll.pay_period_start|date:"Y-m-d" payroll.pay_period_end|date:"Y-m-d" %}" 
+                                   class="
+                                       bg-orange-600 text-orange-200 
+                                       font-semibold px-4 py-2 rounded hover:bg-orange-700
+                                       w-full text-center
+                                   ">
+                                    Initiate Payroll
+                                </a>
+                            {% endif %}
+                        {% elif payroll.status == 'paid' %}
+                            <span class="bg-green-600 text-green-200 font-semibold px-4 py-2 rounded-full block text-center">Paid</span>
+                        {% elif payroll.status == 'no_income' %}
+                            <span class="text-gray-400 block text-center">No Income</span>
+                        {% else %}
+                            <span class="text-gray-400 block text-center">{{ payroll.status_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-center py-6 text-gray-500">No payroll records available.</div>
+            {% endfor %}
         </div>
     </div>
 
@@ -193,25 +277,18 @@
             document.getElementById('modalImage').src = '';
         }
 
-        window.onclick = function(event) {
-            const modal = document.getElementById('imageModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
-
         // Dropdown Functions
         function toggleDropdown() {
             const dropdown = document.getElementById('dateRangeDropdownMenu');
             dropdown.classList.toggle('hidden');
         }
 
-        // Close dropdown if clicked outside
-        window.onclick = function(event) {
+        // Close dropdown and modal if clicked outside
+        window.addEventListener('click', function(event) {
             const dropdownButton = document.getElementById('dateRangeDropdownButton');
             const dropdownMenu = document.getElementById('dateRangeDropdownMenu');
             const customRangeForm = document.getElementById('customRangeForm');
-            const isClickInsideDropdown = dropdownButton.contains(event.target) || dropdownMenu.contains(event.target);
+            const isClickInsideDropdown = dropdownButton.contains(event.target) || dropdownMenu.contains(event.target) || customRangeForm.contains(event.target);
 
             if (!isClickInsideDropdown) {
                 dropdownMenu.classList.add('hidden');
@@ -221,7 +298,7 @@
             if (event.target == modal) {
                 closeModal();
             }
-        }
+        });
 
         // Handle Custom Range Button Click
         document.getElementById('customRangeButton').addEventListener('click', function() {
