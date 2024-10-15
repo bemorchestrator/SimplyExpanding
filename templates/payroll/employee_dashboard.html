@@ -76,7 +76,7 @@
         <!-- Mobile Card View -->
         <div class="block sm:hidden">
             {% for payroll in payroll_records %}
-            <div class="bg-gray-800 rounded-lg shadow-md mb-6 p-2 px-6"> <!-- Adjust padding and width here -->
+            <div class="bg-gray-800 rounded-lg shadow-md mb-6 p-2 w-[120%] mx-auto"> <!-- Adjust padding and width here -->
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-gray-400 text-sm">Pay Period:</span>
                     <span class="text-gray-200 text-sm">{{ payroll.pay_period_start|date:"Y-m-d" }} - {{ payroll.pay_period_end|date:"Y-m-d" }}</span>
