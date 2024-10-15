@@ -76,7 +76,7 @@
         <!-- Mobile Card View -->
         <div class="block sm:hidden">
             {% for payroll in payroll_records %}
-            <div class="bg-gray-800 rounded-lg shadow-md mb-6 p-4">
+            <div class="bg-gray-800 rounded-lg shadow-md mb-6 p-2 px-6"> <!-- Adjust padding and width here -->
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-gray-400 text-sm">Pay Period:</span>
                     <span class="text-gray-200 text-sm">{{ payroll.pay_period_start|date:"Y-m-d" }} - {{ payroll.pay_period_end|date:"Y-m-d" }}</span>
@@ -97,22 +97,23 @@
                 </div>
                 <div class="flex justify-end">
                     {% if payroll.status == 'paid' %}
-                        <a href="{% url 'download_payslip' payroll.id %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
-                            Download Payslip
-                        </a>
+                    <a href="{% url 'download_payslip' payroll.id %}" 
+                    class="bg-teal-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-xs sm:text-sm sm:py-2 sm:px-4">
+                     Download Payslip
+                    </a>
                     {% else %}
                         <span class="text-gray-500 text-sm">Not available</span>
                     {% endif %}
                 </div>
             </div>
             {% endfor %}
-
             {% if not payroll_records %}
             <div class="text-center py-6 text-gray-500">
                 You don't have any payroll records yet.
             </div>
             {% endif %}
         </div>
+
 
         <!-- Pagination Controls -->
         {% if paginator.num_pages > 1 and rows_per_page != 'all' %}
