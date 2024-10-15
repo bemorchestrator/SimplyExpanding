@@ -21,6 +21,7 @@ from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.http import Http404, HttpResponse, JsonResponse
 import logging
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 
@@ -294,7 +295,7 @@ def validate_payment_proof(payment_proof):
 @login_required
 def employee_payroll_dashboard(request):
     """
-    Display all payroll records of the currently logged-in employee.
+    Display all payroll records of the currently logged-in employee with pagination and rows per page control.
     """
     # Verify if the user has an associated Employee record
     try:
@@ -305,15 +306,50 @@ def employee_payroll_dashboard(request):
     # Retrieve all payroll records for the employee, sorted by most recent pay period
     payroll_records = PayrollRecord.objects.filter(employee=employee).order_by('-pay_period_end')
 
-    # Add a check for empty records to enhance the UX
-    has_records = payroll_records.exists()
+    # Get 'rows_per_page' from GET parameters, default to 10
+    rows_per_page = request.GET.get('rows_per_page', '10')
+    valid_rows = ['10', '20', '30', 'all']
+    if rows_per_page not in valid_rows:
+        rows_per_page = '10'
+
+    # Get 'page' from GET parameters, default to 1
+    page = request.GET.get('page', 1)
+
+    # Determine the number of items per page
+    if rows_per_page == 'all':
+        per_page = payroll_records.count() if payroll_records.count() > 10 else 10  # Minimum display of 10
+    else:
+        per_page = int(rows_per_page) if int(rows_per_page) >=10 else 10  # Enforce minimum of 10
+
+    # Initialize Paginator
+    paginator = Paginator(payroll_records, per_page)
+
+    try:
+        page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range, deliver last page of results.
+        page_obj = paginator.page(paginator.num_pages)
+
+    # Preserve other GET parameters except 'page' and 'rows_per_page'
+    get_params = request.GET.copy()
+    if 'page' in get_params:
+        del get_params['page']
+    if 'rows_per_page' in get_params:
+        del get_params['rows_per_page']
+    current_get_parameters = get_params.urlencode()
 
     context = {
-        'payroll_records': payroll_records,
-        'has_records': has_records,  # To handle 'no records' message in the template
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'rows_per_page': rows_per_page,
+        'current_get_parameters': get_params,  # For preserving other GET params
+        'payroll_records': page_obj.object_list,  # Current page's payroll records
+        'has_records': payroll_records.exists(),
     }
-    return render(request, 'payroll/employee_dashboard.html', context)  # Updated template
-
+    return render(request, 'payroll/employee_dashboard.html', context)
 
 @login_required
 def download_payslip(request, payroll_id):

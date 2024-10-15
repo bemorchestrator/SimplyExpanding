@@ -5,7 +5,26 @@
     <h2 class="text-lg font-semibold text-gray-200 mb-6">Your Payroll Records</h2>
 
     <div class="rounded-lg p-8 w-full">
-        <div class="overflow-x-auto">
+        <!-- Rows Per Page Control -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <!-- Rows Per Page Selection -->
+            <form method="get" class="flex items-center space-x-2">
+                <label for="rows_per_page" class="text-gray-400">Rows per page:</label>
+                <select name="rows_per_page" id="rows_per_page" onchange="this.form.submit()" class="bg-gray-700 text-gray-200 py-2 px-4 rounded-lg border border-gray-600">
+                    <option value="10" {% if rows_per_page == '10' %}selected{% endif %}>10</option>
+                    <option value="20" {% if rows_per_page == '20' %}selected{% endif %}>20</option>
+                    <option value="30" {% if rows_per_page == '30' %}selected{% endif %}>30</option>
+                    <option value="all" {% if rows_per_page == 'all' %}selected{% endif %}>All</option>
+                </select>
+                <!-- Preserve other GET parameters -->
+                {% for key, value in current_get_parameters.items %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+            </form>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden sm:block overflow-x-auto">
             <table class="w-full bg-gray-800 rounded-lg">
                 <thead>
                     <tr class="text-left text-gray-400 text-sm">
@@ -20,7 +39,7 @@
                     {% for payroll in payroll_records %}
                     <tr class="border-t border-gray-700 text-sm">
                         <td class="py-3 px-4 text-gray-200">
-                            {{ payroll.pay_period_start }} - {{ payroll.pay_period_end }}
+                            {{ payroll.pay_period_start|date:"Y-m-d" }} - {{ payroll.pay_period_end|date:"Y-m-d" }}
                         </td>
                         <td class="py-3 px-4 text-gray-200">
                             Php {{ payroll.total_income|floatformat:2 }}
@@ -31,7 +50,7 @@
                             </span>
                         </td>
                         <td class="py-3 px-4 text-gray-200">
-                            {{ payroll.date_processed|default:"N/A" }}
+                            {{ payroll.date_processed|date:"Y-m-d"|default:"N/A" }}
                         </td>
                         <td class="py-3 px-4">
                             {% if payroll.status == 'paid' %}
@@ -53,6 +72,107 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Mobile Card View -->
+        <div class="block sm:hidden">
+            {% for payroll in payroll_records %}
+            <div class="bg-gray-800 rounded-lg shadow-md mb-6 p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-400 text-sm">Pay Period:</span>
+                    <span class="text-gray-200 text-sm">{{ payroll.pay_period_start|date:"Y-m-d" }} - {{ payroll.pay_period_end|date:"Y-m-d" }}</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-400 text-sm">Total Income:</span>
+                    <span class="text-gray-200 text-sm">Php {{ payroll.total_income|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-400 text-sm">Status:</span>
+                    <span class="{% if payroll.status == 'paid' %}bg-green-600 text-green-200{% else %}bg-orange-500 text-orange-200{% endif %} font-semibold px-3 py-1 rounded-full text-xs">
+                        {{ payroll.status|capfirst }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-400 text-sm">Date Processed:</span>
+                    <span class="text-gray-200 text-sm">{{ payroll.date_processed|date:"Y-m-d"|default:"N/A" }}</span>
+                </div>
+                <div class="flex justify-end">
+                    {% if payroll.status == 'paid' %}
+                        <a href="{% url 'download_payslip' payroll.id %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
+                            Download Payslip
+                        </a>
+                    {% else %}
+                        <span class="text-gray-500 text-sm">Not available</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not payroll_records %}
+            <div class="text-center py-6 text-gray-500">
+                You don't have any payroll records yet.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if paginator.num_pages > 1 and rows_per_page != 'all' %}
+            <div class="flex items-center justify-between mt-6">
+                <span class="text-gray-400 text-sm">
+                    Page {{ page_obj.number }} of {{ paginator.num_pages }}
+                </span>
+                <div class="inline-flex">
+                    {% if page_obj.has_previous %}
+                        <a href="?rows_per_page={{ rows_per_page }}&page={{ page_obj.previous_page_number }}{% if current_get_parameters %}&{{ current_get_parameters.urlencode }}{% endif %}" class="px-3 py-2 bg-blue-500 text-white rounded-md mr-2 hover:bg-blue-600">
+                            Previous
+                        </a>
+                    {% else %}
+                        <span class="px-3 py-2 bg-gray-700 text-gray-400 rounded-md mr-2">Previous</span>
+                    {% endif %}
+
+                    {% for num in paginator.page_range %}
+                        {% if num == page_obj.number %}
+                            <span class="px-3 py-2 bg-blue-700 text-white rounded-md mr-2">{{ num }}</span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <a href="?rows_per_page={{ rows_per_page }}&page={{ num }}{% if current_get_parameters %}&{{ current_get_parameters.urlencode }}{% endif %}" class="px-3 py-2 bg-blue-500 text-white rounded-md mr-2 hover:bg-blue-600">
+                                {{ num }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a href="?rows_per_page={{ rows_per_page }}&page={{ page_obj.next_page_number }}{% if current_get_parameters %}&{{ current_get_parameters.urlencode }}{% endif %}" class="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            Next
+                        </a>
+                    {% else %}
+                        <span class="px-3 py-2 bg-gray-700 text-gray-400 rounded-md">Next</span>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
     </div>
 </div>
+{% endblock %}
+
+<!-- Include Flatpickr CSS and JS if necessary -->
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#date_range", {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            defaultDate: [
+                "{{ selected_start_date|default:'' }}",
+                "{{ selected_end_date|default:'' }}"
+            ],
+            locale: {
+                rangeSeparator: " to "
+            }
+        });
+    });
+</script>
 {% endblock %}

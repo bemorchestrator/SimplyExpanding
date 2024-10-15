@@ -86,50 +86,50 @@
     {% endif %}
 
     <!-- Attendance Records Dashboard -->
-    <div class="rounded-lg p-8 w-full">
+    <div class="rounded-lg p-4 sm:p-8 w-full"> <!-- Changed p-8 to p-4 for mobile -->
         <h3 class="text-lg font-semibold text-gray-200 mb-6">Attendance Records</h3>
         <div class="overflow-x-auto">
             <table class="min-w-full bg-gray-800 rounded-lg">
                 <thead>
                     <tr class="text-left text-gray-400">
-                        <th class="py-3 px-4 text-sm" nowrap>Date</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Clock In</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Clock Out</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Total Break Duration</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Break Start</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Break End</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Total Time</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Total Hours Worked</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Time Late</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Deduction</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Primary Clock In</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Lateness Calculated</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Holiday Type</th>
-                        <th class="py-3 px-4 text-sm" nowrap>Total Income</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Date</th> <!-- Reduced px from 4 to 2 on mobile -->
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Clock In</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Clock Out</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Total Break Duration</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Break Start</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Break End</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Total Time</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Total Hours Worked</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Time Late</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Deduction</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Primary Clock In</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Lateness Calculated</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Holiday Type</th>
+                        <th class="py-3 px-2 sm:px-4 text-sm" nowrap>Total Income</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for record in page_obj %}
                         <tr class="border-t border-gray-700">
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>{{ record.clock_in_time|date:"Y-m-d" }}</td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>{{ record.clock_in_time|date:"Y-m-d" }}</td>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.clock_in_time %}
                                     {{ record.clock_in_time|time:"h:i A" }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.clock_out_time %}
                                     {{ record.clock_out_time|time:"h:i A" }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {{ record.break_duration_formatted }}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.breaks.exists %}
                                     {% for brk in record.breaks.all %}
                                         <div>{{ brk.break_start_time|time:"h:i A" }}</div>
@@ -138,7 +138,7 @@
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.breaks.exists %}
                                     {% for brk in record.breaks.all %}
                                         <div>
@@ -153,44 +153,44 @@
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {{ record.total_time_formatted }}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.total_hours %}
                                     {{ record.total_hours }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {{ record.lateness_formatted }}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.lateness_deduction > 0 %}
                                     Php {{ record.lateness_deduction|floatformat:2 }}
                                 {% else %}
                                     Php 0.00
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.is_primary_clock_in %}
                                     Yes
                                 {% else %}
                                     No
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {{ record.lateness_calculated|yesno:"Yes,No" }}
                             </td>
-                            <td class="py-3 px-4 text-sm text-gray-200" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm text-gray-200" nowrap>
                                 {% if record.holiday %}
                                     {{ record.holiday.get_holiday_type_display }}
                                 {% else %}
                                     N/A
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-sm" nowrap>
+                            <td class="py-3 px-2 sm:px-4 text-sm" nowrap>
                                 {% if record.total_income < 0 %}
                                     <span class="text-red-500">Php {{ record.total_income|floatformat:2 }}</span>
                                 {% else %}
@@ -207,17 +207,17 @@
                 <tfoot>
                     <!-- Grand Total Row -->
                     <tr class="border-t border-gray-700 font-bold">
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" colspan="3">Grand Totals</td>
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_break_duration }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" colspan="2"></td>
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_time }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_hours_worked }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">{{ grand_total_time_late }}</td>
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" style="white-space: nowrap;">
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap" colspan="3">Grand Totals</td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap">{{ grand_total_break_duration }}</td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap" colspan="2"></td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap">{{ grand_total_time }}</td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap">{{ grand_total_hours_worked }}</td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap">{{ grand_total_time_late }}</td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap" style="white-space: nowrap;">
                             Php {{ grand_total_deductions|floatformat:2 }}
                         </td>                        
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap" colspan="3"></td>
-                        <td class="py-3 px-4 text-sm text-gray-200 no-wrap">Php {{ grand_total_income|floatformat:2 }}</td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap" colspan="3"></td>
+                        <td class="py-3 px-2 sm:px-4 text-sm text-gray-200 no-wrap">Php {{ grand_total_income|floatformat:2 }}</td>
                     </tr>
                 </tfoot>
             </table>
