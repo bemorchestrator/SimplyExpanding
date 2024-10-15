@@ -6,8 +6,8 @@
 <div class="container mx-auto mt-8 px-4 sm:px-6 lg:px-8">
     <h1 class="text-3xl font-bold text-center mb-8 text-white">Onboarded Clients</h1>
 
-    <!-- Search Form -->
-    <form method="GET" action="{% url 'client_list' %}" class="mb-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+    <!-- Search Form (Visible only on desktop and larger screens) -->
+    <form method="GET" action="{% url 'client_list' %}" class="mb-8 hidden md:flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
         <div class="flex items-center space-x-2 w-full sm:w-auto">
             <input
                 type="text"
@@ -20,11 +20,35 @@
         </div>
     </form>
 
+    <!-- Mobile Dropdown: Client List -->
+    <div class="mb-8 md:hidden relative">
+        <button id="mobileDropdownButton" class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-600 focus:outline-none flex justify-between items-center">
+            Select a Client
+            <svg class="inline-block ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+        <div id="mobileDropdownMenu" class="absolute mt-2 w-full bg-gray-700 rounded-lg shadow-md max-h-60 overflow-y-auto hidden z-10">
+            <ul class="py-1">
+                {% for client in clients %}
+                    <li>
+                        <a href="{% url 'client_list' %}?selected={{ client.pk }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                           class="block px-4 py-2 text-white hover:bg-blue-600">
+                            {{ client.business_name }}
+                        </a>
+                    </li>
+                {% empty %}
+                    <li class="px-4 py-2 text-gray-400">No clients found.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
     <!-- Master-Detail Layout -->
     <div class="flex flex-col md:flex-row gap-8">
-        <!-- Left Card: Client List -->
-        <div class="w-full md:w-1/3  rounded-xl  p-6 overflow-auto">
-            <h2 class="text-2xl font-semibold mb-4 text-white">Client List</h2>
+        <!-- Left Card: Client List (visible on md and up) -->
+        <div class="w-full md:w-1/3 rounded-xl p-6 bg-gray-800 shadow-lg overflow-auto hidden md:block">
+            <h2 class="text-2xl font-semibold mb-6 text-white">Client List</h2>
             <ul class="space-y-2">
                 {% for client in clients %}
                     <li>
@@ -40,59 +64,59 @@
         </div>
 
         <!-- Right Card: Client Details -->
-        <div class="w-full md:w-2/3  rounded-xl  p-6 overflow-auto">
+        <div class="w-full md:w-2/3 rounded-xl p-6 bg-gray-800 shadow-lg overflow-auto">
             {% if selected_client %}
-                <h2 class="text-2xl font-semibold mb-4 text-white">Client Details</h2>
+                <h2 class="text-2xl font-semibold mb-6 text-white">Client Details</h2>
                 
                 <!-- Edit Button -->
-                <div class="flex justify-end mb-4">
+                <div class="flex justify-end mb-6">
                     <a href="{% url 'client_update' selected_client.pk %}" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
                         Edit
                     </a>
                 </div>
 
                 <!-- Client Information in Two Columns -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-12">
                     <!-- Left Column -->
-                    <div class="space-y-4">
+                    <div class="space-y-6">
                         <!-- Basic Information -->
                         <div>
-                            <h3 class="text-xl font-medium text-gray-300 mb-2">Basic Information</h3>
-                            <p><strong>Business Name:</strong> {{ selected_client.business_name }}</p>
-                            <p><strong>Business Description:</strong> {{ selected_client.business_description }}</p>
-                            <p><strong>Website URL:</strong> <a href="{{ selected_client.website_url }}" target="_blank" class="text-blue-400 hover:underline">{{ selected_client.website_url }}</a></p>
-                            <p><strong>Contact Person:</strong> {{ selected_client.contact_person }}</p>
-                            <p><strong>Email:</strong> <a href="mailto:{{ selected_client.email }}" class="text-blue-400 hover:underline">{{ selected_client.email }}</a></p>
-                            <p><strong>Phone Number:</strong> <a href="tel:{{ selected_client.phone_number }}" class="text-blue-400 hover:underline">{{ selected_client.phone_number }}</a></p>
+                            <h3 class="text-xl font-medium text-gray-300 mb-4">Basic Information</h3>
+                            <p class="text-white leading-relaxed mb-2"><strong>Business Name:</strong> {{ selected_client.business_name }}</p>
+                            <p class="text-white leading-relaxed mb-2"><strong>Business Description:</strong> {{ selected_client.business_description }}</p>
+                            <p class="text-white leading-relaxed mb-2"><strong>Website URL:</strong> <a href="{{ selected_client.website_url }}" target="_blank" class="text-blue-400 hover:underline">{{ selected_client.website_url }}</a></p>
+                            <p class="text-white leading-relaxed mb-2"><strong>Contact Person:</strong> {{ selected_client.contact_person }}</p>
+                            <p class="text-white leading-relaxed mb-2"><strong>Email:</strong> <a href="mailto:{{ selected_client.email }}" class="text-blue-400 hover:underline">{{ selected_client.email }}</a></p>
+                            <p class="text-white leading-relaxed mb-2"><strong>Phone Number:</strong> <a href="tel:{{ selected_client.phone_number }}" class="text-blue-400 hover:underline">{{ selected_client.phone_number }}</a></p>
                         </div>
-
+                
                         <!-- Project Details -->
                         <div>
-                            <h3 class="text-xl font-medium text-gray-300 mb-2">Project Details</h3>
-                            <p><strong>Business Goals:</strong> {{ selected_client.business_goals }}</p>
-                            <p><strong>Target Keywords:</strong> {{ selected_client.target_keywords }}</p>
-                            <p><strong>CMS Type:</strong> {{ selected_client.cms_type }}</p>
-                            <p><strong>Start Date:</strong> {{ selected_client.start_date|date:"M d, Y" }}</p>
-                            <p><strong>End Date:</strong> {{ selected_client.end_date|date:"M d, Y" }}</p>
+                            <h3 class="text-xl font-medium text-gray-300 mb-4">Project Details</h3>
+                            <p class="text-white leading-relaxed mb-2"><strong>Business Goals:</strong> {{ selected_client.business_goals }}</p>
+                            <p class="text-white leading-relaxed mb-2"><strong>Target Keywords:</strong> {{ selected_client.target_keywords }}</p>
+                            <p class="text-white leading-relaxed mb-2"><strong>CMS Type:</strong> {{ selected_client.cms_type }}</p>
+                            <p class="text-white leading-relaxed mb-2"><strong>Start Date:</strong> {{ selected_client.start_date|date:"M d, Y" }}</p>
+                            <p class="text-white leading-relaxed mb-2"><strong>End Date:</strong> {{ selected_client.end_date|date:"M d, Y" }}</p>
                         </div>
                     </div>
 
                     <!-- Right Column -->
-                    <div class="space-y-4">
+                    <div class="space-y-6 gap-12">
                         <!-- Tool Logins -->
                         <div>
-                            <h3 class="text-xl font-medium text-gray-300 mb-2">Tool Logins</h3>
-                            <p><strong>G4A Login Details:</strong> {{ selected_client.g4a_login }}</p>
-                            <p><strong>Google Search Console Login Details:</strong> {{ selected_client.google_search_console_login }}</p>
-                            <p><strong>Tag Manager Login Details:</strong> {{ selected_client.tag_manager_login }}</p>
-                            <p><strong>Website Login Details:</strong> {{ selected_client.website_login }}</p>
+                            <h3 class="text-xl font-medium text-gray-300 mb-4">Tool Logins</h3>
+                            <p class="text-white leading-relaxed"><strong>G4A Login Details:</strong> {{ selected_client.g4a_login }}</p>
+                            <p class="text-white leading-relaxed"><strong>Google Search Console Login Details:</strong> {{ selected_client.google_search_console_login }}</p>
+                            <p class="text-white leading-relaxed"><strong>Tag Manager Login Details:</strong> {{ selected_client.tag_manager_login }}</p>
+                            <p class="text-white leading-relaxed"><strong>Website Login Details:</strong> {{ selected_client.website_login }}</p>
                         </div>
 
                         <!-- Competitors -->
                         <div>
-                            <h3 class="text-xl font-medium text-gray-300 mb-2">Competitors</h3>
+                            <h3 class="text-xl font-medium text-gray-300 mb-4">Competitors</h3>
                             {% if selected_client.competitor_urls_list %}
-                                <ul class="list-disc pl-5 text-white">
+                                <ul class="list-disc pl-5 text-white space-y-2">
                                     {% for url in selected_client.competitor_urls_list %}
                                         <li>
                                             <a href="{{ url }}" target="_blank" class="text-blue-400 hover:underline">{{ url }}</a>
@@ -100,7 +124,7 @@
                                     {% endfor %}
                                 </ul>
                             {% else %}
-                                <p>N/A</p>
+                                <p class="text-white leading-relaxed">N/A</p>
                             {% endif %}
                         </div>
                     </div>
@@ -112,19 +136,37 @@
             {% endif %}
         </div>
     </div>
-</div>
 
-<!-- JavaScript for Optional Enhancements (e.g., Highlight Selected Client) -->
-<script>
-    // Optional: Scroll the selected client into view
-    document.addEventListener('DOMContentLoaded', function () {
-        const selectedClientId = "{{ selected_client.pk }}" || null;
-        if (selectedClientId) {
-            const selectedLink = document.querySelector(`a[href*="selected=${selectedClientId}"]`);
-            if (selectedLink) {
-                selectedLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    <!-- JavaScript for Optional Enhancements (e.g., Highlight Selected Client) and Dropdown navigation -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Optional: Scroll the selected client into view (desktop)
+            const selectedClientId = "{{ selected_client.pk }}" || null;
+            if (selectedClientId) {
+                const selectedLink = document.querySelector(`a[href*="selected=${selectedClientId}"]`);
+                if (selectedLink) {
+                    selectedLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
-        }
-    });
-</script>
+
+            // Handle mobile client dropdown toggle
+            const mobileDropdownButton = document.getElementById('mobileDropdownButton');
+            const mobileDropdownMenu = document.getElementById('mobileDropdownMenu');
+
+            if (mobileDropdownButton && mobileDropdownMenu) {
+                mobileDropdownButton.addEventListener('click', function(event) {
+                    event.stopPropagation(); // Prevent event from bubbling up to window
+                    mobileDropdownMenu.classList.toggle('hidden');
+                });
+
+                // Close the dropdown if clicked outside
+                window.addEventListener('click', function(event) {
+                    if (!mobileDropdownButton.contains(event.target) && !mobileDropdownMenu.contains(event.target)) {
+                        mobileDropdownMenu.classList.add('hidden');
+                    }
+                });
+            }
+        });
+    </script>
+</div>
 {% endblock %}
