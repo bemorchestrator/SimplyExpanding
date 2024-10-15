@@ -211,14 +211,21 @@ def clock_in_out_page(request):
         minutes, seconds = divmod(remainder, 60)
         return f"{hours}:{minutes:02}:{seconds:02}"
 
+    # Get the logged-in user's employee record
+    current_employee = get_object_or_404(Employee, user=request.user)
+
     # Admin can select an employee, or regular users will view their own records
-    if request.user.is_superuser and 'employee_id' in request.GET:
-        # Admin viewing selected employee's attendance
-        employee = get_object_or_404(Employee, pk=request.GET.get('employee_id'))
+    if request.user.is_superuser:
         employees = Employee.objects.all()  # Fetch all employees for the dropdown menu
+        if 'employee_id' in request.GET:
+            # Admin viewing selected employee's attendance
+            employee = get_object_or_404(Employee, pk=request.GET.get('employee_id'))
+        else:
+            # Default to viewing admin's own attendance
+            employee = current_employee
     else:
-        # Regular user or admin viewing their own attendance
-        employee = get_object_or_404(Employee, user=request.user)
+        # Regular user
+        employee = current_employee
         employees = None  # No dropdown for regular users
 
     # Automatically clock out if it's past 5 PM
@@ -226,6 +233,11 @@ def clock_in_out_page(request):
 
     # Handle POST request (Clock in/out/start/end break)
     if request.method == 'POST':
+        # Only allow the current user to perform clock in/out actions for themselves
+        if employee != current_employee:
+            messages.error(request, 'You cannot perform actions on behalf of other employees.')
+            return redirect('clock_in_out_page')
+
         action = None
         if 'clock_in' in request.POST:
             action = 'clock_in'
@@ -422,6 +434,7 @@ def clock_in_out_page(request):
         'rows_per_page': rows_per_page,
         'js_data': json.dumps(js_data),
         'employees': employees,  # Pass employee list for the admin dropdown
+        'employee': employee,    # Pass the selected employee
         'grand_total_break_duration': grand_total_break_duration,
         'grand_total_time': grand_total_time,
         'grand_total_hours_worked': grand_total_hours_worked,
