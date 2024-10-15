@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-<div class="container min-h-screen p-10 flex text-white space-x-6">
+<div class="container min-h-screen p-4 md:p-10 flex flex-col md:flex-row text-white space-y-6 md:space-y-0 md:space-x-6">
     <!-- Left Column: Form Section -->
-    <div class="form-container w-1/2 bg-gray-800 p-6 shadow-lg rounded-lg">
+    <div class="form-container w-full md:w-1/2 bg-gray-800 p-6 shadow-lg rounded-lg">
         <h2 class="text-xl font-semibold mb-6">Edit Payslip</h2>
         
         <!-- Display form errors -->
@@ -39,12 +39,22 @@
             <div class="form-group mb-4">
                 <label for="{{ form.pay_period_start.id_for_label }}" class="block font-medium mb-1">Pay Period Start</label>
                 {{ form.pay_period_start }}
+                {% if form.pay_period_start.errors %}
+                    <div class="text-red-500 text-xs">
+                        {{ form.pay_period_start.errors }}
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Pay Period End (Editable) -->
             <div class="form-group mb-4">
                 <label for="{{ form.pay_period_end.id_for_label }}" class="block font-medium mb-1">Pay Period End</label>
                 {{ form.pay_period_end }}
+                {% if form.pay_period_end.errors %}
+                    <div class="text-red-500 text-xs">
+                        {{ form.pay_period_end.errors }}
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Average Daily Pay (Read-Only) -->
@@ -67,40 +77,65 @@
             <div class="form-group mb-4">
                 <label for="{{ form.bonus.id_for_label }}" class="block font-medium mb-1">Bonus</label>
                 {{ form.bonus }}
+                {% if form.bonus.errors %}
+                    <div class="text-red-500 text-xs">
+                        {{ form.bonus.errors }}
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Deductions (Tax) -->
             <div class="form-group mb-4">
                 <label for="{{ form.deductions.id_for_label }}" class="block font-medium mb-1">Deductions (Tax)</label>
                 {{ form.deductions }}
+                {% if form.deductions.errors %}
+                    <div class="text-red-500 text-xs">
+                        {{ form.deductions.errors }}
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Absence Deductions (Manually Editable) -->
             <div class="form-group mb-4">
                 <label for="{{ form.absence_deductions.id_for_label }}" class="block font-medium mb-1">Absence Deductions</label>
                 {{ form.absence_deductions }}
+                {% if form.absence_deductions.errors %}
+                    <div class="text-red-500 text-xs">
+                        {{ form.absence_deductions.errors }}
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Other Deductions -->
             <div class="form-group mb-4">
                 <label for="{{ form.other_deductions.id_for_label }}" class="block font-medium mb-1">Other Deductions (Auto-filled with lateness deduction)</label>
                 {{ form.other_deductions }}
+                {% if form.other_deductions.errors %}
+                    <div class="text-red-500 text-xs">
+                        {{ form.other_deductions.errors }}
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Remarks -->
             <div class="form-group mb-4">
                 <label for="{{ form.remarks.id_for_label }}" class="block font-medium mb-1">Remarks</label>
                 {{ form.remarks }}
+                {% if form.remarks.errors %}
+                    <div class="text-red-500 text-xs">
+                        {{ form.remarks.errors }}
+                    </div>
+                {% endif %}
             </div>
 
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full md:w-auto">
                 Save Changes
             </button>
         </form>
     </div>
 
     <!-- Right Column: Preview Section -->
-    <div class="preview-container w-1/2 bg-gray-800 p-6 shadow-lg rounded-lg">
+    <div class="preview-container w-full md:w-1/2 bg-gray-800 p-6 shadow-lg rounded-lg">
         <div class="header text-center mb-6">
             <img src="{% static 'images/se_logo.png' %}" alt="Company Logo" class="mx-auto h-32">
             <h1 class="text-2xl font-bold mt-4">SIMPLY EXPANDING</h1>
@@ -108,53 +143,55 @@
             <p class="text-sm text-gray-400">#23 Ground Floor Jomabo Building, <br>Kadulasan Street, Dadiangas East, <br>General Santos City, 9500, Philippines</p>
         </div>
 
-        <table class="w-full border-collapse text-white">
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Name of Employee:</th>
-                <td id="preview-employee-name" class="py-2 border-b border-gray-700">
-                    {{ payroll.employee.user.get_full_name }}
-                </td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Pay Period:</th>
-                <td id="preview-pay-period" class="py-2 border-b border-gray-700">
-                    {{ payroll.pay_period_start }} to {{ payroll.pay_period_end }}
-                </td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Average Daily Pay:</th>
-                <td id="preview-average-daily-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.average_daily_pay|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Basic Salary:</th>
-                <td id="preview-basic-salary" class="py-2 border-b border-gray-700">PHP {{ payroll.total_income|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Bonus:</th>
-                <td id="preview-bonus" class="py-2 border-b border-gray-700">PHP {{ payroll.bonus|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Deductions (Tax):</th>
-                <td id="preview-deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.deductions|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Absence Deductions:</th>
-                <td id="preview-absence-deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.absence_deductions|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Other Deductions:</th>
-                <td id="preview-other_deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.other_deductions|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Remarks:</th>
-                <td id="preview-remarks" class="py-2 border-b border-gray-700">{{ payroll.remarks|default:"N/A" }}</td>
-            </tr>
-            <!-- Net Pay -->
-            <tr>
-                <th class="text-left py-2 border-b border-gray-700">Net Pay:</th>
-                <td id="preview-net-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.total_income|floatformat:2 }}</td>
-            </tr>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-white">
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Name of Employee:</th>
+                    <td id="preview-employee-name" class="py-2 border-b border-gray-700">
+                        {{ payroll.employee.user.get_full_name }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Pay Period:</th>
+                    <td id="preview-pay-period" class="py-2 border-b border-gray-700">
+                        {{ payroll.pay_period_start }} to {{ payroll.pay_period_end }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Average Daily Pay:</th>
+                    <td id="preview-average-daily-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.average_daily_pay|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Basic Salary:</th>
+                    <td id="preview-basic-salary" class="py-2 border-b border-gray-700">PHP {{ payroll.total_income|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Bonus:</th>
+                    <td id="preview-bonus" class="py-2 border-b border-gray-700">PHP {{ payroll.bonus|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Deductions (Tax):</th>
+                    <td id="preview-deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.deductions|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Absence Deductions:</th>
+                    <td id="preview-absence-deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.absence_deductions|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Other Deductions:</th>
+                    <td id="preview-other_deductions" class="py-2 border-b border-gray-700">PHP {{ payroll.other_deductions|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Remarks:</th>
+                    <td id="preview-remarks" class="py-2 border-b border-gray-700">{{ payroll.remarks|default:"N/A" }}</td>
+                </tr>
+                <!-- Net Pay -->
+                <tr>
+                    <th class="text-left py-2 border-b border-gray-700">Net Pay:</th>
+                    <td id="preview-net-pay" class="py-2 border-b border-gray-700">PHP {{ payroll.total_income|floatformat:2 }}</td>
+                </tr>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
