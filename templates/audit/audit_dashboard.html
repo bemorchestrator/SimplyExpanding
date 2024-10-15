@@ -10,23 +10,23 @@
 {% endblock %}
 
 {% block content %}
-    <div class="mt-10 px-8 h-screen flex flex-col">
-        <div class="bg-gray-800 rounded px-8 py-6 flex-1 flex flex-col">
+    <div class="mt-10 px-4 sm:px-8 lg:px-10 h-screen flex flex-col">
+        <div class="bg-gray-800 rounded px-4 sm:px-8 py-6 flex-1 flex flex-col">
 
             <!-- Header Section -->
-            <div class="flex justify-between items-center mb-5">
-                <h2 class="text-xl font-semibold text-white">Website Audit Dashboard</h2>
+            <div class="flex flex-col md:flex-row justify-between items-center mb-5">
+                <h2 class="text-xl font-semibold text-white mb-4 md:mb-0">Website Audit Dashboard</h2>
 
                 <!-- Action Buttons -->
                 {% if not is_shared_view %}
-                <div class="flex items-center space-x-2 relative">
+                <div class="flex flex-wrap items-center space-x-2 relative">
                     <!-- Upload Button -->
-                    <button id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">
+                    <button id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition mb-2 md:mb-0">
                         <i class="bi bi-upload text-lg"></i>
                     </button>
 
                     <!-- Fetch Google Search Console Data -->
-                    <form action="{% url 'fetch_search_console_data' %}" method="POST">
+                    <form action="{% url 'fetch_search_console_data' %}" method="POST" class="mb-2 md:mb-0">
                         {% csrf_token %}
                         <button type="submit" class="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition">
                             <i class="bi bi-google text-lg"></i> <!-- Google Icon -->
@@ -34,7 +34,7 @@
                     </form>
 
                     <!-- Crawl Sitemap -->
-                    <form action="{% url 'crawl_sitemaps' %}" method="POST">
+                    <form action="{% url 'crawl_sitemaps' %}" method="POST" class="mb-2 md:mb-0">
                         {% csrf_token %}
                         <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
                             <i class="bi bi-bug text-lg"></i>
@@ -42,183 +42,40 @@
                     </form>
 
                     <!-- Column Filter Button with Dropdown -->
-                    <div class="relative">
+                    <div class="relative mb-2 md:mb-0">
                         <button type="button" id="openColumnFilter" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition">
                             <i class="bi bi-columns-gap text-lg"></i> <!-- Filter Icon -->
                         </button>
 
                         <!-- Column Filter Dropdown (Initially hidden) -->
-                        <div id="columnFilterMenu" class="absolute left-1/2 transform -translate-x-1/2 mt-2 w-72 bg-gray-700 rounded shadow-lg p-4 text-white opacity-0 scale-95 transition-all duration-200 origin-top-left pointer-events-none z-50 max-h-80 overflow-y-auto">
+                        <div id="columnFilterMenu" class="absolute right-0 mt-2 w-72 bg-gray-700 rounded shadow-lg p-4 text-white opacity-0 scale-95 transition-all duration-200 origin-top-left pointer-events-none z-50 max-h-80 overflow-y-auto">
                             <div class="py-1 space-y-2">
-                                <!-- Action Choice -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="1" checked>
-                                    <span class="ml-2">Action Choice</span>
-                                </label>
-                                <!-- URL -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="2" checked>
-                                    <span class="ml-2">URL</span>
-                                </label>
-                                <!-- Page Path -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="3" checked>
-                                    <span class="ml-2">Page Path</span>
-                                </label>
-                                <!-- Crawl Depth -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="4" checked>
-                                    <span class="ml-2">Crawl Depth</span>
-                                </label>
-                                <!-- Category -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="5" checked>
-                                    <span class="ml-2">Category</span>
-                                </label>
-                                <!-- In Sitemap -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="6" checked>
-                                    <span class="ml-2">In Sitemap</span>
-                                </label>
-                                <!-- Main KW -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="7" checked>
-                                    <span class="ml-2">Main KW</span>
-                                </label>
-                                <!-- Volume -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="8" checked>
-                                    <span class="ml-2">Volume</span>
-                                </label>
-                                <!-- Ranking -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="9" checked>
-                                    <span class="ml-2">Ranking</span>
-                                </label>
-                                <!-- Best KW -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="10" checked>
-                                    <span class="ml-2">Best KW</span>
-                                </label>
-                                <!-- Best KW Volume -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="11" checked>
-                                    <span class="ml-2">Best KW Volume</span>
-                                </label>
-                                <!-- Best KW Ranking -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="12" checked>
-                                    <span class="ml-2">Best KW Ranking</span>
-                                </label>
-                                <!-- Impressions -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="13" checked>
-                                    <span class="ml-2">Impressions</span>
-                                </label>
-                                <!-- Sessions -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="14" checked>
-                                    <span class="ml-2">Sessions</span>
-                                </label>
-                                <!-- % Change Sessions -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="15" checked>
-                                    <span class="ml-2">% Change Sessions</span>
-                                </label>
-                                <!-- Bounce Rate -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="16" checked>
-                                    <span class="ml-2">Bounce Rate</span>
-                                </label>
-                                <!-- Avg Time on Page -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="17" checked>
-                                    <span class="ml-2">Avg Time on Page</span>
-                                </label>
-                                <!-- Losing Traffic -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="18" checked>
-                                    <span class="ml-2">Losing Traffic</span>
-                                </label>
-                                <!-- Links -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="19" checked>
-                                    <span class="ml-2">Links</span>
-                                </label>
-                                <!-- SERP CTR -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="20" checked>
-                                    <span class="ml-2">SERP CTR</span>
-                                </label>
-                                <!-- Type -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="21" checked>
-                                    <span class="ml-2">Type</span>
-                                </label>
-                                <!-- Current Title -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="22" checked>
-                                    <span class="ml-2">Current Title</span>
-                                </label>
-                                <!-- Meta -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="23" checked>
-                                    <span class="ml-2">Meta</span>
-                                </label>
-                                <!-- H1 -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="24" checked>
-                                    <span class="ml-2">H1</span>
-                                </label>
-                                <!-- Word Count -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="25" checked>
-                                    <span class="ml-2">Word Count</span>
-                                </label>
-                                <!-- Canonical Link -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="26" checked>
-                                    <span class="ml-2">Canonical Link</span>
-                                </label>
-                                <!-- Status Code -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="27" checked>
-                                    <span class="ml-2">Status Code</span>
-                                </label>
-                                <!-- Index/No Index -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="28" checked>
-                                    <span class="ml-2">Index/No Index</span>
-                                </label>
-                                <!-- Inlinks -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="29" checked>
-                                    <span class="ml-2">Inlinks</span>
-                                </label>
-                                <!-- Outlinks -->
-                                <label class="flex items-center">
-                                    <input type="checkbox" class="column-checkbox" data-column="30" checked>
-                                    <span class="ml-2">Outlinks</span>
-                                </label>
+                                <!-- Repeat for each column -->
+                                {% for column in table.columns %}
+                                    <label class="flex items-center">
+                                        <input type="checkbox" class="column-checkbox" data-column="{{ forloop.counter }}" checked>
+                                        <span class="ml-2">{{ column.verbose_name }}</span>
+                                    </label>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
 
                     <!-- Share Button -->
                     {% if dashboard %}
-                    <button id="share-btn" data-dashboard-id="{{ dashboard.id }}" class="bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition">
+                    <button id="share-btn" data-dashboard-id="{{ dashboard.id }}" class="bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition mb-2 md:mb-0">
                         <i class="bi bi-share text-lg"></i> <!-- Share Icon -->
                     </button>
                     {% endif %}
 
                     <!-- Save Button (Triggers the Modal) -->
-                    <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
+                    <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition mb-2 md:mb-0">
                         <i class="bi bi-cloud-upload text-lg"></i> <!-- Save Icon -->
                     </button>
 
                     <!-- Delete Button -->
                     <button id="delete-all-btn"
-                            class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition"
+                            class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition mb-2 md:mb-0"
                             data-base-url="{% url 'delete_uploaded_files' %}"
                             {% if dashboard %}
                                 data-dashboard-id="{{ dashboard.id }}"
@@ -229,19 +86,221 @@
                 {% else %}
                 {% endif %}
             </div>
-            <!-- Table Rendering using django-tables2 -->
+            <!-- Table and Card Rendering using django-tables2 -->
             <div class="table-container overflow-x-auto flex-1 w-full">
                 {% if not is_shared_view %}
                     <form method="POST" action="">
                         {% csrf_token %}
-                        {% render_table table %}  <!-- Render the table using Django Tables2 -->
+                        <!-- Desktop Table View -->
+                        <div class="hidden md:block">
+                            {% render_table table %}
+                        </div>
+
+                        <!-- Mobile Card View -->
+                        <div class="block md:hidden space-y-4">
+                            {% for obj in page_obj.object_list %}
+                                <div class="bg-gray-700 rounded-lg p-4 shadow-md">
+                                    <!-- Replace the following fields with your actual table columns -->
+                                    <div class="mb-2">
+                                        <strong>Action Choice:</strong> {{ obj.action_choice }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>URL:</strong> <a href="{{ obj.url }}" class="text-blue-400 underline break-all">{{ obj.url }}</a>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Page Path:</strong> {{ obj.page_path }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Crawl Depth:</strong> {{ obj.crawl_depth }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Category:</strong> {{ obj.category }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>In Sitemap:</strong> {{ obj.in_sitemap }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Main KW:</strong> {{ obj.main_kw }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Volume:</strong> {{ obj.volume }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Ranking:</strong> {{ obj.ranking }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Best KW:</strong> {{ obj.best_kw }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Best KW Volume:</strong> {{ obj.best_kw_volume }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Best KW Ranking:</strong> {{ obj.best_kw_ranking }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Impressions:</strong> {{ obj.impressions }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Sessions:</strong> {{ obj.sessions }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>% Change Sessions:</strong> {{ obj.change_sessions }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Bounce Rate:</strong> {{ obj.bounce_rate }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Avg Time on Page:</strong> {{ obj.avg_time_on_page }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Losing Traffic:</strong> {{ obj.losing_traffic }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Links:</strong> {{ obj.links }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>SERP CTR:</strong> {{ obj.serp_ctr }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Type:</strong> {{ obj.type }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Current Title:</strong> {{ obj.current_title }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Meta:</strong> {{ obj.meta }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>H1:</strong> {{ obj.h1 }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Word Count:</strong> {{ obj.word_count }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Canonical Link:</strong> <a href="{{ obj.canonical_link }}" class="text-blue-400 underline break-all">{{ obj.canonical_link }}</a>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Status Code:</strong> {{ obj.status_code }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Index/No Index:</strong> {{ obj.index_noindex }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Inlinks:</strong> {{ obj.inlinks }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Outlinks:</strong> {{ obj.outlinks }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
                     </form>
                 {% else %}
                     <!-- Render table without form to make it read-only -->
-                    {% render_table table %}
+                    <div class="hidden md:block">
+                        {% render_table table %}
+                    </div>
+                    <div class="block md:hidden space-y-4">
+                        {% for obj in page_obj.object_list %}
+                            <div class="bg-gray-700 rounded-lg p-4 shadow-md">
+                                <!-- Replace the following fields with your actual table columns -->
+                                <div class="mb-2">
+                                    <strong>Action Choice:</strong> {{ obj.action_choice }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>URL:</strong> <a href="{{ obj.url }}" class="text-blue-400 underline break-all">{{ obj.url }}</a>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Page Path:</strong> {{ obj.page_path }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Crawl Depth:</strong> {{ obj.crawl_depth }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Category:</strong> {{ obj.category }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>In Sitemap:</strong> {{ obj.in_sitemap }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Main KW:</strong> {{ obj.main_kw }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Volume:</strong> {{ obj.volume }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Ranking:</strong> {{ obj.ranking }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Best KW:</strong> {{ obj.best_kw }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Best KW Volume:</strong> {{ obj.best_kw_volume }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Best KW Ranking:</strong> {{ obj.best_kw_ranking }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Impressions:</strong> {{ obj.impressions }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Sessions:</strong> {{ obj.sessions }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>% Change Sessions:</strong> {{ obj.change_sessions }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Bounce Rate:</strong> {{ obj.bounce_rate }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Avg Time on Page:</strong> {{ obj.avg_time_on_page }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Losing Traffic:</strong> {{ obj.losing_traffic }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Links:</strong> {{ obj.links }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>SERP CTR:</strong> {{ obj.serp_ctr }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Type:</strong> {{ obj.type }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Current Title:</strong> {{ obj.current_title }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Meta:</strong> {{ obj.meta }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>H1:</strong> {{ obj.h1 }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Word Count:</strong> {{ obj.word_count }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Canonical Link:</strong> <a href="{{ obj.canonical_link }}" class="text-blue-400 underline break-all">{{ obj.canonical_link }}</a>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Status Code:</strong> {{ obj.status_code }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Index/No Index:</strong> {{ obj.index_noindex }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Inlinks:</strong> {{ obj.inlinks }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Outlinks:</strong> {{ obj.outlinks }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             </div>
 
+            <!-- Pagination -->
             <div class="pagination mt-4 text-center">
                 <span class="step-links">
                     {% if page_obj.has_previous %}
