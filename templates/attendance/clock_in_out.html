@@ -18,15 +18,23 @@
 
     <!-- Admin Employee Dropdown for Attendance Selection -->
     {% if user.is_superuser %}
-        <div class="w-full mb-4 flex justify-end">
-            <label for="employee_id" class="text-gray-400 mr-2">Select Employee:</label>
+    <div class="w-full mb-4 flex justify-end">
+        <label for="employee_id" class="text-gray-400 mr-2">Select Employee:</label>
+
+        {% if employees %}
+            <!-- If employees are available, render the dropdown -->
             <select name="employee_id" id="employee_id" class="bg-gray-700 text-gray-200 py-2 px-4 rounded-lg" onchange="this.form.submit()">
                 {% for emp in employees %}
                     <option value="{{ emp.id }}" {% if emp.id == employee.id %}selected{% endif %}>{{ emp.user.get_full_name }}</option>
                 {% endfor %}
             </select>
-        </div>
+        {% else %}
+            <!-- If no employees are found, show a message -->
+            <p class="text-red-500">No employees available.</p>
+        {% endif %}
+    </div>
     {% endif %}
+
 
     <!-- Clock In/Out Buttons -->
     <div class="w-full mb-4 flex flex-col sm:flex-row items-center justify-start space-y-4 sm:space-y-0 sm:space-x-4">
