@@ -1,7 +1,7 @@
 # urls.py
 from django.urls import path
 from . import views
-from .views import populate_audit_dashboard_with_search_console_data
+from .views import populate_audit_dashboard_with_search_console_data, keyword_research_view
 
 urlpatterns = [
     path('upload/', views.upload_file, name='upload_file'),  # For uploading files
@@ -25,4 +25,6 @@ urlpatterns = [
     path('delete-dashboard/<int:id>/', views.delete_dashboard, name='delete_dashboard'),
     path('generate-share-link/<int:id>/', views.generate_shareable_link, name='generate_shareable_link'),
     path('shared-dashboard/<str:share_token>/', views.shared_dashboard, name='shared_dashboard'),
+    path('keyword-research/', views.keyword_research_view, name='keyword_research'),
+    path('update-keyword-field/', keyword_research_view, name='update_keyword_field'),  # Renamed URL
 ]

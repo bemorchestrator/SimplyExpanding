@@ -45,6 +45,7 @@ from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google_auth import get_credentials
 from django.views.decorators.http import require_POST
 from django.db.models import ProtectedError
+from .tables import KeywordResearchTable
 
 
 logger = logging.getLogger(__name__)
@@ -1273,3 +1274,111 @@ def shared_dashboard(request, share_token):
         'is_shared_view': True,  # Indicate that this is a shared view
         'hide_sidebar': True,    # Hide the sidebar in the template
     })
+
+
+
+@csrf_protect  # Ensure CSRF protection is enabled
+def keyword_research_view(request):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            data = json.loads(request.body)
+            row_id = data.get('id')
+            field_value = data.get('value')
+            action = data.get('action')
+            field = data.get('field')  # Indicates which column to update
+
+            if action == "update":
+                # Handle update case
+                if row_id is not None and field:
+                    uploaded_file = get_object_or_404(UploadedFile, id=row_id)
+                    
+                    # Dynamically update the specified field
+                    if field == 'primary_keyword':
+                        uploaded_file.primary_keyword = field_value if field_value else ""
+                    elif field == 'pk_volume':
+                        if field_value is None or field_value == '':
+                            uploaded_file.pk_volume = None
+                        else:
+                            try:
+                                uploaded_file.pk_volume = int(field_value)
+                            except (ValueError, TypeError):
+                                return JsonResponse({'success': False, 'error': 'Invalid PK Volume value'}, status=400)
+                    elif field == 'pk_ranking':
+                        if field_value is None or field_value == '':
+                            uploaded_file.pk_ranking = None
+                        else:
+                            try:
+                                uploaded_file.pk_ranking = int(field_value)
+                            except (ValueError, TypeError):
+                                return JsonResponse({'success': False, 'error': 'Invalid PK Ranking value'}, status=400)
+                    elif field == 'secondary_keywords':
+                        uploaded_file.secondary_keywords = field_value if field_value else ""
+                    else:
+                        return JsonResponse({'success': False, 'error': 'Invalid field'}, status=400)
+                    
+                    uploaded_file.save()
+                    return JsonResponse({'success': True, 'message': f'{field.replace("_", " ").capitalize()} updated successfully!'})
+                else:
+                    return JsonResponse({'success': False, 'error': 'Missing record ID or field'}, status=400)
+            
+            elif action == "add":
+                # Handle add case (create a new record)
+                if field_value:
+                    new_file = UploadedFile.objects.create(primary_keyword=field_value)
+                    return JsonResponse({'success': True, 'message': 'Primary Keyword added successfully!'})
+                else:
+                    return JsonResponse({'success': False, 'error': 'Missing data'}, status=400)
+
+            elif action == "delete":
+                # Handle delete case
+                if row_id is not None:
+                    uploaded_file = get_object_or_404(UploadedFile, id=row_id)
+                    uploaded_file.delete()
+                    return JsonResponse({'success': True, 'message': 'Record deleted successfully!'})
+                else:
+                    return JsonResponse({'success': False, 'error': 'Record not found'}, status=404)
+
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+    else:
+        # Handle the regular GET request for displaying the table with pagination
+
+        # Define the available options for rows per page
+        per_page_options = [5, 10, 15, 20, 25]
+
+        # Get the 'per_page' parameter from the GET parameters, default to 5
+        per_page = request.GET.get('per_page', '5')
+        try:
+            per_page = int(per_page)
+            if per_page not in per_page_options:
+                per_page = 5
+        except ValueError:
+            per_page = 5
+
+        # Build the base query string without the 'page' parameter
+        query_params = request.GET.copy()
+        if 'page' in query_params:
+            del query_params['page']
+        base_query_string = query_params.urlencode()
+
+        queryset = UploadedFile.objects.filter(action_choice__in=["update_on_page", "merge"]).order_by('id')  # Explicitly order by 'id'
+        table = KeywordResearchTable(queryset)
+
+        # Configure pagination using the per_page value
+        RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+        # Pass 'per_page', 'per_page_options', and 'base_query_string' to the template
+        return render(request, 'audit/keyword_research.html', {
+            'table': table,
+            'per_page': per_page,
+            'per_page_options': per_page_options,
+            'base_query_string': base_query_string
+        })
+
+

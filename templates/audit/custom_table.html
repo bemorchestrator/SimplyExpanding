@@ -131,6 +131,10 @@
             background-color: #2d3748;
             color: white;
         }
+
+        body {
+            font-size: 0.875rem; /* Adjust base font size */
+        }
     </style>
 </head>
 <body>
@@ -331,29 +335,29 @@
                 const selectedText = selectedOption.textContent.trim();
     
                 const actionChoiceColors = {
-                    'Leave As Is': '#9b51e0',  // Purple
-                    'Update On Page': '#f2c94c',  // Yellow
-                    'Target w/ Links': '#2d9cdb',  // Cyan
-                    '301': '#f2994a',  // Orange
-                    'Canonicalize': '#6fcf97',  // Light Teal
-                    'Block Crawl': '#e67e22',  // Darker Orange
-                    'No Index': '#eb5757',  // Red
-                    'Content Audit': '#56ccf2',  // Light Blue
-                    'Merge': '#2f80ed'  // Royal Blue
-                };
-    
-                const categoryColors = {
-                    'Product Page': '#bb6bd9',  // Light Purple (distinct from Leave As Is)
-                    'Product Category': '#f4b400',  // Deep Yellow (distinct from Update On Page)
-                    'Local Lander': '#27ae60',  // Green (completely new for category)
-                    'Lead Generation': '#ff6347',  // Tomato Red (distinct from No Index)
-                    'Blog Post': '#4682B4',  // Orange (distinct from 301 or Block Crawl)
-                    'Resource / Guide': '#ffcc00',  // Gold
-                    'Blog Category': '#1e90ff',  // Dodger Blue (darker than Cyan)
-                    'Site Info': '#4682b4',  // Steel Blue
-                    'Images': '#7dcea0',  // Steel blue
-                    'Assets': '#af7ac5'  // Lavender (unique color)
-                };
+                'Leave As Is': '#9b51e0',  // Purple
+                'Update On Page': '#6a5acd',  // Slate Blue (replacing Yellow)
+                'Target w/ Links': '#2d9cdb',  // Cyan
+                '301': '#f2994a',  // Orange
+                'Canonicalize': '#6fcf97',  // Light Teal
+                'Block Crawl': '#e67e22',  // Darker Orange
+                'No Index': '#eb5757',  // Red
+                'Content Audit': '#56ccf2',  // Light Blue
+                'Merge': '#2f80ed'  // Royal Blue
+            };
+
+            const categoryColors = {
+                'Product Page': '#bb6bd9',  // Light Purple (distinct from Leave As Is)
+                'Product Category': '#6a5acd',  // Slate Blue (replacing Deep Yellow)
+                'Local Lander': '#27ae60',  // Green (completely new for category)
+                'Lead Generation': '#ff6347',  // Tomato Red (distinct from No Index)
+                'Blog Post': '#4682B4',  // Orange (distinct from 301 or Block Crawl)
+                'Resource / Guide': '#6a5acd',  // Slate Blue (replacing Gold)
+                'Blog Category': '#1e90ff',  // Dodger Blue (darker than Cyan)
+                'Site Info': '#4682b4',  // Steel Blue
+                'Images': '#7dcea0',  // Steel blue
+                'Assets': '#af7ac5'  // Lavender (unique color)
+            };
     
                 // Get the correct color for the action or category dropdown
                 if (dropdown.classList.contains('action-dropdown')) {

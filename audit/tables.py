@@ -280,3 +280,89 @@ class UploadedFileTable(tables.Table):
             'word_count', 'canonical_link', 'status_code', 'index_status', 'inlinks', 'outlinks'
         ]
         attrs = {'class': 'table table-striped text-white'}
+
+
+
+class KeywordResearchTable(tables.Table):
+    action_choice = tables.Column(
+        verbose_name='Action Choice',
+        attrs={
+            "td": {"class": "sticky-col-1", "style": "white-space: nowrap; position: sticky; left: 0; background-color: #2d3748; z-index: 3; width: 150px; padding: 0 20px;"},
+            "th": {"class": "sticky-col-1", "style": "position: sticky; top: 0; left: 0; background-color: #2d3748; z-index: 5; width: 150px; padding: 0 20px;"}
+        }
+    )
+
+    def render_action_choice(self, value, record):
+        action_choice_colors = {
+            'Leave As Is': '#9b51e0',  # Purple
+            'Update On Page': '#6a5acd',  # Slate Blue
+            'Target w/ Links': '#2d9cdb',  # Cyan
+            '301': '#f2994a',  # Orange
+            'Canonicalize': '#6fcf97',  # Light Teal
+            'Block Crawl': '#e67e22',  # Darker Orange
+            'No Index': '#eb5757',  # Red
+            'Content Audit': '#56ccf2',  # Light Blue
+            'Merge': '#2f80ed'  # Royal Blue
+        }
+
+        button_width = '150px'
+        background_color = action_choice_colors.get(value, '#ffffff')
+
+        return format_html(
+            '<span style="background-color: {}; padding: 5px 10px; border-radius: 4px; color: #fff; display: inline-block; width: {}; text-align: center;">{}</span>',
+            background_color, button_width, value
+        )
+
+    url = UploadedFileTable.base_columns['url']
+    
+    def render_url(self, value, record):
+        truncated_url = value if len(value) <= 120 else value[:120] + "..."
+        return format_html(
+            '''
+            <a href="{}" title="{}" style="
+                white-space: nowrap; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                display: inline-block; 
+                max-width: 380px;
+            ">
+                {}
+            </a>
+            ''',
+            value, value, truncated_url
+        )
+
+    category = UploadedFileTable.base_columns['category']
+    main_kw = UploadedFileTable.base_columns['main_kw']
+    kw_volume = UploadedFileTable.base_columns['kw_volume']
+    kw_ranking = UploadedFileTable.base_columns['kw_ranking']
+    best_kw = UploadedFileTable.base_columns['best_kw']
+    best_kw_volume = UploadedFileTable.base_columns['best_kw_volume']
+    best_kw_ranking = UploadedFileTable.base_columns['best_kw_ranking']
+    primary_keyword = tables.Column(verbose_name="Primary Keyword")
+    pk_volume = tables.Column(verbose_name="PK Volume")
+    pk_ranking = tables.Column(verbose_name="PK Ranking")
+    secondary_keywords = tables.Column(verbose_name="Secondary Keywords")
+    
+
+    class Meta:
+        model = UploadedFile
+        template_name = "django_tables2/bootstrap.html"
+        fields = ['action_choice', 'url', 'category', 'main_kw', 'kw_volume', 
+                  'kw_ranking', 'best_kw', 'best_kw_volume', 'best_kw_ranking', 'primary_keyword', 'pk_volume', 'pk_ranking','secondary_keywords']
+
+        # Apply consistent padding for all columns except Action Choice and URL
+        attrs = {
+            'class': 'table table-striped text-white',
+            'td': {
+                'style': lambda column: 'white-space: nowrap; padding: 0 20px; text-align: left;' if column.name not in ['action_choice', 'url'] else 'white-space: nowrap; text-align: left;',
+                'class': lambda record, column: 'px-6' if column.name not in ['action_choice', 'url'] else ''
+            },
+            'th': {
+                'style': lambda column: 'white-space: nowrap; padding: 0 20px; text-align: left;' if column.name not in ['action_choice', 'url'] else 'white-space: nowrap;',
+                'class': lambda column: 'px-6' if column.name not in ['action_choice', 'url'] else ''
+            }
+        }
+
+
+

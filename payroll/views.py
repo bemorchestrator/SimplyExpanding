@@ -447,8 +447,13 @@ def edit_payslip(request, payroll_id):
             total_lateness=Sum('lateness_deduction')
         )['total_lateness'] or Decimal('0.00')
 
-        # Calculate the number of days in the pay period (inclusive)
-        num_days = (pay_period_end - pay_period_start).days + 1
+        # Calculate the number of weekdays (Monday to Friday) in the pay period
+        num_days = 0
+        current_day = pay_period_start
+        while current_day <= pay_period_end:
+            if current_day.weekday() < 5:  # Monday to Friday are 0 to 4
+                num_days += 1
+            current_day += timedelta(days=1)
 
         # Get the per_day_rate from the employee model
         per_day_rate = employee.per_day_rate or Decimal('0.00')
@@ -506,8 +511,13 @@ def edit_payslip(request, payroll_id):
             total_lateness=Sum('lateness_deduction')
         )['total_lateness'] or Decimal('0.00')
 
-        # Calculate the number of days in the pay period (inclusive)
-        num_days = (payroll.pay_period_end - payroll.pay_period_start).days + 1
+        # Calculate the number of weekdays (Monday to Friday) in the pay period
+        num_days = 0
+        current_day = payroll.pay_period_start
+        while current_day <= payroll.pay_period_end:
+            if current_day.weekday() < 5:  # Monday to Friday are 0 to 4
+                num_days += 1
+            current_day += timedelta(days=1)
 
         # Get the per_day_rate from the employee model
         per_day_rate = employee.per_day_rate or Decimal('0.00')
@@ -527,6 +537,7 @@ def edit_payslip(request, payroll_id):
         form.fields['average_daily_pay'].widget.attrs['readonly'] = True
 
     return render(request, 'payroll/edit_payslip.html', {'form': form, 'payroll': payroll})
+
 
 
 @login_required

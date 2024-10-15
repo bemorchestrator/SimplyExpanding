@@ -82,6 +82,10 @@ class UploadedFile(models.Model):
 
     # New ForeignKey linking this file to an AuditDashboard instance
     dashboard = models.ForeignKey(AuditDashboard, on_delete=models.CASCADE, related_name="audit_data", null=True, blank=True)
+    primary_keyword = models.CharField(max_length=255, null=True, blank=True)
+    pk_volume = models.IntegerField(null=True, blank=True)
+    pk_ranking = models.IntegerField(null=True, blank=True)
+    secondary_keywords = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.file_name
