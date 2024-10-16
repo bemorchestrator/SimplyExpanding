@@ -1,0 +1,152 @@
+/* Editable Span Initial State */
+.editable-span {
+    cursor: pointer;
+    position: relative;
+    padding: 2px 4px; /* Compact padding for single-line appearance */
+    border-radius: 8px; /* Rounded edges */
+    transition: background-color 0.3s ease, border 0.3s ease;
+    display: inline-block;
+    max-width: 100%; /* Ensure it doesn't exceed cell width */
+    box-sizing: border-box;
+    background-color: transparent; /* Default background (transparent) */
+    min-width: 150px; /* Set a consistent minimum width */
+}
+
+/* Editable Span for Single-line Fields */
+.editable-span.single-line {
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Editable Span for Multi-line Field (Secondary Keywords) */
+.editable-span.multi-line {
+    display: block;
+    white-space: pre-wrap; /* Allow line breaks for multi-line content */
+    word-break: break-word; /* Prevent long words from overflowing */
+    min-height: 1.5em; /* Default single line height */
+    background-color: #2d3748; /* Tailwind Gray-800 background for multi-line */
+    min-width: 150px; /* Set consistent minimum width for multi-line */
+    padding: 4px; /* Add padding */
+}
+
+/* Editable Span Expansion for Multi-line Fields (Editing Mode) */
+.editable-span.multi-line.editing {
+    overflow-y: auto; /* Adds scroll if content exceeds available height */
+    background-color: #4a5568; /* Darker gray background when editing */
+}
+
+/* Editable Span for Single-line Fields (Primary Keyword, PK Volume, PK Ranking) */
+.editable-span.single-line.editing {
+    background-color: #4a5568; /* Tailwind Gray-700 background for single-line fields when editing */
+}
+
+/* Highlight Editing State */
+.editable-span.editing {
+    background-color: #4a5568; /* Tailwind Gray-700 background when editing */
+    border-radius: 8px; /* Rounded corners when editing */
+}
+
+/* Edit Icon Styling */
+.editable-icon {
+    pointer-events: none; /* Allows clicks to pass through to the span */
+    transition: opacity 0.2s ease;
+}
+
+/* Show the edit icon when the span is hovered and not editing */
+.editable-span:hover .editable-icon {
+    opacity: 1;
+}
+
+/* Placeholder Styling */
+.editable-span:empty:before {
+    content: attr(data-placeholder);
+    color: #a0aec0; /* Tailwind Gray-400 */
+    pointer-events: none;
+}
+
+/* Ensure placeholder is hidden when editing or not empty */
+.editable-span.editing:empty:before,
+.editable-span:not(:empty):before {
+    content: "";
+}
+
+/* Ensure Customer Journey Dropdown Styles */
+.customer-journey-dropdown {
+    width: 100%;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    background-color: #2d3748; /* Tailwind Gray-800 */
+    color: #edf2f7; /* Tailwind Gray-200 */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.customer-journey-dropdown:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #6b46c1; /* Tailwind Purple-600 */
+}
+
+/* Adjust table cell to accommodate multi-line content */
+td {
+    vertical-align: top;
+}
+
+/* Adjust the overall table row to be compact */
+table tr td {
+    padding: 0.5em 1em; /* Reduce padding to compact the row height */
+    vertical-align: top; /* Ensure top alignment of text */
+    white-space: nowrap; /* Prevent long text from expanding the cell height */
+    overflow: hidden; /* Hide overflow text */
+    text-overflow: ellipsis; /* Use ellipsis for overflowed text */
+}
+
+/* Add gray background to table rows */
+table tr {
+    background-color: #1a202c; /* Tailwind Gray-900 background for rows */
+    transition: background-color 0.3s ease; /* Smooth background transition */
+}
+
+/* Add hover effect for table rows */
+table tr:hover {
+    background-color: #2d3748; /* Tailwind Gray-800 background on hover */
+}
+
+/* Add gray background to sticky columns (like URL) */
+table tr td.sticky {
+    background-color: #2d3748; /* Tailwind Gray-800 background for sticky columns */
+}
+
+/* Gray backgrounds for Primary Keyword, PK Volume, PK Ranking, and Secondary Keywords */
+.editable-span[data-field="primary_keyword"],
+.editable-span[data-field="pk_volume"],
+.editable-span[data-field="pk_ranking"],
+.editable-span[data-field="secondary_keywords"] {
+    background-color: #2d3748; /* Tailwind Gray-800 background */
+    min-width: 150px; /* Set consistent minimum width */
+}
+
+.editable-span[data-field="primary_keyword"].editing,
+.editable-span[data-field="pk_volume"].editing,
+.editable-span[data-field="pk_ranking"].editing,
+.editable-span[data-field="secondary_keywords"].editing {
+    background-color: #4a5568; /* Darker Tailwind Gray-700 background when editing */
+}
+
+/* Pagination Styles */
+.pagination li a, .pagination li span {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.25rem;
+    text-decoration: none;
+    border-radius: 0.375rem; /* Rounded corners */
+}
+.pagination li a:hover {
+    background-color: #4a5568; /* Tailwind Gray-700 on hover */
+    color: #fff;
+}
+.pagination li span {
+    background-color: #2d3748; /* Tailwind Gray-800 for current page */
+    color: #fff;
+}

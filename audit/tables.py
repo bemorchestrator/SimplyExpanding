@@ -297,15 +297,15 @@ class KeywordResearchTable(tables.Table):
 
     def render_action_choice(self, value, record):
         action_choice_colors = {
-            'Leave As Is': '#9b51e0',  # Purple
-            'Update On Page': '#6a5acd',  # Slate Blue
-            'Target w/ Links': '#2d9cdb',  # Cyan
-            '301': '#f2994a',  # Orange
-            'Canonicalize': '#6fcf97',  # Light Teal
-            'Block Crawl': '#e67e22',  # Darker Orange
-            'No Index': '#eb5757',  # Red
-            'Content Audit': '#56ccf2',  # Light Blue
-            'Merge': '#2f80ed'  # Royal Blue
+            'Leave As Is': '#9b51e0',        # Purple
+            'Update On Page': '#6a5acd',     # Slate Blue
+            'Target w/ Links': '#2d9cdb',    # Cyan
+            '301': '#f2994a',                 # Orange
+            'Canonicalize': '#6fcf97',        # Light Teal
+            'Block Crawl': '#e67e22',         # Darker Orange
+            'No Index': '#eb5757',            # Red
+            'Content Audit': '#56ccf2',       # Light Blue
+            'Merge': '#2f80ed'                 # Royal Blue
         }
 
         background_color = action_choice_colors.get(value, '#ffffff')
@@ -345,7 +345,7 @@ class KeywordResearchTable(tables.Table):
     pk_ranking = tables.Column(verbose_name="PK Ranking")
     secondary_keywords = tables.Column(verbose_name="Secondary Keywords")
 
-    # Define customer_journey dropdown with its choices
+    # Define customer_journey dropdown with its choices and background colors
     customer_journey = tables.Column(
         verbose_name='Customer Journey',
         attrs={
@@ -355,20 +355,20 @@ class KeywordResearchTable(tables.Table):
     )
 
     def render_customer_journey(self, value, record):
-        # Available customer journey stages
+        # Available customer journey stages with their corresponding colors
         customer_journey_choices = [
-            ('Awareness', 'Awareness'),
-            ('Consideration', 'Consideration'),
-            ('Decision', 'Decision'),
-            ('Retention', 'Retention')
+            ('Awareness', 'Awareness', '#63b3ed'),        # Blue
+            ('Consideration', 'Consideration', '#68d391'),# Green
+            ('Decision', 'Decision', '#ed8936'),          # Orange
+            ('Retention', 'Retention', '#a0aec0')         # Gray
         ]
         
         options_html = ""
-        for key, label in customer_journey_choices:
+        for key, label, color in customer_journey_choices:
             selected = "selected" if value == key else ""
-            options_html += f'<option value="{key}" {selected}>{label}</option>'
+            options_html += f'<option value="{key}" style="background-color: {color}; color: #fff;" {selected}>{label}</option>'
         
-        # Removed the <form> tag to prevent full-page reload on change
+        # Return the <select> element with styled <option>s
         return format_html(
             '''
             <select name="customer_journey" class="customer-journey-dropdown bg-gray-700 text-gray-200 rounded"
@@ -400,6 +400,3 @@ class KeywordResearchTable(tables.Table):
                 'class': lambda column: 'px-6' if column.name not in ['action_choice', 'url'] else ''
             }
         }
-
-
-
