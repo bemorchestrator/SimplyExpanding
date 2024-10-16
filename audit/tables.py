@@ -381,9 +381,9 @@ class KeywordResearchTable(tables.Table):
     
 
     serp_content_type = tables.Column(verbose_name='SERP Content Type', attrs={
-        "td": {"class": "sticky-col-2", "style": "white-space: nowrap;"},
-        "th": {"class": "sticky-col-2", "style": "position: sticky; top: 0; left: 0; background-color: #2d3748; z-index: 5; width: 120px;"}
-    })
+    "td": {"class": "sticky-col-2", "style": "white-space: nowrap;"},
+    "th": {"class": "sticky-col-2", "style": "position: sticky; top: 0; left: 0; background-color: #2d3748; z-index: 5; width: 120px;"}
+})
 
     def render_serp_content_type(self, value, record):
         options = [
@@ -401,7 +401,10 @@ class KeywordResearchTable(tables.Table):
             ('Site Info', 'Site Info'),
             ('YouTube Video', 'YouTube Video'),
             ('Pinterest Page', 'Pinterest Page'),
-            ('Wikipedia', 'Wikipedia')
+            ('Wikipedia', 'Wikipedia'),
+            ('Facebook Page', 'Facebook Page'),
+            ('Instagram Page', 'Instagram Page'),
+            ('Video Page', 'Video Page')
         ]
 
         # Define the color mappings based on the content type
@@ -420,7 +423,10 @@ class KeywordResearchTable(tables.Table):
             'Site Info': '#9b2c2c',            # Dark Red
             'YouTube Video': '#d53f8c',        # Pink
             'Pinterest Page': '#ed64a6',       # Pinkish Red
-            'Wikipedia': '#2c5282'             # Dark Blue
+            'Wikipedia': '#2c5282',            # Dark Blue
+            'Facebook Page': '#3b5998',        # Facebook Blue
+            'Instagram Page': '#e1306c',       # Instagram Pink
+            'Video Page': '#ff4500'            # Orange Red
         }
 
         # Generate HTML for the select options with inline background colors

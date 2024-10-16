@@ -21,7 +21,10 @@ const serpContentTypeColors = {
     'Site Info': '#9b2c2c',            // Dark Red
     'YouTube Video': '#d53f8c',        // Pink
     'Pinterest Page': '#ed64a6',       // Pinkish Red
-    'Wikipedia': '#2c5282'             // Dark Blue
+    'Wikipedia': '#2c5282',            // Dark Blue
+    'Facebook Page': '#3b5998',        // Facebook Blue
+    'Instagram Page': '#e1306c',       // Instagram Pink
+    'Video Page': '#ff4500'            // Orange Red
 };
 
 // Function to set the background color of the select element based on selected option
