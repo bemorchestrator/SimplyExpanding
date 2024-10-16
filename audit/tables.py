@@ -378,6 +378,69 @@ class KeywordResearchTable(tables.Table):
             ''',
             record.id, options_html
         )
+    
+
+    serp_content_type = tables.Column(verbose_name='SERP Content Type', attrs={
+        "td": {"class": "sticky-col-2", "style": "white-space: nowrap;"},
+        "th": {"class": "sticky-col-2", "style": "position: sticky; top: 0; left: 0; background-color: #2d3748; z-index: 5; width: 120px;"}
+    })
+
+    def render_serp_content_type(self, value, record):
+        options = [
+            ('Amazon Product Page', 'Amazon Product Page'),
+            ('Blog Category', 'Blog Category'),
+            ('Blog Post', 'Blog Post'),
+            ('Citation Site', 'Citation Site'),
+            ('Homepage', 'Homepage'),
+            ('Lead Generation', 'Lead Generation'),
+            ('Local Lander', 'Local Lander'),
+            ('Product Category', 'Product Category'),
+            ('Product Page', 'Product Page'),
+            ('Resource Guide', 'Resource Guide'),
+            ('Review Site', 'Review Site'),
+            ('Site Info', 'Site Info'),
+            ('YouTube Video', 'YouTube Video'),
+            ('Pinterest Page', 'Pinterest Page'),
+            ('Wikipedia', 'Wikipedia')
+        ]
+
+        # Define the color mappings based on the content type
+        serp_content_type_colors = {
+            'Amazon Product Page': '#6b46c1',  # Purple
+            'Blog Category': '#3182ce',        # Blue
+            'Blog Post': '#38a169',            # Green
+            'Citation Site': '#ed8936',        # Orange
+            'Homepage': '#63b3ed',             # Light Blue
+            'Lead Generation': '#e53e3e',      # Red
+            'Local Lander': '#dd6b20',         # Dark Orange
+            'Product Category': '#d69e2e',     # Yellow
+            'Product Page': '#48bb78',         # Green
+            'Resource Guide': '#319795',       # Teal
+            'Review Site': '#805ad5',          # Indigo
+            'Site Info': '#9b2c2c',            # Dark Red
+            'YouTube Video': '#d53f8c',        # Pink
+            'Pinterest Page': '#ed64a6',       # Pinkish Red
+            'Wikipedia': '#2c5282'             # Dark Blue
+        }
+
+        # Generate HTML for the select options with inline background colors
+        options_html = "".join(
+            f'<option value="{key}" {"selected" if value == key else ""} style="background-color:{serp_content_type_colors.get(key, "#2d3748")}; color:#fff;">{choice}</option>'
+            for key, choice in options
+        )
+
+        # Return the formatted HTML for the select element
+        return format_html(
+            '''
+            <form method="post" class="serp-content-type-dropdown">
+                <select name="serp_content_type" class="form-control" style="color:#fff;">
+                    {}
+                </select>
+            </form>
+            ''',
+            options_html
+        )
+
 
     class Meta:
         model = UploadedFile
@@ -385,7 +448,7 @@ class KeywordResearchTable(tables.Table):
         fields = [
             'action_choice', 'url', 'category', 'main_kw', 'kw_volume', 'kw_ranking', 
             'best_kw', 'best_kw_volume', 'best_kw_ranking', 'primary_keyword', 'pk_volume', 
-            'pk_ranking', 'secondary_keywords', 'customer_journey'
+            'pk_ranking', 'secondary_keywords', 'customer_journey', 'serp_content_type'
         ]
 
         # Table attributes for consistent styling

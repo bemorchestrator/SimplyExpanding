@@ -86,6 +86,26 @@
                                             <option value="Decision" {% if cell == 'Decision' %}selected{% endif %}>Decision</option>
                                             <option value="Retention" {% if cell == 'Retention' %}selected{% endif %}>Retention</option>
                                         </select>
+                                    {% elif column.name == 'serp_content_type' %}
+                                        <!-- SERP Content Type Dropdown -->
+                                        <select name="serp_content_type" class="serp-content-type-dropdown bg-gray-700 text-gray-200 rounded"
+                                            data-id="{{ row.record.id }}" data-field="serp_content_type" onchange="saveField(this)">
+                                            <option value="Amazon Product Page" {% if cell == 'Amazon Product Page' %}selected{% endif %}>Amazon Product Page</option>
+                                            <option value="Blog Category" {% if cell == 'Blog Category' %}selected{% endif %}>Blog Category</option>
+                                            <option value="Blog Post" {% if cell == 'Blog Post' %}selected{% endif %}>Blog Post</option>
+                                            <option value="Citation Site" {% if cell == 'Citation Site' %}selected{% endif %}>Citation Site</option>
+                                            <option value="Homepage" {% if cell == 'Homepage' %}selected{% endif %}>Homepage</option>
+                                            <option value="Lead Generation" {% if cell == 'Lead Generation' %}selected{% endif %}>Lead Generation</option>
+                                            <option value="Local Lander" {% if cell == 'Local Lander' %}selected{% endif %}>Local Lander</option>
+                                            <option value="Product Category" {% if cell == 'Product Category' %}selected{% endif %}>Product Category</option>
+                                            <option value="Product Page" {% if cell == 'Product Page' %}selected{% endif %}>Product Page</option>
+                                            <option value="Resource Guide" {% if cell == 'Resource Guide' %}selected{% endif %}>Resource Guide</option>
+                                            <option value="Review Site" {% if cell == 'Review Site' %}selected{% endif %}>Review Site</option>
+                                            <option value="Site Info" {% if cell == 'Site Info' %}selected{% endif %}>Site Info</option>
+                                            <option value="YouTube Video" {% if cell == 'YouTube Video' %}selected{% endif %}>YouTube Video</option>
+                                            <option value="Pinterest Page" {% if cell == 'Pinterest Page' %}selected{% endif %}>Pinterest Page</option>
+                                            <option value="Wikipedia" {% if cell == 'Wikipedia' %}selected{% endif %}>Wikipedia</option>
+                                        </select>
                                     {% else %}
                                         {{ cell|safe }}
                                     {% endif %}

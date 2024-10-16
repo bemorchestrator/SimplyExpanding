@@ -72,7 +72,8 @@
 }
 
 /* Ensure Customer Journey Dropdown Styles */
-.customer-journey-dropdown {
+.customer-journey-dropdown,
+.serp-content-type-dropdown {
     width: 100%;
     padding: 4px 8px;
     border: none;
@@ -83,9 +84,34 @@
     transition: background-color 0.3s ease;
 }
 
-.customer-journey-dropdown:focus {
+.customer-journey-dropdown:focus,
+.serp-content-type-dropdown:focus {
     outline: none;
     box-shadow: 0 0 0 2px #6b46c1; /* Tailwind Purple-600 */
+}
+
+/* Dropdown Hover Effect */
+.customer-journey-dropdown:hover,
+.serp-content-type-dropdown:hover {
+    background-color: #4a5568; /* Tailwind Gray-700 on hover */
+    color: #e2e8f0; /* Lighter text on hover */
+}
+
+/* Pagination Styles */
+.pagination li a, .pagination li span {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.25rem;
+    text-decoration: none;
+    border-radius: 0.375rem; /* Rounded corners */
+}
+.pagination li a:hover {
+    background-color: #4a5568; /* Tailwind Gray-700 on hover */
+    color: #fff;
+}
+.pagination li span {
+    background-color: #2d3748; /* Tailwind Gray-800 for current page */
+    color: #fff;
 }
 
 /* Adjust table cell to accommodate multi-line content */
@@ -132,21 +158,4 @@ table tr td.sticky {
 .editable-span[data-field="pk_ranking"].editing,
 .editable-span[data-field="secondary_keywords"].editing {
     background-color: #4a5568; /* Darker Tailwind Gray-700 background when editing */
-}
-
-/* Pagination Styles */
-.pagination li a, .pagination li span {
-    display: block;
-    padding: 0.5rem 0.75rem;
-    margin: 0 0.25rem;
-    text-decoration: none;
-    border-radius: 0.375rem; /* Rounded corners */
-}
-.pagination li a:hover {
-    background-color: #4a5568; /* Tailwind Gray-700 on hover */
-    color: #fff;
-}
-.pagination li span {
-    background-color: #2d3748; /* Tailwind Gray-800 for current page */
-    color: #fff;
 }

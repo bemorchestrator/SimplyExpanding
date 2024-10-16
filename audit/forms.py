@@ -10,6 +10,7 @@ class UploadedFileForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': 'category-dropdown form-control'}),
             'action_choice': forms.Select(attrs={'class': 'action-dropdown form-control'}),
             'customer_journey': forms.Select(attrs={'class': 'customer-journey-dropdown form-control'}),
+            'serp_content_type': forms.Select(attrs={'class': 'serp-content-type-dropdown form-control'}),
         }
 
 class FileUploadForm(forms.Form):

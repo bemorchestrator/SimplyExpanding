@@ -1,4 +1,4 @@
-// Mapping of Customer Journey stages to their respective colors
+// Mapping of Customer Journey and SERP Content Type stages to their respective colors
 const customerJourneyColors = {
     'Awareness': '#63b3ed',       // Blue
     'Consideration': '#68d391',   // Green
@@ -6,10 +6,33 @@ const customerJourneyColors = {
     'Retention': '#5a67d8'        // Indigo
 };
 
+const serpContentTypeColors = {
+    'Amazon Product Page': '#6b46c1',  // Purple
+    'Blog Category': '#3182ce',        // Blue
+    'Blog Post': '#38a169',            // Green
+    'Citation Site': '#ed8936',        // Orange
+    'Homepage': '#63b3ed',             // Light Blue
+    'Lead Generation': '#e53e3e',      // Red
+    'Local Lander': '#dd6b20',         // Dark Orange
+    'Product Category': '#d69e2e',     // Yellow
+    'Product Page': '#48bb78',         // Green
+    'Resource Guide': '#319795',       // Teal
+    'Review Site': '#805ad5',          // Indigo
+    'Site Info': '#9b2c2c',            // Dark Red
+    'YouTube Video': '#d53f8c',        // Pink
+    'Pinterest Page': '#ed64a6',       // Pinkish Red
+    'Wikipedia': '#2c5282'             // Dark Blue
+};
+
 // Function to set the background color of the select element based on selected option
 function updateSelectBackground(selectElement) {
     const selectedValue = selectElement.value;
-    const color = customerJourneyColors[selectedValue] || '#2d3748'; // Default color if not found
+    
+    // Determine the appropriate color mapping based on the select element's class
+    const color = selectElement.classList.contains('customer-journey-dropdown')
+        ? customerJourneyColors[selectedValue] || '#2d3748'
+        : serpContentTypeColors[selectedValue] || '#2d3748';
+
     selectElement.style.backgroundColor = color;
     selectElement.style.color = '#fff'; // Ensure text is readable
 }
@@ -20,7 +43,7 @@ function saveField(element) {
     const field = element.dataset.field;  // Get the field name
     let value;
 
-    // Handle dropdowns (e.g., Customer Journey)
+    // Handle dropdowns (e.g., Customer Journey and SERP Content Type)
     if (element.tagName === 'SELECT') {
         value = element.value;  // Get the value from the dropdown
     } else if (element.classList.contains('multi-line')) {
@@ -71,7 +94,7 @@ function saveField(element) {
                 }
             }
             if (element.tagName === 'SELECT') {
-                updateSelectBackground(element); // Update background color
+                updateSelectBackground(element); // Update background color for dropdowns
             }
         } else {
             console.error('Failed to update ' + field + ':', data.error);
@@ -132,9 +155,15 @@ function getCSRFToken() {
 document.addEventListener('DOMContentLoaded', function() {
     const editableSpans = document.querySelectorAll('.editable-span');
     const customerJourneySelects = document.querySelectorAll('.customer-journey-dropdown');
+    const serpContentTypeSelects = document.querySelectorAll('.serp-content-type-dropdown');
 
-    // Initialize background colors for existing selects
+    // Initialize background colors for existing customer journey selects
     customerJourneySelects.forEach(select => {
+        updateSelectBackground(select);
+    });
+
+    // Initialize background colors for existing SERP content type selects
+    serpContentTypeSelects.forEach(select => {
         updateSelectBackground(select);
     });
 
@@ -198,8 +227,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Update background color when dropdown value changes
+    // Update background color when dropdown value changes (Customer Journey and SERP Content Type)
     customerJourneySelects.forEach(select => {
+        select.addEventListener('change', function() {
+            updateSelectBackground(this);
+        });
+    });
+
+    serpContentTypeSelects.forEach(select => {
         select.addEventListener('change', function() {
             updateSelectBackground(this);
         });
