@@ -86,6 +86,7 @@ class UploadedFile(models.Model):
     pk_volume = models.IntegerField(null=True, blank=True)
     pk_ranking = models.IntegerField(null=True, blank=True)
     secondary_keywords = models.TextField(null=True, blank=True)
+    customer_journey = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return self.file_name

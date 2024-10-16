@@ -4,6 +4,7 @@ from .models import UploadedFile
 from .forms import UploadedFileForm
 from django.urls import reverse
 from django.middleware.csrf import get_token
+from django.template.loader import render_to_string
 
 class UploadedFileTable(tables.Table):
     action_choice = tables.Column(
@@ -283,6 +284,8 @@ class UploadedFileTable(tables.Table):
 
 
 
+
+
 class KeywordResearchTable(tables.Table):
     action_choice = tables.Column(
         verbose_name='Action Choice',
@@ -305,16 +308,14 @@ class KeywordResearchTable(tables.Table):
             'Merge': '#2f80ed'  # Royal Blue
         }
 
-        button_width = '150px'
         background_color = action_choice_colors.get(value, '#ffffff')
-
         return format_html(
-            '<span style="background-color: {}; padding: 5px 10px; border-radius: 4px; color: #fff; display: inline-block; width: {}; text-align: center;">{}</span>',
-            background_color, button_width, value
+            '<span style="background-color: {}; padding: 5px 10px; border-radius: 4px; color: #fff; display: inline-block; width: 150px; text-align: center;">{}</span>',
+            background_color, value
         )
 
-    url = UploadedFileTable.base_columns['url']
-    
+    url = tables.Column(verbose_name='URL')
+
     def render_url(self, value, record):
         truncated_url = value if len(value) <= 120 else value[:120] + "..."
         return format_html(
@@ -332,26 +333,62 @@ class KeywordResearchTable(tables.Table):
             value, value, truncated_url
         )
 
-    category = UploadedFileTable.base_columns['category']
-    main_kw = UploadedFileTable.base_columns['main_kw']
-    kw_volume = UploadedFileTable.base_columns['kw_volume']
-    kw_ranking = UploadedFileTable.base_columns['kw_ranking']
-    best_kw = UploadedFileTable.base_columns['best_kw']
-    best_kw_volume = UploadedFileTable.base_columns['best_kw_volume']
-    best_kw_ranking = UploadedFileTable.base_columns['best_kw_ranking']
+    category = tables.Column(verbose_name='Category')
+    main_kw = tables.Column(verbose_name='Main Keyword')
+    kw_volume = tables.Column(verbose_name='KW Volume')
+    kw_ranking = tables.Column(verbose_name='KW Ranking')
+    best_kw = tables.Column(verbose_name='Best KW')
+    best_kw_volume = tables.Column(verbose_name='Best KW Volume')
+    best_kw_ranking = tables.Column(verbose_name='Best KW Ranking')
     primary_keyword = tables.Column(verbose_name="Primary Keyword")
     pk_volume = tables.Column(verbose_name="PK Volume")
     pk_ranking = tables.Column(verbose_name="PK Ranking")
     secondary_keywords = tables.Column(verbose_name="Secondary Keywords")
-    
+
+    # Define customer_journey dropdown with its choices
+    customer_journey = tables.Column(
+        verbose_name='Customer Journey',
+        attrs={
+            "td": {"style": "white-space: nowrap;"},
+            "th": {"style": "text-align: left;"}
+        }
+    )
+
+    def render_customer_journey(self, value, record):
+        # Available customer journey stages
+        customer_journey_choices = [
+            ('Awareness', 'Awareness'),
+            ('Consideration', 'Consideration'),
+            ('Decision', 'Decision'),
+            ('Retention', 'Retention')
+        ]
+        
+        options_html = ""
+        for key, label in customer_journey_choices:
+            selected = "selected" if value == key else ""
+            options_html += f'<option value="{key}" {selected}>{label}</option>'
+        
+        # Removed the <form> tag to prevent full-page reload on change
+        return format_html(
+            '''
+            <select name="customer_journey" class="customer-journey-dropdown bg-gray-700 text-gray-200 rounded"
+                data-id="{}" data-field="customer_journey" onchange="saveField(this)">
+                {}
+            </select>
+            ''',
+            record.id, options_html
+        )
 
     class Meta:
         model = UploadedFile
         template_name = "django_tables2/bootstrap.html"
-        fields = ['action_choice', 'url', 'category', 'main_kw', 'kw_volume', 
-                  'kw_ranking', 'best_kw', 'best_kw_volume', 'best_kw_ranking', 'primary_keyword', 'pk_volume', 'pk_ranking','secondary_keywords']
+        fields = [
+            'action_choice', 'url', 'category', 'main_kw', 'kw_volume', 'kw_ranking', 
+            'best_kw', 'best_kw_volume', 'best_kw_ranking', 'primary_keyword', 'pk_volume', 
+            'pk_ranking', 'secondary_keywords', 'customer_journey'
+        ]
 
-        # Apply consistent padding for all columns except Action Choice and URL
+        # Table attributes for consistent styling
         attrs = {
             'class': 'table table-striped text-white',
             'td': {

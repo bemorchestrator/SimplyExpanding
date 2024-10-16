@@ -1313,6 +1313,8 @@ def keyword_research_view(request):
                                 return JsonResponse({'success': False, 'error': 'Invalid PK Ranking value'}, status=400)
                     elif field == 'secondary_keywords':
                         uploaded_file.secondary_keywords = field_value if field_value else ""
+                    elif field == 'customer_journey':  # New logic for customer journey
+                        uploaded_file.customer_journey = field_value if field_value else ""
                     else:
                         return JsonResponse({'success': False, 'error': 'Invalid field'}, status=400)
                     
@@ -1380,5 +1382,6 @@ def keyword_research_view(request):
             'per_page_options': per_page_options,
             'base_query_string': base_query_string
         })
+
 
 

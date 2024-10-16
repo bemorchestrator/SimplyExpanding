@@ -1,4 +1,3 @@
-<!-- keyword_research.html -->
 {% extends 'base.html' %}
 {% load render_table from django_tables2 %}
 
@@ -68,6 +67,15 @@
                                             <!-- Edit Icon -->
                                             <i class="fa fa-pencil-alt absolute right-0 top-0 mt-1 mr-2 text-gray-400 opacity-0 transition-opacity duration-200 editable-icon"></i>
                                         </span>
+                                    {% elif column.name == 'customer_journey' %}
+                                        <!-- Customer Journey Dropdown -->
+                                        <select name="customer_journey" class="customer-journey-dropdown bg-gray-700 text-gray-200 rounded"
+                                            data-id="{{ row.record.id }}" data-field="customer_journey" onchange="saveField(this)">
+                                            <option value="Awareness" {% if cell == 'Awareness' %}selected{% endif %}>Awareness</option>
+                                            <option value="Consideration" {% if cell == 'Consideration' %}selected{% endif %}>Consideration</option>
+                                            <option value="Decision" {% if cell == 'Decision' %}selected{% endif %}>Decision</option>
+                                            <option value="Retention" {% if cell == 'Retention' %}selected{% endif %}>Retention</option>
+                                        </select>
                                     {% else %}
                                         {{ cell|safe }}
                                     {% endif %}
@@ -127,161 +135,163 @@
 <!-- Inline Editing Script -->
 <script>
     // Function to save the field
-function saveField(element) {
-    const id = element.dataset.id;        // Get the row ID
-    const field = element.dataset.field;  // Get the field name
-    let value;
+    function saveField(element) {
+        const id = element.dataset.id;        // Get the row ID
+        const field = element.dataset.field;  // Get the field name
+        let value;
 
-    if (element.classList.contains('multi-line')) {
-        // For multi-line fields, get text content, preserving line breaks
-        value = element.innerText.trim();
-    } else {
-        // For single-line fields, get text content
-        value = element.textContent.trim();
-    }
-
-    // Field-specific validation
-    if (field === 'pk_volume' || field === 'pk_ranking') {
-        if (value === '') {
-            value = null;  // Allow empty value to set as null
-        } else if (!/^\d+$/.test(value)) {  // Simple integer validation
-            alert('Please enter a valid number.');
-            element.focus();  // Optionally, revert to previous value or keep editing
-            return;
+        // Handle dropdowns (e.g., Customer Journey)
+        if (element.tagName === 'SELECT') {
+            value = element.value;  // Get the value from the dropdown
+        } else if (element.classList.contains('multi-line')) {
+            value = element.innerText.trim();  // For multi-line fields
         } else {
-            value = parseInt(value, 10);
+            value = element.textContent.trim();  // For single-line fields
         }
-    }
 
-    // Remove editing highlight
-    element.classList.remove('editing');
-
-    fetch("{% url 'keyword_research' %}", {  // Ensure this URL name matches your urls.py
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'  // Ensure AJAX request is identified
-        },
-        body: JSON.stringify({
-            'id': id,
-            'value': value,
-            'action': 'update',
-            'field': field
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log(field + ' updated successfully');
-            // Replace newline characters with <br> for multi-line fields
-            if (field === 'secondary_keywords') {
-                element.innerHTML = value ? value.replace(/\n/g, '<br>') : '';
+        // Field-specific validation
+        if (field === 'pk_volume' || field === 'pk_ranking') {
+            if (value === '') {
+                value = null;  // Allow empty value to set as null
+            } else if (!/^\d+$/.test(value)) {  // Simple integer validation
+                alert('Please enter a valid number.');
+                element.focus();  // Optionally, revert to previous value or keep editing
+                return;
             } else {
-                element.innerHTML = value || '';
+                value = parseInt(value, 10);
+            }
+        }
+
+        // Remove editing highlight
+        element.classList.remove('editing');
+
+        fetch("{% url 'update_keyword_field' %}", {  // Changed URL to 'update_keyword_field'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'  // Ensure AJAX request is identified
+            },
+            body: JSON.stringify({
+                'id': id,
+                'value': value,
+                'action': 'update',
+                'field': field
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(field + ' updated successfully');
+                if (element.tagName !== 'SELECT') {  // Only modify for non-select elements
+                    if (field === 'secondary_keywords') {
+                        element.innerHTML = value ? value.replace(/\n/g, '<br>') : '';
+                    } else {
+                        element.innerHTML = value || '';
+                    }
+                }
+                // For SELECT elements, no need to modify innerHTML
+            } else {
+                console.error('Failed to update ' + field + ':', data.error);
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An unexpected error occurred.');
+        });
+    }
+
+    // Function to handle keydown events
+    function handleKeyDown(element, event) {
+        const field = element.dataset.field;
+        if (field === 'secondary_keywords') {
+            if (event.altKey && event.key === "Enter") {
+                event.preventDefault();  // Prevent default behavior
+                // Insert line break at cursor position
+                document.execCommand('insertText', false, '\n');
+            } else if (event.key === "Enter") {
+                event.preventDefault(); // Prevent default Enter key behavior
             }
         } else {
-            console.error('Failed to update ' + field + ':', data.error);
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An unexpected error occurred.');
-    });
-}
-
-// Function to handle keydown events
-function handleKeyDown(element, event) {
-    const field = element.dataset.field;
-    if (field === 'secondary_keywords') {
-        if (event.altKey && event.key === "Enter") {
-            event.preventDefault();  // Prevent default behavior
-            // Insert line break at cursor position
-            document.execCommand('insertText', false, '\n');
-        } else if (event.key === "Enter") {
-            event.preventDefault(); // Prevent default Enter key behavior
-        }
-    } else {
-        if (event.key === "Enter") {
-            event.preventDefault();  // Prevent inserting a newline
-            element.blur();          // Trigger onblur to save the data
+            if (event.key === "Enter") {
+                event.preventDefault();  // Prevent inserting a newline
+                element.blur();          // Trigger onblur to save the data
+            }
         }
     }
-}
 
-// Function to adjust the height of the editable span
-function adjustHeight(element) {
-    if (element.classList.contains('multi-line')) {
-        element.style.height = 'auto';  // Reset the height to auto
+    // Function to adjust the height of the editable span
+    function adjustHeight(element) {
+        if (element.classList.contains('multi-line')) {
+            element.style.height = 'auto';  // Reset the height to auto
+        }
     }
-}
 
-// Add event listeners for editable spans
-document.addEventListener('DOMContentLoaded', function() {
-    const editableSpans = document.querySelectorAll('.editable-span');
+    // Add event listeners for editable spans
+    document.addEventListener('DOMContentLoaded', function() {
+        const editableSpans = document.querySelectorAll('.editable-span');
 
-    editableSpans.forEach(span => {
-        // Show edit icon on hover
-        span.addEventListener('mouseenter', () => {
-            const icon = span.querySelector('.editable-icon');
-            if (icon) {
-                icon.style.opacity = '1';
-            }
-        });
+        editableSpans.forEach(span => {
+            // Show edit icon on hover
+            span.addEventListener('mouseenter', () => {
+                const icon = span.querySelector('.editable-icon');
+                if (icon) {
+                    icon.style.opacity = '1';
+                }
+            });
 
-        span.addEventListener('mouseleave', () => {
-            const icon = span.querySelector('.editable-icon');
-            if (icon && !span.classList.contains('editing')) {
-                icon.style.opacity = '0';
-            }
-        });
+            span.addEventListener('mouseleave', () => {
+                const icon = span.querySelector('.editable-icon');
+                if (icon && !span.classList.contains('editing')) {
+                    icon.style.opacity = '0';
+                }
+            });
 
-        // Highlight the span when editing
-        span.addEventListener('focus', () => {
-            span.classList.add('editing');
-            const icon = span.querySelector('.editable-icon');
-            if (icon) {
-                icon.style.opacity = '0';
-            }
+            // Highlight the span when editing
+            span.addEventListener('focus', () => {
+                span.classList.add('editing');
+                const icon = span.querySelector('.editable-icon');
+                if (icon) {
+                    icon.style.opacity = '0';
+                }
 
-            // Remove extra empty elements
-            if (span.classList.contains('multi-line')) {
-                span.innerHTML = span.innerHTML.replace(/<br>/gi, '');
-            }
+                // Remove extra empty elements
+                if (span.classList.contains('multi-line')) {
+                    span.innerHTML = span.innerHTML.replace(/<br>/gi, '');
+                }
 
-            adjustHeight(span);
-        });
+                adjustHeight(span);
+            });
 
-        span.addEventListener('blur', () => {
-            span.classList.remove('editing');
-            const icon = span.querySelector('.editable-icon');
-            if (icon) {
-                icon.style.opacity = '0';
-            }
+            span.addEventListener('blur', () => {
+                span.classList.remove('editing');
+                const icon = span.querySelector('.editable-icon');
+                if (icon) {
+                    icon.style.opacity = '0';
+                }
 
-            // Clean up extra empty lines
-            if (span.classList.contains('multi-line')) {
-                span.innerHTML = span.innerHTML.trim().replace(/(<br>\s*)+$/, '');
-            }
+                // Clean up extra empty lines
+                if (span.classList.contains('multi-line')) {
+                    span.innerHTML = span.innerHTML.trim().replace(/(<br>\s*)+$/, '');
+                }
 
-            adjustHeight(span);
-        });
+                adjustHeight(span);
+            });
 
-        // Adjust height on input for multi-line fields
-        span.addEventListener('input', () => {
+            // Adjust height on input for multi-line fields
+            span.addEventListener('input', () => {
+                if (span.classList.contains('multi-line')) {
+                    adjustHeight(span);
+                }
+            });
+
+            // Adjust height based on initial content
             if (span.classList.contains('multi-line')) {
                 adjustHeight(span);
             }
         });
-
-        // Adjust height based on initial content
-        if (span.classList.contains('multi-line')) {
-            adjustHeight(span);
-        }
     });
-});
-
 </script>
 
 <!-- Inline Styles for Editable Cells -->
@@ -357,6 +367,22 @@ document.addEventListener('DOMContentLoaded', function() {
     .editable-span.editing:empty:before,
     .editable-span:not(:empty):before {
         content: "";
+    }
+
+    /* Ensure Customer Journey Dropdown Styles */
+    .customer-journey-dropdown {
+        width: 100%;
+        padding: 4px 8px;
+        border: none;
+        border-radius: 4px;
+        background-color: #2d3748; /* Tailwind Gray-800 */
+        color: #edf2f7; /* Tailwind Gray-200 */
+        cursor: pointer;
+    }
+
+    .customer-journey-dropdown:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #6b46c1; /* Tailwind Purple-600 */
     }
 
     /* Adjust table cell to accommodate multi-line content */
