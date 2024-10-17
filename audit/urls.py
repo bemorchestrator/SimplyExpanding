@@ -1,7 +1,7 @@
 # urls.py
 from django.urls import path
 from . import views
-from .views import populate_audit_dashboard_with_search_console_data, keyword_research_view
+from .views import populate_audit_dashboard_with_search_console_data
 
 urlpatterns = [
     path('upload/', views.upload_file, name='upload_file'),  # For uploading files
@@ -13,18 +13,20 @@ urlpatterns = [
     path('delete-uploaded-files/', views.delete_uploaded_files, name='delete_uploaded_files'),  # Delete all unsaved files
     path('delete-uploaded-files/<int:dashboard_id>/', views.delete_uploaded_files, name='delete_uploaded_files_with_id'),  # Delete files for specific dashboard
     
-    path('update-action-choice/', views.update_action_choice, name='update_action_choice'),  # New URL for updating actions
+    path('update-action-choice/', views.update_action_choice, name='update_action_choice'),  # URL for updating actions
     path('update-category/', views.update_category, name='update_category'),
     path('sitemaps/delete/<int:sitemap_id>/', views.delete_sitemap, name='delete_sitemap'),
     path('fetch-data/', populate_audit_dashboard_with_search_console_data, name='fetch_search_console_data'),
     path('save-audit-dashboard/', views.save_audit_dashboard, name='save_audit_dashboard'),
     
-    path('list-dashboard/', views.list_dashboard, name='list_dashboard'),  # Removed duplicate
+    path('list-dashboard/', views.list_dashboard, name='list_dashboard'),  # List all saved dashboards
     
     path('load-dashboard/<int:id>/', views.load_dashboard, name='load_dashboard'),
     path('delete-dashboard/<int:id>/', views.delete_dashboard, name='delete_dashboard'),
     path('generate-share-link/<int:id>/', views.generate_shareable_link, name='generate_shareable_link'),
     path('shared-dashboard/<str:share_token>/', views.shared_dashboard, name='shared_dashboard'),
-    path('keyword-research/', views.keyword_research_view, name='keyword_research'),
-    path('update-keyword-field/', keyword_research_view, name='update_keyword_field'),  # Renamed URL
+    
+    # The following URL patterns related to keyword research have been removed:
+    # path('keyword-research/', views.keyword_research_view, name='keyword_research'),
+    # path('update-keyword-field/', keyword_research_view, name='update_keyword_field'),  # Renamed URL
 ]

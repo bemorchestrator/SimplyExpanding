@@ -22,7 +22,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
 from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_exempt
 
 from .filters import UploadedFileFilter 
 from .forms import AuditDashboardForm, FileUploadForm, SitemapForm, UploadedFileForm
@@ -32,21 +32,13 @@ from google_auth import get_credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from django_tables2 import RequestConfig
-from django.views.decorators.csrf import csrf_exempt
 from .tables import UploadedFileTable 
 from .utils import identify_csv_type, normalize_page_path
-from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from datetime import datetime, timedelta
-from django.shortcuts import redirect
-from django.contrib import messages
-import logging
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google_auth import get_credentials
 from django.views.decorators.http import require_POST
 from django.db.models import ProtectedError
-from .tables import KeywordResearchTable
-
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +55,8 @@ root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)  # You can adjust this level if needed
 root_logger.addHandler(console_handler)
 
-
 # Define the fixed folder ID for Google Drive
 GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
-
 
 
 def audit_result(request):
@@ -76,7 +66,7 @@ def audit_result(request):
 
     # Pagination Logic
     page_number = request.GET.get('page', 1)
-    rows_per_page = request.GET.get('rows', 15)  # Default to 25 rows per page
+    rows_per_page = request.GET.get('rows', 15)  # Default to 15 rows per page
 
     # Ensure rows_per_page is an integer
     try:
@@ -237,8 +227,6 @@ def upload_file(request):
     return render(request, 'audit/upload.html', {'form': form})
 
 
-
-
 def fetch_search_console_data(creds, site_url, start_date, end_date):
     try:
         service = build('searchconsole', 'v1', credentials=creds)
@@ -258,7 +246,6 @@ def fetch_search_console_data(creds, site_url, start_date, end_date):
     except Exception as e:
         logging.error(f"Error fetching data from Google Search Console: {e}")
         return []
-
 
 
 def populate_audit_dashboard_with_search_console_data(request):
@@ -367,7 +354,6 @@ def scrape_sitemap(sitemap_url):
     # If both attempts fail, return None
     logging.warning(f"Both cloudscraper and requests failed to fetch the sitemap: {sitemap_url}")
     return None
-
 
 
 def parse_sitemap(content, sitemap_url):
@@ -512,8 +498,6 @@ def crawl_sitemaps(request):
     })
 
 
-
-
 @csrf_protect
 def delete_sitemap(request, sitemap_id):
     if request.method == 'POST':
@@ -545,7 +529,6 @@ def delete_sitemap(request, sitemap_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
 
-
 def update_in_sitemap_status():
     """
     Updates the 'in_sitemap' field in UploadedFile by checking
@@ -555,7 +538,7 @@ def update_in_sitemap_status():
     sitemap_urls = SitemapURL.objects.values_list('url', flat=True)
     normalized_sitemap_urls = set(normalize_url(url) for url in sitemap_urls)
 
-    # Fetch all audit files that are not yet flagged as in_sitemap (to minimize unnecessary updates)
+    # Fetch all audit files
     audit_files = UploadedFile.objects.all()
 
     # Batch update to avoid too many save() calls in a loop
@@ -577,9 +560,6 @@ def update_in_sitemap_status():
         UploadedFile.objects.bulk_update(bulk_updates, ['in_sitemap'])
 
 
-
-
-
 def get_page_path(url):
     """
     Extracts the path from a URL. If the URL has no path, returns '/'.
@@ -595,8 +575,6 @@ def get_page_path(url):
     logging.debug(f"Extracted path: {path}")
     
     return path
-
-
 
 
 def process_csv_file(file):
@@ -974,6 +952,7 @@ def process_csv_file(file):
 
 
 
+
 def audit_dashboard(request):
     # Ensure that the 'in_sitemap' status is always updated when the dashboard is loaded
     update_in_sitemap_status()  # This will update the in_sitemap field for all uploaded files
@@ -1018,8 +997,6 @@ def audit_dashboard(request):
     })
 
 
-
-
 @csrf_protect
 @require_POST
 def delete_uploaded_files(request, dashboard_id=None):
@@ -1054,7 +1031,6 @@ def delete_uploaded_files(request, dashboard_id=None):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-
 @csrf_protect
 def update_action_choice(request):
     if request.method == 'POST':
@@ -1073,11 +1049,6 @@ def update_action_choice(request):
             return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
 
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
-
-
-
-
-
 
 
 @csrf_protect
@@ -1104,7 +1075,6 @@ def update_category(request):
 
     # Return an error if the request is not a POST request
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
-
 
 
 @csrf_protect
@@ -1150,14 +1120,10 @@ def save_audit_dashboard(request):
     return redirect('audit_dashboard')
 
 
-    
-
-
-    
-
 def list_dashboard(request):
     dashboards = AuditDashboard.objects.all()  # Fetch all saved dashboards
     return render(request, 'audit/list_dashboards.html', {'dashboards': dashboards})
+
 
 def load_dashboard(request, id):
     # Get the specific dashboard
@@ -1189,8 +1155,6 @@ def load_dashboard(request, id):
         'table': table,  # Pass the paginated table to the template
         'page_obj': page_obj,  # Pass the page object for pagination controls
     })
-
-
 
 
 @csrf_protect
@@ -1225,7 +1189,6 @@ def delete_dashboard(request, id):
     return redirect('list_dashboard')
 
 
-
 @csrf_protect
 def generate_shareable_link(request, id):
     if request.method == 'POST':
@@ -1242,9 +1205,7 @@ def generate_shareable_link(request, id):
         return JsonResponse({'success': True, 'shareable_link': shareable_link})
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
-    
 
-    
 
 def shared_dashboard(request, share_token):
     # Retrieve the dashboard using the share token
@@ -1274,116 +1235,3 @@ def shared_dashboard(request, share_token):
         'is_shared_view': True,  # Indicate that this is a shared view
         'hide_sidebar': True,    # Hide the sidebar in the template
     })
-
-
-
-@csrf_protect  # Ensure CSRF protection is enabled
-def keyword_research_view(request):
-    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        try:
-            data = json.loads(request.body)
-            row_id = data.get('id')
-            field_value = data.get('value')
-            action = data.get('action')
-            field = data.get('field')  # Indicates which column to update
-
-            if action == "update":
-                # Handle update case
-                if row_id is not None and field:
-                    uploaded_file = get_object_or_404(UploadedFile, id=row_id)
-                    
-                    # Dynamically update the specified field
-                    if field == 'primary_keyword':
-                        uploaded_file.primary_keyword = field_value if field_value else ""
-                    elif field == 'pk_volume':
-                        if field_value is None or field_value == '':
-                            uploaded_file.pk_volume = None
-                        else:
-                            try:
-                                uploaded_file.pk_volume = int(field_value)
-                            except (ValueError, TypeError):
-                                return JsonResponse({'success': False, 'error': 'Invalid PK Volume value'}, status=400)
-                    elif field == 'pk_ranking':
-                        if field_value is None or field_value == '':
-                            uploaded_file.pk_ranking = None
-                        else:
-                            try:
-                                uploaded_file.pk_ranking = int(field_value)
-                            except (ValueError, TypeError):
-                                return JsonResponse({'success': False, 'error': 'Invalid PK Ranking value'}, status=400)
-                    elif field == 'secondary_keywords':
-                        uploaded_file.secondary_keywords = field_value if field_value else ""
-                    elif field == 'customer_journey':  
-                        uploaded_file.customer_journey = field_value if field_value else ""
-                    elif field == 'serp_content_type':
-                        uploaded_file.serp_content_type = field_value if field_value else ""
-                    else:
-                        return JsonResponse({'success': False, 'error': 'Invalid field'}, status=400)
-                    
-                    uploaded_file.save()
-                    return JsonResponse({'success': True, 'message': f'{field.replace("_", " ").capitalize()} updated successfully!'})
-                else:
-                    return JsonResponse({'success': False, 'error': 'Missing record ID or field'}, status=400)
-            
-            elif action == "add":
-                # Handle add case (create a new record)
-                if field_value:
-                    new_file = UploadedFile.objects.create(primary_keyword=field_value)
-                    return JsonResponse({'success': True, 'message': 'Primary Keyword added successfully!'})
-                else:
-                    return JsonResponse({'success': False, 'error': 'Missing data'}, status=400)
-
-            elif action == "delete":
-                # Handle delete case
-                if row_id is not None:
-                    uploaded_file = get_object_or_404(UploadedFile, id=row_id)
-                    uploaded_file.delete()
-                    return JsonResponse({'success': True, 'message': 'Record deleted successfully!'})
-                else:
-                    return JsonResponse({'success': False, 'error': 'Record not found'}, status=404)
-
-            else:
-                return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-    else:
-        # Handle the regular GET request for displaying the table with pagination
-
-        # Define the available options for rows per page
-        per_page_options = [5, 10, 15, 20, 25]
-
-        # Get the 'per_page' parameter from the GET parameters, default to 5
-        per_page = request.GET.get('per_page', '5')
-        try:
-            per_page = int(per_page)
-            if per_page not in per_page_options:
-                per_page = 5
-        except ValueError:
-            per_page = 5
-
-        # Build the base query string without the 'page' parameter
-        query_params = request.GET.copy()
-        if 'page' in query_params:
-            del query_params['page']
-        base_query_string = query_params.urlencode()
-
-        queryset = UploadedFile.objects.filter(action_choice__in=["update_on_page", "merge"]).order_by('id')  # Explicitly order by 'id'
-        table = KeywordResearchTable(queryset)
-
-        # Configure pagination using the per_page value
-        RequestConfig(request, paginate={"per_page": per_page}).configure(table)
-
-        # Pass 'per_page', 'per_page_options', and 'base_query_string' to the template
-        return render(request, 'audit/keyword_research.html', {
-            'table': table,
-            'per_page': per_page,
-            'per_page_options': per_page_options,
-            'base_query_string': base_query_string
-        })
-
-
-
