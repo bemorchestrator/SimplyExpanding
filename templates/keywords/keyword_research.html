@@ -301,9 +301,10 @@
                 editableCells.forEach(cell => {
                     cell.addEventListener('click', function() {
                         // Prevent multiple inputs in the same cell
-                        if (cell.querySelector('input') || cell.querySelector('textarea')) return;
+                        if (cell.querySelector('input') || cell.querySelector('textarea') || cell.querySelector('select')) return;
 
-                        const currentText = cell.textContent.trim();
+                        const currentTextElement = cell.querySelector('span');
+                        const currentText = currentTextElement ? currentTextElement.textContent.trim() : cell.textContent.trim();
                         const entryId = cell.getAttribute('data-id');
                         const fieldName = cell.getAttribute('data-field');
 
@@ -316,37 +317,21 @@
                             input.value = currentText === '-' ? '' : currentText.replace(/<br\s*\/?>/gi, '\n');
                             input.style.height = 'auto';
                             input.style.minHeight = '2.5rem';
-                        } else if (fieldName === 'customer_journey') {
-                            const colorMap = {
-                                'Customer': 'bg-blue-500',
-                                'Consider': 'bg-green-500',
-                                'Discover': 'bg-yellow-500',
-                                'Awareness': 'bg-purple-500',
-                                'Attention': 'bg-red-500'
-                            };
-                            input = document.createElement('input');
-                            input.value = currentText === '-' ? '' : currentText;
-                        } else {
-                            input = document.createElement('input');
-                            input.value = currentText === '-' ? '' : currentText;
-                        }
+                            input.classList.add('input-edit');
 
-                        input.classList.add('input-edit');
+                            // Replace cell content with textarea
+                            cell.innerHTML = '';
+                            cell.appendChild(input);
+                            input.focus();
 
-                        // Replace cell content with input
-                        cell.innerHTML = '';
-                        cell.appendChild(input);
-                        input.focus();
-
-                        // Handle keydown event
-                        input.addEventListener('keydown', function(event) {
-                            if (event.key === 'Enter' && !event.altKey && !event.shiftKey) {
-                                // Prevent new line in textarea when pressing Enter without Alt/Shift
-                                event.preventDefault();
-                                input.blur();
-                            } else if (event.key === 'Enter' && (event.altKey || event.shiftKey)) {
-                                // Insert newline in textarea when Alt+Enter or Shift+Enter is pressed
-                                if (fieldName === 'secondary_keywords') {
+                            // Handle keydown event
+                            input.addEventListener('keydown', function(event) {
+                                if (event.key === 'Enter' && !event.altKey && !event.shiftKey) {
+                                    // Prevent new line in textarea when pressing Enter without Alt/Shift
+                                    event.preventDefault();
+                                    input.blur();
+                                } else if (event.key === 'Enter' && (event.altKey || event.shiftKey)) {
+                                    // Insert newline in textarea when Alt+Enter or Shift+Enter is pressed
                                     event.preventDefault();
                                     const cursorPos = input.selectionStart;
                                     const textBefore = input.value.substring(0, cursorPos);
@@ -354,54 +339,190 @@
                                     input.value = textBefore + '\n' + textAfter;
                                     input.selectionStart = input.selectionEnd = cursorPos + 1;
                                 }
-                            }
-                        });
+                            });
 
-                        // Handle input blur event
-                        input.addEventListener('blur', function() {
-                            let newValue = input.value.trim();
+                            // Handle blur event
+                            input.addEventListener('blur', function() {
+                                let newValue = input.value.trim();
 
-                            // For 'secondary_keywords', replace newlines with <br> for display
-                            if (fieldName === 'secondary_keywords') {
+                                // For 'secondary_keywords', replace newlines with <br> for display
                                 cell.innerHTML = newValue ? newValue.replace(/\n/g, '<br>') : '-';
-                            } else {
-                                cell.innerHTML = newValue || '-';
-                            }
 
-                            // If value hasn't changed, do nothing
-                            if (newValue === (currentText === '-' ? '' : currentText)) {
-                                return;
-                            }
+                                // If value hasn't changed, do nothing
+                                if (newValue === (currentText === '-' ? '' : currentText)) {
+                                    return;
+                                }
 
-                            // Prepare data for AJAX
-                            const data = {
-                                id: entryId,
-                                field_name: fieldName,
-                                new_value: newValue
+                                // Prepare data for AJAX
+                                const data = {
+                                    id: entryId,
+                                    field_name: fieldName,
+                                    new_value: newValue
+                                };
+
+                                // Send AJAX request
+                                fetch("{% url 'update_field' %}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': csrftoken
+                                    },
+                                    body: JSON.stringify(data)
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (!data.success) {
+                                        alert(data.error || 'An error occurred while updating the field.');
+                                        cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error('Error:', error);
+                                    alert('An unexpected error occurred.');
+                                    cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                });
+                            });
+                        } else if (fieldName === 'customer_journey') {
+                            // Define color mapping
+                            const colorMap = {
+                                'Customer': 'bg-blue-500',
+                                'Consider': 'bg-green-500',
+                                'Discover': 'bg-yellow-500',
+                                'Awareness': 'bg-purple-500',
+                                'Attention': 'bg-red-500'
                             };
 
-                            // Send AJAX request
-                            fetch("{% url 'update_field' %}", {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrftoken
-                                },
-                                body: JSON.stringify(data)
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (!data.success) {
-                                    alert(data.error || 'An error occurred while updating the field.');
-                                    cell.innerHTML = currentText === '-' ? '-' : currentText;
+                            // Create a select element
+                            input = document.createElement('select');
+                            input.classList.add('input-edit', 'text-white', 'px-2', 'py-1', 'rounded');
+
+                            // Populate select options
+                            const options = ['Customer', 'Consider', 'Discover', 'Awareness', 'Attention'];
+                            options.forEach(optionText => {
+                                const option = document.createElement('option');
+                                option.value = optionText;
+                                option.textContent = optionText;
+                                if (optionText === currentText) {
+                                    option.selected = true;
                                 }
-                            })
-                            .catch((error) => {
-                                console.error('Error:', error);
-                                alert('An unexpected error occurred.');
-                                cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                input.appendChild(option);
                             });
-                        });
+
+                            // Apply initial background color
+                            input.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--' + colorMap[currentText]);
+
+                            // Replace cell content with select
+                            cell.innerHTML = '';
+                            cell.appendChild(input);
+                            input.focus();
+
+                            // Handle change event
+                            input.addEventListener('change', function() {
+                                const newValue = input.value;
+
+                                // Prepare data for AJAX
+                                const data = {
+                                    id: entryId,
+                                    field_name: fieldName,
+                                    new_value: newValue
+                                };
+
+                                // Send AJAX request
+                                fetch("{% url 'update_field' %}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': csrftoken
+                                    },
+                                    body: JSON.stringify(data)
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        // Update cell with colored span
+                                        cell.innerHTML = `<span class="${colorMap[newValue] || 'bg-gray-700'} text-white px-2 py-1 rounded">${newValue || '-'}</span>`;
+                                    } else {
+                                        alert(data.error || 'An error occurred while updating the field.');
+                                        // Revert to previous value
+                                        cell.innerHTML = currentText === '-' ? '-' : `<span class="${colorMap[currentText] || 'bg-gray-700'} text-white px-2 py-1 rounded">${currentText}</span>`;
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error('Error:', error);
+                                    alert('An unexpected error occurred.');
+                                    // Revert to previous value
+                                    cell.innerHTML = currentText === '-' ? '-' : `<span class="${colorMap[currentText] || 'bg-gray-700'} text-white px-2 py-1 rounded">${currentText}</span>`;
+                                });
+                            });
+
+                            // Handle blur event
+                            input.addEventListener('blur', function() {
+                                if (!input.value) {
+                                    cell.innerHTML = currentText === '-' ? '-' : `<span class="${colorMap[currentText] || 'bg-gray-700'} text-white px-2 py-1 rounded">${currentText}</span>`;
+                                }
+                            });
+                        } else {
+                            // Handle other editable fields (primary_keyword, pk_volume, pk_ranking, etc.)
+                            // Create an input element
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.value = currentText === '-' ? '' : currentText;
+                            input.classList.add('input-edit');
+
+                            // Replace cell content with input
+                            cell.innerHTML = '';
+                            cell.appendChild(input);
+                            input.focus();
+
+                            // Handle input blur event
+                            input.addEventListener('blur', function() {
+                                const newValue = input.value.trim();
+
+                                // If value hasn't changed, revert to original text
+                                if (newValue === (currentText === '-' ? '' : currentText)) {
+                                    cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                    return;
+                                }
+
+                                // Prepare data for AJAX
+                                const data = {
+                                    id: entryId,
+                                    field_name: fieldName,
+                                    new_value: newValue
+                                };
+
+                                // Send AJAX request
+                                fetch("{% url 'update_field' %}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': csrftoken
+                                    },
+                                    body: JSON.stringify(data)
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        cell.innerHTML = newValue || '-';
+                                    } else {
+                                        alert(data.error || 'An error occurred while updating the field.');
+                                        cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error('Error:', error);
+                                    alert('An unexpected error occurred.');
+                                    cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                });
+                            });
+
+                            // Handle Enter key
+                            input.addEventListener('keydown', function(event) {
+                                if (event.key === 'Enter') {
+                                    input.blur();
+                                }
+                            });
+                        }
                     });
                 });
             });
