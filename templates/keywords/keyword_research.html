@@ -8,6 +8,7 @@
 
     <!-- Custom CSS for Tooltip and Sticky Columns -->
     <style>
+    
         /* Tooltip Styles */
         .tooltip {
             position: relative;
@@ -195,7 +196,7 @@
                                     {{ entry.pk_ranking|default:"-" }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="secondary_keywords">
-                                    {{ entry.secondary_keywords|default:"-" }}
+                                    {{ entry.secondary_keywords|default:"-"|linebreaksbr }}
                                 </td>
                             </tr>
                         {% endif %}
@@ -280,16 +281,28 @@
                 editableCells.forEach(cell => {
                     cell.addEventListener('click', function() {
                         // Prevent multiple inputs in the same cell
-                        if (cell.querySelector('input')) return;
+                        if (cell.querySelector('input') || cell.querySelector('textarea')) return;
 
                         const currentText = cell.textContent.trim();
                         const entryId = cell.getAttribute('data-id');
                         const fieldName = cell.getAttribute('data-field');
 
-                        // Create an input element
-                        const input = document.createElement('input');
-                        input.type = 'text';
-                        input.value = currentText === '-' ? '' : currentText;
+                        let input;
+
+                        if (fieldName === 'secondary_keywords') {
+                            // Create a textarea for 'secondary_keywords'
+                            input = document.createElement('textarea');
+                            input.rows = 3; // Adjust as needed
+                            input.value = currentText === '-' ? '' : currentText.replace(/<br\s*\/?>/gi, '\n');
+                            input.style.height = 'auto';
+                            input.style.minHeight = '2.5rem';
+                        } else {
+                            // Create an input element for other fields
+                            input = document.createElement('input');
+                            input.type = 'text';
+                            input.value = currentText === '-' ? '' : currentText;
+                        }
+
                         input.classList.add('input-edit');
 
                         // Replace cell content with input
@@ -297,13 +310,38 @@
                         cell.appendChild(input);
                         input.focus();
 
+                        // Handle keydown event
+                        input.addEventListener('keydown', function(event) {
+                            if (event.key === 'Enter' && !event.altKey && !event.shiftKey) {
+                                // Prevent new line in textarea when pressing Enter without Alt/Shift
+                                event.preventDefault();
+                                input.blur();
+                            } else if (event.key === 'Enter' && (event.altKey || event.shiftKey)) {
+                                // Insert newline in textarea when Alt+Enter or Shift+Enter is pressed
+                                if (fieldName === 'secondary_keywords') {
+                                    event.preventDefault();
+                                    const cursorPos = input.selectionStart;
+                                    const textBefore = input.value.substring(0, cursorPos);
+                                    const textAfter = input.value.substring(cursorPos);
+                                    input.value = textBefore + '\n' + textAfter;
+                                    input.selectionStart = input.selectionEnd = cursorPos + 1;
+                                }
+                            }
+                        });
+
                         // Handle input blur event
                         input.addEventListener('blur', function() {
-                            const newValue = input.value.trim();
+                            let newValue = input.value.trim();
 
-                            // If value hasn't changed, revert to original text
+                            // For 'secondary_keywords', replace newlines with <br> for display
+                            if (fieldName === 'secondary_keywords') {
+                                cell.innerHTML = newValue ? newValue.replace(/\n/g, '<br>') : '-';
+                            } else {
+                                cell.innerHTML = newValue || '-';
+                            }
+
+                            // If value hasn't changed, do nothing
                             if (newValue === (currentText === '-' ? '' : currentText)) {
-                                cell.innerHTML = currentText === '-' ? '-' : currentText;
                                 return;
                             }
 
@@ -325,9 +363,7 @@
                             })
                             .then(response => response.json())
                             .then(data => {
-                                if (data.success) {
-                                    cell.innerHTML = newValue || '-';
-                                } else {
+                                if (!data.success) {
                                     alert(data.error || 'An error occurred while updating the field.');
                                     cell.innerHTML = currentText === '-' ? '-' : currentText;
                                 }
@@ -337,13 +373,6 @@
                                 alert('An unexpected error occurred.');
                                 cell.innerHTML = currentText === '-' ? '-' : currentText;
                             });
-                        });
-
-                        // Handle Enter key
-                        input.addEventListener('keydown', function(event) {
-                            if (event.key === 'Enter') {
-                                input.blur();
-                            }
                         });
                     });
                 });
