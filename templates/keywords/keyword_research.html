@@ -8,7 +8,6 @@
 
     <!-- Custom CSS for Tooltip and Sticky Columns -->
     <style>
-    
         /* Tooltip Styles */
         .tooltip {
             position: relative;
@@ -95,7 +94,7 @@
 
         .input-edit {
             width: 100%;
-            background-color: #4a5568; /* Tailwind Gray-700 */
+            /* Removed fixed background color to allow dynamic classes */
             color: #fff;
             border: none;
             padding: 0.5rem;
@@ -109,13 +108,13 @@
     </style>
 
     <div class="container mx-auto px-4 py-8 min-h-screen">
-        <h2 class="text-2xl font-bold mb-6 text-white">Keyword Research Table</h2>
+        <h2 class="text-xl font-bold mb-6 text-white">Keyword Research Table</h2> <!-- Changed from text-2xl to text-xl for smaller font -->
 
         <!-- Rows per page dropdown -->
         <form method="GET">
             <div class="flex justify-end mb-4">
-                <label for="per_page" class="mr-2 text-white text-base">Rows per page:</label>
-                <select name="per_page" id="per_page" onchange="this.form.submit()" class="bg-gray-700 text-gray-200 rounded focus:outline-none text-base">
+                <label for="per_page" class="mr-2 text-white text-sm">Rows per page:</label> <!-- Changed from text-base to text-sm -->
+                <select name="per_page" id="per_page" onchange="this.form.submit()" class="bg-gray-700 text-gray-200 rounded focus:outline-none text-sm"> <!-- Changed text-base to text-sm -->
                     {% for option in per_page_options %}
                         <option value="{{ option }}" {% if per_page == option|stringformat:"s" %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
@@ -125,35 +124,35 @@
 
         <!-- Table Container with Horizontal Scroll -->
         <div class="table-container">
-            <table class="min-w-full table-auto text-white text-base">
+            <table class="min-w-full table-auto text-white text-sm"> <!-- Changed text-base to text-sm -->
                 <thead>
                     <tr>
                         <!-- Actions Column - Sticky -->
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap sticky-header sticky-actions">
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap sticky-header sticky-actions"> <!-- Changed px-6 py-3 to px-4 py-2 and text-base to text-sm -->
                             Actions
                         </th>
                         
                         <!-- URL Column - Sticky -->
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap sticky-header sticky-url">
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap sticky-header sticky-url">
                             URL
                         </th>
                         
                         <!-- Existing Non-Editable Columns -->
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Category</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Main KW</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Volume</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Ranking</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Best KW</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Best KW Volume</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Best KW Ranking</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Category</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Main KW</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Volume</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Ranking</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Best KW</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Best KW Volume</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Best KW Ranking</th>
                         
                         <!-- Additional Editable Columns -->
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Primary Keyword</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">PK Volume</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">PK Ranking</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Secondary Keywords</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Customer Journey</th>
-                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">SERP Content Type</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Primary Keyword</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">PK Volume</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">PK Ranking</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Secondary Keywords</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Customer Journey</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">SERP Content Type</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -161,46 +160,46 @@
                         {% if entry.action_choice == 'update_on_page' %}
                             <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700">
                                 <!-- Actions Column - Sticky -->
-                                <td class="px-6 py-4 whitespace-nowrap bg-gray-800 sticky left-0 z-50 sticky-actions">
+                                <td class="px-4 py-2 whitespace-nowrap bg-gray-800 sticky left-0 z-50 sticky-actions">
                                     <!-- Static Text as per user requirements -->
-                                    <span class="text-white text-base">Update On Page</span>
+                                    <span class="text-white text-sm">Update On Page</span>
                                 </td>
 
                                 <!-- URL Column - Sticky with Tooltip -->
-                                <td class="px-6 py-4 whitespace-nowrap bg-gray-800 sticky left-150px z-45 sticky-url">
+                                <td class="px-4 py-2 whitespace-nowrap bg-gray-800 sticky left-150px z-45 sticky-url">
                                     <div class="tooltip">
-                                        <span class="truncate max-w-xs block text-white text-base">
+                                        <span class="truncate max-w-xs block text-white text-sm">
                                             {{ entry.url|default:"-" }}
                                         </span>
-                                        <div class="tooltip-text text-base">
+                                        <div class="tooltip-text text-sm">
                                             {{ entry.url|default:"-" }}
                                         </div>
                                     </div>
                                 </td>
 
                                 <!-- Existing Non-Editable Data Columns -->
-                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.category|default:"-" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.main_kw|default:"-" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.kw_volume|default:"-" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.kw_ranking|default:"-" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.best_kw|default:"-" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.best_kw_volume|default:"-" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.best_kw_ranking|default:"-" }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.category|default:"-" }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.main_kw|default:"-" }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.kw_volume|default:"-" }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.kw_ranking|default:"-" }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.best_kw|default:"-" }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.best_kw_volume|default:"-" }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.best_kw_ranking|default:"-" }}</td>
 
                                 <!-- Additional Editable Data Columns -->
-                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="primary_keyword">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="primary_keyword">
                                     {{ entry.primary_keyword|default:"-" }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="pk_volume">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="pk_volume">
                                     {{ entry.pk_volume|default:"-" }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="pk_ranking">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="pk_ranking">
                                     {{ entry.pk_ranking|default:"-" }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="secondary_keywords">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="secondary_keywords">
                                     {{ entry.secondary_keywords|default:"-"|linebreaksbr }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="customer_journey">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="customer_journey">
                                     {% if entry.customer_journey == 'Customer' %}
                                         <span class="bg-blue-500 text-white px-2 py-1 rounded">Customer</span>
                                     {% elif entry.customer_journey == 'Consider' %}
@@ -215,7 +214,7 @@
                                         -
                                     {% endif %}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="serp_content_type">
+                                <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="serp_content_type">
                                     {{ entry.serp_content_type|default:"-" }}
                                 </td>
                             </tr>
@@ -232,13 +231,13 @@
                     <!-- Previous Button -->
                     {% if keyword_entries.has_previous %}
                         <li>
-                            <a href="?page={{ keyword_entries.previous_page_number }}&per_page={{ per_page }}" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-base">
+                            <a href="?page={{ keyword_entries.previous_page_number }}&per_page={{ per_page }}" class="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-sm">
                                 Previous
                             </a>
                         </li>
                     {% else %}
                         <li>
-                            <span class="px-4 py-2 bg-gray-700 text-gray-400 rounded text-base">Previous</span>
+                            <span class="px-3 py-1 bg-gray-700 text-gray-400 rounded text-sm">Previous</span>
                         </li>
                     {% endif %}
 
@@ -247,11 +246,11 @@
                         {% if num >= keyword_entries.number|add:'-2' and num <= keyword_entries.number|add:'2' %}
                             {% if num == keyword_entries.number %}
                                 <li>
-                                    <span class="px-4 py-2 bg-gray-900 text-white rounded text-base">{{ num }}</span>
+                                    <span class="px-3 py-1 bg-gray-900 text-white rounded text-sm">{{ num }}</span>
                                 </li>
                             {% else %}
                                 <li>
-                                    <a href="?page={{ num }}&per_page={{ per_page }}" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-base">
+                                    <a href="?page={{ num }}&per_page={{ per_page }}" class="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-sm">
                                         {{ num }}
                                     </a>
                                 </li>
@@ -262,13 +261,13 @@
                     <!-- Next Button -->
                     {% if keyword_entries.has_next %}
                         <li>
-                            <a href="?page={{ keyword_entries.next_page_number }}&per_page={{ per_page }}" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-base">
+                            <a href="?page={{ keyword_entries.next_page_number }}&per_page={{ per_page }}" class="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-sm">
                                 Next
                             </a>
                         </li>
                     {% else %}
                         <li>
-                            <span class="px-4 py-2 bg-gray-700 text-gray-400 rounded text-base">Next</span>
+                            <span class="px-3 py-1 bg-gray-700 text-gray-400 rounded text-sm">Next</span>
                         </li>
                     {% endif %}
                 </ul>
@@ -408,8 +407,17 @@
                                 input.appendChild(option);
                             });
 
-                            // Apply initial background color
-                            input.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--' + colorMap[currentText]);
+                            // Remove existing color classes
+                            Object.values(colorMap).forEach(cls => {
+                                input.classList.remove(cls);
+                            });
+
+                            // Apply the current background color
+                            if (colorMap[currentText]) {
+                                input.classList.add(colorMap[currentText]);
+                            } else {
+                                input.classList.add('bg-gray-700');
+                            }
 
                             // Replace cell content with select
                             cell.innerHTML = '';
@@ -419,6 +427,18 @@
                             // Handle change event
                             input.addEventListener('change', function() {
                                 const newValue = input.value;
+
+                                // Remove existing color classes
+                                Object.values(colorMap).forEach(cls => {
+                                    input.classList.remove(cls);
+                                });
+
+                                // Apply new color class
+                                if (colorMap[newValue]) {
+                                    input.classList.add(colorMap[newValue]);
+                                } else {
+                                    input.classList.add('bg-gray-700');
+                                }
 
                                 // Prepare data for AJAX
                                 const data = {
