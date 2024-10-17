@@ -1,0 +1,353 @@
+<!-- templates/keywords/keyword_research.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <!-- Include Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-yH2Br+HtIsVJzObX5fNRb/Ot7DRSuhxSjE6lE6FVHIbvc6im1cB/3H0tUv0D4OmGiDhZyVY3cXkGgFum0BvBtA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Custom CSS for Tooltip and Sticky Columns -->
+    <style>
+        /* Tooltip Styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: max-content;
+            max-width: 300px;
+            background-color: rgba(55, 65, 81, 0.95); /* Gray-700 with slight transparency */
+            color: #fff;
+            text-align: left;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            position: absolute;
+            z-index: 50;
+            bottom: 125%; /* Position above the text */
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: none;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Tooltip Arrow */
+        .tooltip .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%; /* At the bottom of the tooltip */
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(55, 65, 81, 0.95) transparent transparent transparent;
+        }
+
+        /* Sticky Column Headers */
+        .sticky-header {
+            position: sticky;
+            background-color: #2d3748; /* Tailwind Gray-800 */
+            z-index: 40;
+        }
+
+        /* Sticky Actions Column */
+        .sticky-actions {
+            left: 0;
+            z-index: 50;
+            min-width: 150px; /* Define a fixed width for Actions column */
+        }
+
+        /* Sticky URL Column */
+        .sticky-url {
+            left: 150px; /* Must match the Actions column width */
+            z-index: 45;
+            min-width: 300px; /* Define a fixed width for URL column */
+        }
+
+        /* Ensure the table container allows horizontal scrolling */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        /* Truncate Text with Ellipsis */
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Editable Cell Styles */
+        .editable {
+            cursor: pointer;
+        }
+
+        .editable:hover {
+            background-color: #4a5568; /* Tailwind Gray-700 */
+        }
+
+        .input-edit {
+            width: 100%;
+            background-color: #4a5568; /* Tailwind Gray-700 */
+            color: #fff;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            outline: none;
+        }
+
+        .input-edit:focus {
+            box-shadow: 0 0 0 2px #2d3748; /* Tailwind Gray-800 */
+        }
+    </style>
+
+    <div class="container mx-auto px-4 py-8 min-h-screen">
+        <h2 class="text-2xl font-bold mb-6 text-white">Keyword Research Table</h2>
+
+        <!-- Rows per page dropdown -->
+        <form method="GET">
+            <div class="flex justify-end mb-4">
+                <label for="per_page" class="mr-2 text-white text-base">Rows per page:</label>
+                <select name="per_page" id="per_page" onchange="this.form.submit()" class="bg-gray-700 text-gray-200 rounded focus:outline-none text-base">
+                    {% for option in per_page_options %}
+                        <option value="{{ option }}" {% if per_page == option|stringformat:"s" %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
+        <!-- Table Container with Horizontal Scroll -->
+        <div class="table-container">
+            <table class="min-w-full table-auto text-white text-base">
+                <thead>
+                    <tr>
+                        <!-- Actions Column - Sticky -->
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap sticky-header sticky-actions">
+                            Actions
+                        </th>
+                        
+                        <!-- URL Column - Sticky -->
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap sticky-header sticky-url">
+                            URL
+                        </th>
+                        
+                        <!-- Existing Non-Editable Columns -->
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Category</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Main KW</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Volume</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Ranking</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Best KW</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Best KW Volume</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Best KW Ranking</th>
+                        
+                        <!-- Additional Editable Columns -->
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Primary Keyword</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">PK Volume</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">PK Ranking</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Secondary Keywords</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in keyword_entries %}
+                        {% if entry.action_choice == 'update_on_page' %}
+                            <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700">
+                                <!-- Actions Column - Sticky -->
+                                <td class="px-6 py-4 whitespace-nowrap bg-gray-800 sticky left-0 z-50 sticky-actions">
+                                    <!-- Static Text as per user requirements -->
+                                    <span class="text-white text-base">Update On Page</span>
+                                </td>
+
+                                <!-- URL Column - Sticky with Tooltip -->
+                                <td class="px-6 py-4 whitespace-nowrap bg-gray-800 sticky left-150px z-45 sticky-url">
+                                    <div class="tooltip">
+                                        <span class="truncate max-w-xs block text-white text-base">
+                                            {{ entry.url|default:"-" }}
+                                        </span>
+                                        <div class="tooltip-text text-base">
+                                            {{ entry.url|default:"-" }}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Existing Non-Editable Data Columns -->
+                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.category|default:"-" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.main_kw|default:"-" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.kw_volume|default:"-" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.kw_ranking|default:"-" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.best_kw|default:"-" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.best_kw_volume|default:"-" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base">{{ entry.best_kw_ranking|default:"-" }}</td>
+
+                                <!-- Additional Editable Data Columns -->
+                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="primary_keyword">
+                                    {{ entry.primary_keyword|default:"-" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="pk_volume">
+                                    {{ entry.pk_volume|default:"-" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="pk_ranking">
+                                    {{ entry.pk_ranking|default:"-" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="secondary_keywords">
+                                    {{ entry.secondary_keywords|default:"-" }}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="mt-6">
+            {% if keyword_entries.paginator.num_pages > 1 %}
+                <ul class="pagination flex justify-center items-center space-x-2">
+                    <!-- Previous Button -->
+                    {% if keyword_entries.has_previous %}
+                        <li>
+                            <a href="?page={{ keyword_entries.previous_page_number }}&per_page={{ per_page }}" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-base">
+                                Previous
+                            </a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <span class="px-4 py-2 bg-gray-700 text-gray-400 rounded text-base">Previous</span>
+                        </li>
+                    {% endif %}
+
+                    <!-- Page Numbers -->
+                    {% for num in keyword_entries.paginator.page_range %}
+                        {% if num >= keyword_entries.number|add:'-2' and num <= keyword_entries.number|add:'2' %}
+                            {% if num == keyword_entries.number %}
+                                <li>
+                                    <span class="px-4 py-2 bg-gray-900 text-white rounded text-base">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li>
+                                    <a href="?page={{ num }}&per_page={{ per_page }}" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-base">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Next Button -->
+                    {% if keyword_entries.has_next %}
+                        <li>
+                            <a href="?page={{ keyword_entries.next_page_number }}&per_page={{ per_page }}" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition text-base">
+                                Next
+                            </a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <span class="px-4 py-2 bg-gray-700 text-gray-400 rounded text-base">Next</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- JavaScript for Inline Editing -->
+        <script>
+            // CSRF helper functions taken from Django docs
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie != '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = cookies[i].trim();
+                        // Does this cookie string begin with the name we want?
+                        if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            var csrftoken = getCookie('csrftoken');
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const editableCells = document.querySelectorAll('.editable');
+
+                editableCells.forEach(cell => {
+                    cell.addEventListener('click', function() {
+                        // Prevent multiple inputs in the same cell
+                        if (cell.querySelector('input')) return;
+
+                        const currentText = cell.textContent.trim();
+                        const entryId = cell.getAttribute('data-id');
+                        const fieldName = cell.getAttribute('data-field');
+
+                        // Create an input element
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = currentText === '-' ? '' : currentText;
+                        input.classList.add('input-edit');
+
+                        // Replace cell content with input
+                        cell.innerHTML = '';
+                        cell.appendChild(input);
+                        input.focus();
+
+                        // Handle input blur event
+                        input.addEventListener('blur', function() {
+                            const newValue = input.value.trim();
+
+                            // If value hasn't changed, revert to original text
+                            if (newValue === (currentText === '-' ? '' : currentText)) {
+                                cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                return;
+                            }
+
+                            // Prepare data for AJAX
+                            const data = {
+                                id: entryId,
+                                field_name: fieldName,
+                                new_value: newValue
+                            };
+
+                            // Send AJAX request
+                            fetch("{% url 'update_field' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrftoken
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    cell.innerHTML = newValue || '-';
+                                } else {
+                                    alert(data.error || 'An error occurred while updating the field.');
+                                    cell.innerHTML = currentText === '-' ? '-' : currentText;
+                                }
+                            })
+                            .catch((error) => {
+                                console.error('Error:', error);
+                                alert('An unexpected error occurred.');
+                                cell.innerHTML = currentText === '-' ? '-' : currentText;
+                            });
+                        });
+
+                        // Handle Enter key
+                        input.addEventListener('keydown', function(event) {
+                            if (event.key === 'Enter') {
+                                input.blur();
+                            }
+                        });
+                    });
+                });
+            });
+        </script>
+    </div>
+{% endblock %}

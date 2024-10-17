@@ -4,8 +4,10 @@
 <div class="container mx-auto px-4 mt-14">
     <h1 class="text-2xl font-bold my-4 text-white">Saved Dashboards</h1>
 
+    <!-- Section for Audit Dashboards -->
+    <h2 class="text-xl font-semibold text-white mt-6 mb-4">Audit Dashboards</h2>
     {% if dashboards %}
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto mb-8">
             <table class="min-w-full table-auto">
                 <thead>
                     <tr>
@@ -34,7 +36,42 @@
             </table>
         </div>
     {% else %}
-        <p class="text-gray-400">No dashboards saved yet.</p>
+        <p class="text-gray-400">No audit dashboards saved yet.</p>
+    {% endif %}
+
+    <!-- Section for Keyword Research Dashboards -->
+    <h2 class="text-xl font-semibold text-white mt-6 mb-4">Keyword Research Dashboards</h2>
+    {% if keyword_research_dashboards %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full table-auto">
+                <thead>
+                    <tr>
+                        <th class="py-3 px-6 border-b border-gray-700 text-white text-left">Name</th>
+                        <th class="py-3 px-6 border-b border-gray-700 text-white text-left">Created At</th>
+                        <th class="py-3 px-6 border-b border-gray-700 text-white text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dashboard in keyword_research_dashboards %}
+                        <tr>
+                            <td class="py-3 px-6 border-b border-gray-700 text-white">{{ dashboard.name }}</td>
+                            <td class="py-3 px-6 border-b border-gray-700 text-gray-400">{{ dashboard.created_at }}</td>
+                            <td class="py-3 px-6 border-b border-gray-700">
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'load_keyword_dashboard' dashboard.id %}" class="bg-blue-500 text-white px-2 py-1 rounded">Load</a>
+                                    <form action="{% url 'delete_keyword_dashboard' dashboard.id %}" method="POST" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-400">No keyword research dashboards saved yet.</p>
     {% endif %}
 </div>
 {% endblock %}

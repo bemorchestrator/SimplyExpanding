@@ -24,6 +24,8 @@ from django.db.models import Q
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 
+from keywords.models import KeywordResearchDashboard
+
 from .filters import UploadedFileFilter 
 from .forms import AuditDashboardForm, FileUploadForm, SitemapForm, UploadedFileForm
 from .models import AuditDashboard, UploadedFile, SitemapURL, Sitemap
@@ -1121,8 +1123,16 @@ def save_audit_dashboard(request):
 
 
 def list_dashboard(request):
-    dashboards = AuditDashboard.objects.all()  # Fetch all saved dashboards
-    return render(request, 'audit/list_dashboards.html', {'dashboards': dashboards})
+    # Fetch all saved audit dashboards
+    audit_dashboards = AuditDashboard.objects.all()
+
+    # Fetch all saved keyword research dashboards
+    keyword_research_dashboards = KeywordResearchDashboard.objects.all()
+
+    return render(request, 'audit/list_dashboards.html', {
+        'dashboards': audit_dashboards,
+        'keyword_research_dashboards': keyword_research_dashboards,  # Pass both to the template
+    })
 
 
 def load_dashboard(request, id):

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'audit',
     'django_tables2',
     'django_filters',
+    'keywords',
 ]
 
 MIDDLEWARE = [
