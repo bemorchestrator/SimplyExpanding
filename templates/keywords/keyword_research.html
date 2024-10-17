@@ -201,7 +201,19 @@
                                     {{ entry.secondary_keywords|default:"-"|linebreaksbr }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="customer_journey">
-                                    {{ entry.customer_journey|default:"-" }}
+                                    {% if entry.customer_journey == 'Customer' %}
+                                        <span class="bg-blue-500 text-white px-2 py-1 rounded">Customer</span>
+                                    {% elif entry.customer_journey == 'Consider' %}
+                                        <span class="bg-green-500 text-white px-2 py-1 rounded">Consider</span>
+                                    {% elif entry.customer_journey == 'Discover' %}
+                                        <span class="bg-yellow-500 text-white px-2 py-1 rounded">Discover</span>
+                                    {% elif entry.customer_journey == 'Awareness' %}
+                                        <span class="bg-purple-500 text-white px-2 py-1 rounded">Awareness</span>
+                                    {% elif entry.customer_journey == 'Attention' %}
+                                        <span class="bg-red-500 text-white px-2 py-1 rounded">Attention</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="serp_content_type">
                                     {{ entry.serp_content_type|default:"-" }}
@@ -304,10 +316,18 @@
                             input.value = currentText === '-' ? '' : currentText.replace(/<br\s*\/?>/gi, '\n');
                             input.style.height = 'auto';
                             input.style.minHeight = '2.5rem';
-                        } else {
-                            // Create an input element for other fields
+                        } else if (fieldName === 'customer_journey') {
+                            const colorMap = {
+                                'Customer': 'bg-blue-500',
+                                'Consider': 'bg-green-500',
+                                'Discover': 'bg-yellow-500',
+                                'Awareness': 'bg-purple-500',
+                                'Attention': 'bg-red-500'
+                            };
                             input = document.createElement('input');
-                            input.type = 'text';
+                            input.value = currentText === '-' ? '' : currentText;
+                        } else {
+                            input = document.createElement('input');
                             input.value = currentText === '-' ? '' : currentText;
                         }
 
