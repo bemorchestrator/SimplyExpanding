@@ -152,6 +152,8 @@
                         <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">PK Volume</th>
                         <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">PK Ranking</th>
                         <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Secondary Keywords</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">Customer Journey</th>
+                        <th class="px-6 py-3 text-left font-medium text-white whitespace-nowrap">SERP Content Type</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -197,6 +199,12 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="secondary_keywords">
                                     {{ entry.secondary_keywords|default:"-"|linebreaksbr }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="customer_journey">
+                                    {{ entry.customer_journey|default:"-" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-base editable" data-id="{{ entry.id }}" data-field="serp_content_type">
+                                    {{ entry.serp_content_type|default:"-" }}
                                 </td>
                             </tr>
                         {% endif %}

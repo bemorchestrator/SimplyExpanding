@@ -267,6 +267,8 @@ def list_keyword_dashboards(request):
         'per_page_options': [10, 15, 20, 50],
     })
 
+
+
 @require_POST
 @csrf_protect
 def update_field(request):
@@ -289,7 +291,9 @@ def update_field(request):
             'primary_keyword',
             'pk_volume',
             'pk_ranking',
-            'secondary_keywords'
+            'secondary_keywords',
+            'customer_journey',
+            'serp_content_type',
         ]
 
         if field_name not in editable_fields:
@@ -310,6 +314,12 @@ def update_field(request):
                     logger.error(f"Invalid value for {field_name}: {new_value}")
                     return JsonResponse({'success': False, 'error': 'Please enter a valid number.'}, status=400)
             setattr(entry, field_name, new_value_converted)
+        elif field_name == 'customer_journey':
+            allowed_choices = ['Customer', 'Consider', 'Discover', 'Awareness', 'Attention']
+            if new_value not in allowed_choices:
+                logger.error(f"Invalid value for customer_journey: {new_value}")
+                return JsonResponse({'success': False, 'error': 'Invalid choice for Customer Journey.'}, status=400)
+            setattr(entry, field_name, new_value)
         else:
             setattr(entry, field_name, new_value)
 
