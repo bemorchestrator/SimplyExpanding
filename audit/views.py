@@ -190,7 +190,7 @@ def upload_file(request):
                                     data['drive_file_id'] = drive_file_id
                                     data['drive_file_link'] = drive_file_link
                                     data['url'] = url  # Ensure the URL is included
-                                    uploaded_file = UploadedFile(user=request.user, **data)
+                                    uploaded_file = UploadedFile(**data)                   
                                     uploaded_file.save()
                                     logging.info(f"Created new UploadedFile for URL: {url}")
                             except Exception as e:
@@ -960,7 +960,8 @@ def audit_dashboard(request):
     update_in_sitemap_status()  # This will update the in_sitemap field for all uploaded files
 
     # Retrieve unsaved files (those with no associated dashboard) and order by 'id' for consistent ordering
-    audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True, user=request.user).order_by('id')
+    audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True).order_by('id')
+
 
     # Pagination logic
     page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
