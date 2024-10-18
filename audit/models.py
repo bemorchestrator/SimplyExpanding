@@ -13,6 +13,7 @@ class AuditDashboard(models.Model):
 
 
 class UploadedFile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     ACTION_CHOICES = [
         ('leave', 'Leave As Is'),
         ('update_on_page', 'Update On Page'),

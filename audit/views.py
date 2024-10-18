@@ -172,7 +172,7 @@ def upload_file(request):
                             url = normalize_url(url)  # Normalize the URL before processing
                             try:
                                 # Try to get existing UploadedFile with matching URL
-                                uploaded_file = UploadedFile.objects.filter(url=url).first()
+                                uploaded_file = UploadedFile.objects.filter(url=url, user=request.user).first()
                                 if uploaded_file:
                                     # Update fields
                                     uploaded_file.file_name = file.name
@@ -185,12 +185,12 @@ def upload_file(request):
                                     uploaded_file.save()
                                     logging.info(f"Updated UploadedFile for URL: {url}")
                                 else:
-                                    # Create new UploadedFile
+                                    # Create new UploadedFile and associate with the current user
                                     data['file_name'] = file.name
                                     data['drive_file_id'] = drive_file_id
                                     data['drive_file_link'] = drive_file_link
                                     data['url'] = url  # Ensure the URL is included
-                                    uploaded_file = UploadedFile(**data)
+                                    uploaded_file = UploadedFile(user=request.user, **data)
                                     uploaded_file.save()
                                     logging.info(f"Created new UploadedFile for URL: {url}")
                             except Exception as e:
@@ -959,8 +959,9 @@ def audit_dashboard(request):
     # Ensure that the 'in_sitemap' status is always updated when the dashboard is loaded
     update_in_sitemap_status()  # This will update the in_sitemap field for all uploaded files
 
-    # Retrieve unsaved files (those with no associated dashboard) and order by 'id' for consistent ordering
-    audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True).order_by('id')
+    # Retrieve unsaved files (those with no associated dashboard) that belong to the current user
+    # This ensures each user only sees their own unsaved data
+    audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True, user=request.user).order_by('id')
 
     # Pagination logic
     page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
@@ -983,7 +984,10 @@ def audit_dashboard(request):
     if request.method == 'POST':
         form = UploadedFileForm(request.POST)
         if form.is_valid():
-            form.save()  # Save the updated form fields
+            # Save the updated form fields with the current user association
+            uploaded_file = form.save(commit=False)
+            uploaded_file.user = request.user  # Associate the file with the current user
+            uploaded_file.save()
             return JsonResponse({'success': True, 'message': 'Form submitted successfully.'})
         else:
             return JsonResponse({'success': False, 'error': 'Invalid form data.'}, status=400)
@@ -997,6 +1001,7 @@ def audit_dashboard(request):
         'form': form,  # Pass the form to the template
         'page_obj': page_obj,  # Pass the page object for pagination controls in the template
     })
+
 
 
 @csrf_protect
