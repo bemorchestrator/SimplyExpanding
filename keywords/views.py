@@ -242,6 +242,8 @@ def delete_keyword_dashboard(request, id):
 
     return redirect('list_dashboard')
 
+
+
 def list_keyword_dashboards(request):
     """
     View to list all KeywordResearchDashboards.
@@ -260,7 +262,7 @@ def list_keyword_dashboards(request):
     except EmptyPage:
         page_obj = paginator.get_page(paginator.num_pages)
 
-    return render(request, 'keywords/list_dashboards.html', {
+    return render(request, 'audit/list_dashboards.html', {
         'dashboards': page_obj.object_list,
         'page_obj': page_obj,
         'per_page': per_page,

@@ -1110,17 +1110,17 @@ def save_audit_dashboard(request):
             )
 
             # Move current unsaved data (those without a dashboard) to the new dashboard
-            uploaded_files = UploadedFile.objects.filter(dashboard__isnull=True, user=request.user)
+            uploaded_files = UploadedFile.objects.filter(dashboard__isnull=True)
             uploaded_files.update(dashboard=dashboard)  # Associate the files with the new dashboard
 
             # Notify the user that the audit has been saved and the workspace cleared
             messages.success(request, "Audit saved successfully. The working area has been cleared.")
 
             # Redirect to the list of saved dashboards
-            return redirect('list_dashboard')
+            return redirect('/audit/list-dashboard/')
 
     # If not POST, redirect back to the dashboard page
-    return redirect('audit_dashboard')
+    return redirect('/audit/dashboard/')
 
 
 def list_dashboard(request):
