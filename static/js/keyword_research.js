@@ -23,34 +23,4 @@ document.addEventListener('DOMContentLoaded', function () {
             modal.classList.add('hidden');
         }
     });
-
-    // -------------------------------
-    // Inline Editing Handling
-    // -------------------------------
-    document.querySelectorAll('.editable').forEach(element => {
-        element.addEventListener('change', function () {
-            const id = this.getAttribute('data-id');
-            const field = this.getAttribute('data-field');
-            const value = this.value;
-
-            fetch(UPDATE_FIELD_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({
-                    id: id,
-                    field_name: field,
-                    new_value: value
-                })
-            }).then(response => response.json()).then(data => {
-                if (data.success) {
-                    console.log('Field updated successfully');
-                } else {
-                    console.error('Error updating field');
-                }
-            });
-        });
-    });
 });

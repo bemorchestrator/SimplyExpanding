@@ -417,6 +417,7 @@ def download_payslip(request, payroll_id):
     return response
 
 
+
 @login_required
 def edit_payslip(request, payroll_id):
     """
@@ -482,12 +483,12 @@ def edit_payslip(request, payroll_id):
             absence_deductions = form.cleaned_data.get('absence_deductions', Decimal('0.00'))
             other_deductions = form.cleaned_data.get('other_deductions', Decimal('0.00'))
 
-            # Calculate net pay: Basic Salary + Bonus - (Deductions + Absence Deductions + Other Deductions)
-            net_pay = basic_salary + bonus - (deductions + absence_deductions + other_deductions)
-
-            # Save the updated payroll record with net pay
-            payroll = form.save(commit=False)
-            payroll.total_income = net_pay  # Update the net pay in the model
+            # Save the updated payroll record
+            payroll.total_income = basic_salary
+            payroll.bonus = bonus
+            payroll.deductions = deductions
+            payroll.absence_deductions = absence_deductions
+            payroll.other_deductions = other_deductions
             payroll.status = 'pending'  # Ensure status is set to 'pending' after edits
             payroll.save()
 
@@ -537,6 +538,8 @@ def edit_payslip(request, payroll_id):
         form.fields['average_daily_pay'].widget.attrs['readonly'] = True
 
     return render(request, 'payroll/edit_payslip.html', {'form': form, 'payroll': payroll})
+
+
 
 
 
