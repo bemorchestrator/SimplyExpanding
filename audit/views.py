@@ -1,4 +1,3 @@
-# views.py
 import os
 import csv
 import re
@@ -120,6 +119,7 @@ def upload_file(request):
                 return render(request, 'audit/upload.html', {'form': form})
 
             temp_file_path = None
+            dashboard_id = request.POST.get('dashboard_id')  # Get dashboard_id from POST data
             try:
                 # Create a temporary file for uploading
                 with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -162,41 +162,11 @@ def upload_file(request):
 
                     # Step 3: Process CSV data before storing in the database
                     file.seek(0)  # Reset file pointer to process CSV
-                    audit_data = process_csv_file(file)  # Use the updated function
+                    records_processed = process_csv_file(file, dashboard_id)  # Pass dashboard_id
 
-                    if audit_data:
-                        for data in audit_data:
-                            url = data.get('url')
-                            if not url:
-                                continue
-                            url = normalize_url(url)  # Normalize the URL before processing
-                            try:
-                                # Try to get existing UploadedFile with matching URL
-                                uploaded_file = UploadedFile.objects.filter(url=url).first()
-                                if uploaded_file:
-                                    # Update fields
-                                    uploaded_file.file_name = file.name
-                                    uploaded_file.drive_file_id = drive_file_id
-                                    uploaded_file.drive_file_link = drive_file_link
-                                    # Update all fields from data
-                                    for key, value in data.items():
-                                        if value is not None:
-                                            setattr(uploaded_file, key, value)
-                                    uploaded_file.save()
-                                    logging.info(f"Updated UploadedFile for URL: {url}")
-                                else:
-                                    # Create new UploadedFile
-                                    data['file_name'] = file.name
-                                    data['drive_file_id'] = drive_file_id
-                                    data['drive_file_link'] = drive_file_link
-                                    data['url'] = url  # Ensure the URL is included
-                                    uploaded_file = UploadedFile(**data)                   
-                                    uploaded_file.save()
-                                    logging.info(f"Created new UploadedFile for URL: {url}")
-                            except Exception as e:
-                                logging.error(f"Error processing URL {url}: {e}")
-
+                    if records_processed > 0:
                         messages.success(request, "File uploaded successfully and audit data processed.")
+                        logging.info(f"CSV processing successful. Records processed: {records_processed}")
 
                         # Step 4: Update the 'In Sitemap' status after saving the uploaded data
                         update_in_sitemap_status()  # Call the function to update 'in_sitemap' field
@@ -222,11 +192,21 @@ def upload_file(request):
                     except PermissionError:
                         logging.debug(f"Retry failed to delete temp file. File may still be in use: {temp_file_path}")
 
-            return redirect('audit_dashboard')
+            # After processing, redirect to the appropriate dashboard
+            if dashboard_id:
+                return redirect(reverse('load_dashboard', args=[dashboard_id]))
+            else:
+                return redirect('audit_dashboard')
     else:
         form = FileUploadForm()
 
-    return render(request, 'audit/upload.html', {'form': form})
+    # Determine if we're uploading to a specific dashboard
+    dashboard_id = request.GET.get('dashboard_id')
+    context = {'form': form}
+    if dashboard_id:
+        context['dashboard_id'] = dashboard_id
+
+    return render(request, 'audit/upload.html', context)
 
 
 def fetch_search_console_data(creds, site_url, start_date, end_date):
@@ -271,7 +251,7 @@ def populate_audit_dashboard_with_search_console_data(request):
         logging.error(f"Error fetching data from Google Search Console: {e}")
         messages.error(request, "An error occurred while fetching data from Google Search Console.")
         return redirect('audit_dashboard')
-    
+
     if not rows:
         logging.info(f"No data returned for {site_url} between {start_date} and {end_date}.")
         messages.error(request, "No data found in the last 6 months.")
@@ -579,7 +559,8 @@ def get_page_path(url):
     return path
 
 
-def process_csv_file(file):
+def process_csv_file(file, dashboard_id=None):
+    records_processed = 0  # Initialize the counter
     try:
         # Decode and split the CSV file for processing
         decoded_file = file.read().decode('utf-8-sig').splitlines()  # Handles BOM (\ufeff) if present
@@ -587,13 +568,13 @@ def process_csv_file(file):
 
         if not decoded_file:
             logging.error("The CSV file is empty.")
-            return []
+            return records_processed  # Return 0
 
         reader = csv.reader(decoded_file)
         headers = next(reader, None)  # Get the header row
         if headers is None:
             logging.error("No headers found in the CSV file.")
-            return []
+            return records_processed  # Return 0
 
         logging.debug(f"CSV Headers: {headers}")  # Log headers for debugging
 
@@ -645,23 +626,46 @@ def process_csv_file(file):
                     url = row[column_mapping['url']] if column_mapping['url'] is not None else None
                     page_path = get_page_path(url) if url else '/'
 
-                    uploaded_file = UploadedFile(
-                        url=url,
-                        page_path=page_path,
-                        type=row[column_mapping['type']] if column_mapping['type'] is not None else None,
-                        current_title=row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
-                        meta=row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
-                        h1=row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
-                        word_count=int(row[column_mapping['word_count']]) if column_mapping['word_count'] is not None and row[column_mapping['word_count']].isdigit() else 0,
-                        canonical_link=row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
-                        status_code=row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
-                        index_status=row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
-                        inlinks=int(row[column_mapping['inlinks']]) if column_mapping['inlinks'] is not None and row[column_mapping['inlinks']].isdigit() else 0,
-                        outlinks=int(row[column_mapping['outlinks']]) if column_mapping['outlinks'] is not None and row[column_mapping['outlinks']].isdigit() else 0,
-                        crawl_depth=int(row[column_mapping['crawl_depth']]) if column_mapping['crawl_depth'] is not None and row[column_mapping['crawl_depth']].isdigit() else 0
-                    )
+                    # If dashboard_id is provided, associate the UploadedFile with the dashboard
+                    if dashboard_id:
+                        dashboard = get_object_or_404(AuditDashboard, id=dashboard_id)
+                        uploaded_file = UploadedFile(
+                            url=url,
+                            page_path=page_path,
+                            type=row[column_mapping['type']] if column_mapping['type'] is not None else None,
+                            current_title=row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
+                            meta=row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
+                            h1=row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
+                            word_count=int(row[column_mapping['word_count']]) if column_mapping['word_count'] is not None and row[column_mapping['word_count']].isdigit() else 0,
+                            canonical_link=row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
+                            status_code=row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
+                            index_status=row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
+                            inlinks=int(row[column_mapping['inlinks']]) if column_mapping['inlinks'] is not None and row[column_mapping['inlinks']].isdigit() else 0,
+                            outlinks=int(row[column_mapping['outlinks']]) if column_mapping['outlinks'] is not None and row[column_mapping['outlinks']].isdigit() else 0,
+                            crawl_depth=int(row[column_mapping['crawl_depth']]) if column_mapping['crawl_depth'] is not None and row[column_mapping['crawl_depth']].isdigit() else 0,
+                            dashboard=dashboard
+                        )
+                    else:
+                        # Associate with dashboard__isnull=True
+                        uploaded_file = UploadedFile(
+                            url=url,
+                            page_path=page_path,
+                            type=row[column_mapping['type']] if column_mapping['type'] is not None else None,
+                            current_title=row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
+                            meta=row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
+                            h1=row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
+                            word_count=int(row[column_mapping['word_count']]) if column_mapping['word_count'] is not None and row[column_mapping['word_count']].isdigit() else 0,
+                            canonical_link=row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
+                            status_code=row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
+                            index_status=row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
+                            inlinks=int(row[column_mapping['inlinks']]) if column_mapping['inlinks'] is not None and row[column_mapping['inlinks']].isdigit() else 0,
+                            outlinks=int(row[column_mapping['outlinks']]) if column_mapping['outlinks'] is not None and row[column_mapping['outlinks']].isdigit() else 0,
+                            crawl_depth=int(row[column_mapping['crawl_depth']]) if column_mapping['crawl_depth'] is not None and row[column_mapping['crawl_depth']].isdigit() else 0
+                        )
+                    
                     uploaded_file.save()
                     logging.info(f"Saved UploadedFile for URL: {url}")
+                    records_processed += 1  # Increment the counter
 
                 except IndexError as e:
                     logging.error(f"IndexError while processing row: {row} - {e}")
@@ -688,7 +692,7 @@ def process_csv_file(file):
             missing_columns = [col for col in required_columns if column_mapping[col] is None]
             if missing_columns:
                 logging.error(f"Missing required columns in CSV: {missing_columns}")
-                return []
+                return records_processed  # Return 0
 
             # Dictionary to store data for each URL
             url_data = {}
@@ -758,6 +762,7 @@ def process_csv_file(file):
                         uploaded_file.best_kw_ranking = data['best_kw_ranking']
                         uploaded_file.save()
                         logging.info(f"Updated data for URL: {uploaded_file.url}")
+                        records_processed += 1  # Increment the counter for each update
                     else:
                         logging.warning(f"No match found for URL: {normalized_url}")
 
@@ -802,6 +807,7 @@ def process_csv_file(file):
                         uploaded_file.serp_ctr = serp_ctr
                         uploaded_file.save()
                         logging.info(f"Updated data for URL: {uploaded_file.url}")
+                        records_processed += 1  # Increment the counter for each update
                     else:
                         logging.warning(f"No match found for URL: {normalized_url}")
 
@@ -875,6 +881,7 @@ def process_csv_file(file):
                         # Save the updated instance to the database
                         uploaded_file.save()
                         logging.info(f"Updated data for page_path: {page_path}")
+                        records_processed += 1  # Increment the counter for each update
                     else:
                         logging.warning(f"No match found for page_path: {page_path}")
 
@@ -897,7 +904,7 @@ def process_csv_file(file):
             missing_columns = [col for col in required_columns if column_mapping[col] is None]
             if missing_columns:
                 logging.error(f"Missing required columns in CSV: {missing_columns}")
-                return []
+                return records_processed  # Return 0
 
             # Dictionary to count backlinks
             backlink_counts = {}
@@ -935,6 +942,7 @@ def process_csv_file(file):
                         uploaded_file.links = count
                         uploaded_file.save()
                         logging.info(f"Updated backlinks count for URL: {uploaded_file.url} with count: {count}")
+                        records_processed += 1  # Increment the counter for each update
                     else:
                         logging.warning(f"No match found for URL: {normalized_url}")
 
@@ -943,16 +951,14 @@ def process_csv_file(file):
 
         else:
             logging.error(f"Unknown CSV type: {csv_type}")
-            return []
+            return records_processed  # Return 0
 
         logging.info("CSV processing complete.")
-        return []
+        return records_processed  # Return the total number of records processed
 
     except Exception as e:
         logging.error(f"Error while processing CSV file: {e}")
-        return []
-
-
+        return records_processed  # Return 0
 
 
 def audit_dashboard(request):
@@ -961,7 +967,6 @@ def audit_dashboard(request):
 
     # Retrieve unsaved files (those with no associated dashboard) and order by 'id' for consistent ordering
     audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True).order_by('id')
-
 
     # Pagination logic
     page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
