@@ -233,23 +233,35 @@ class Attendance(models.Model):
             employee = self.employee
             scheduled_time = self.get_scheduled_start_time()
             clock_in_time_local = timezone.localtime(self.clock_in_time)
+            
+            # Apply grace period from lateness rules or default to 5 minutes
+            grace_period = (
+                employee.lateness_rules.first().grace_period 
+                if employee.lateness_rules.exists() 
+                else timedelta(minutes=5)
+            )
+            
+            # Calculate lateness (difference between clock-in time and scheduled start time)
             lateness = clock_in_time_local - scheduled_time
-            if lateness > timedelta(0):
+            
+            # Adjust the logic: lateness is only calculated if it's beyond the grace period
+            if lateness > grace_period:  # Employee is late if beyond the grace period
                 self.lateness = lateness
                 self.apply_lateness_deduction(lateness)
                 self.lateness_calculated = True
                 logger.debug(f"Lateness Calculated: {self.lateness}, Deduction: {self.lateness_deduction}")
-            else:
+            else:  # Clocked in on time or within the grace period
                 self.lateness = timedelta(0)
                 self.lateness_deduction = Decimal('0.00')
                 self.lateness_calculated = False
-                logger.debug("No lateness detected. No deduction applied.")
+                logger.debug("No lateness detected within grace period. No deduction applied.")
         elif not self.clock_in_time:
             self.lateness = None
             self.lateness_deduction = Decimal('0.00')
             self.lateness_calculated = False
             logger.debug("Clock-in time is not set. Lateness and deduction are null.")
 
+        # Check if the clock-in date falls on a holiday and adjust pay accordingly
         self.check_holiday()
 
         if self.holiday:
@@ -257,6 +269,7 @@ class Attendance(models.Model):
                 self.apply_non_working_holiday_pay()
             elif self.holiday.holiday_type == 'special_non_working':
                 self.apply_special_non_working_holiday_pay()
+
 
     def get_scheduled_start_time(self):
         """Retrieve the scheduled start time for the employee."""
