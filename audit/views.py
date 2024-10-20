@@ -1,3 +1,4 @@
+# views.py
 import os
 import csv
 import re
@@ -107,19 +108,33 @@ def normalize_url(url):
 
 
 def upload_file(request):
+    # Retrieve the current dashboard from the session
+    dashboard_id = request.session.get('current_dashboard_id')
+
+    if dashboard_id:
+        audit_dashboard = get_object_or_404(AuditDashboard, id=dashboard_id)
+    else:
+        # No dashboard is selected
+        messages.error(request, "Please save an audit dashboard before uploading files.")
+        return render(request, 'audit/audit_dashboard.html', {
+            'show_save_modal': True,
+            'dashboard': None,
+        })
+
+    # Continue with the file upload logic if the dashboard exists
     if request.method == 'POST':
         form = FileUploadForm(request.POST, request.FILES)
         if form.is_valid():
             file = request.FILES['file']
             logging.info(f"File upload initiated: {file.name}, size: {file.size} bytes")
 
-            if file.size > 10485760:  # Limit file size to 10MB
+            # Check file size limit (10MB)
+            if file.size > 10485760:
                 messages.error(request, "File too large. The maximum file size is 10MB.")
                 logging.warning(f"File too large: {file.name}, size: {file.size} bytes")
                 return render(request, 'audit/upload.html', {'form': form})
 
             temp_file_path = None
-            dashboard_id = request.POST.get('dashboard_id')  # Get dashboard_id from POST data
             try:
                 # Create a temporary file for uploading
                 with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -162,14 +177,14 @@ def upload_file(request):
 
                     # Step 3: Process CSV data before storing in the database
                     file.seek(0)  # Reset file pointer to process CSV
-                    records_processed = process_csv_file(file, dashboard_id)  # Pass dashboard_id
+                    records_processed = process_csv_file(file, audit_dashboard) 
 
                     if records_processed > 0:
                         messages.success(request, "File uploaded successfully and audit data processed.")
                         logging.info(f"CSV processing successful. Records processed: {records_processed}")
 
                         # Step 4: Update the 'In Sitemap' status after saving the uploaded data
-                        update_in_sitemap_status()  # Call the function to update 'in_sitemap' field
+                        update_in_sitemap_status(audit_dashboard)
                     else:
                         logging.warning("The CSV file is empty or could not be processed.")
                         messages.error(request, "The CSV file is empty or could not be processed.")
@@ -180,7 +195,7 @@ def upload_file(request):
                     return redirect('audit_dashboard')
 
             except Exception as e:
-                logging.error(f"An error occurred during file processing: {e}")
+                logging.error(f"Error during file processing: {e}")
                 messages.error(request, f"An error occurred while processing the file: {e}")
 
             finally:
@@ -192,21 +207,18 @@ def upload_file(request):
                     except PermissionError:
                         logging.debug(f"Retry failed to delete temp file. File may still be in use: {temp_file_path}")
 
-            # After processing, redirect to the appropriate dashboard
-            if dashboard_id:
-                return redirect(reverse('load_dashboard', args=[dashboard_id]))
-            else:
-                return redirect('audit_dashboard')
+            # After successful upload, redirect to the specific dashboard
+            return redirect('load_dashboard', id=audit_dashboard.id)
+
     else:
         form = FileUploadForm()
 
-    # Determine if we're uploading to a specific dashboard
-    dashboard_id = request.GET.get('dashboard_id')
-    context = {'form': form}
-    if dashboard_id:
-        context['dashboard_id'] = dashboard_id
+    return render(request, 'audit/upload.html', {'form': form})
 
-    return render(request, 'audit/upload.html', context)
+
+
+
+
 
 
 def fetch_search_console_data(creds, site_url, start_date, end_date):
@@ -251,7 +263,7 @@ def populate_audit_dashboard_with_search_console_data(request):
         logging.error(f"Error fetching data from Google Search Console: {e}")
         messages.error(request, "An error occurred while fetching data from Google Search Console.")
         return redirect('audit_dashboard')
-
+    
     if not rows:
         logging.info(f"No data returned for {site_url} between {start_date} and {end_date}.")
         messages.error(request, "No data found in the last 6 months.")
@@ -511,7 +523,7 @@ def delete_sitemap(request, sitemap_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
 
-def update_in_sitemap_status():
+def update_in_sitemap_status(audit_dashboard):
     """
     Updates the 'in_sitemap' field in UploadedFile by checking
     if the 'url' exists in the crawled SitemapURL entries.
@@ -520,8 +532,8 @@ def update_in_sitemap_status():
     sitemap_urls = SitemapURL.objects.values_list('url', flat=True)
     normalized_sitemap_urls = set(normalize_url(url) for url in sitemap_urls)
 
-    # Fetch all audit files
-    audit_files = UploadedFile.objects.all()
+    # Fetch all audit files associated with the dashboard
+    audit_files = UploadedFile.objects.filter(dashboard=audit_dashboard)
 
     # Batch update to avoid too many save() calls in a loop
     bulk_updates = []
@@ -542,6 +554,7 @@ def update_in_sitemap_status():
         UploadedFile.objects.bulk_update(bulk_updates, ['in_sitemap'])
 
 
+
 def get_page_path(url):
     """
     Extracts the path from a URL. If the URL has no path, returns '/'.
@@ -559,7 +572,7 @@ def get_page_path(url):
     return path
 
 
-def process_csv_file(file, dashboard_id=None):
+def process_csv_file(file, audit_dashboard):
     records_processed = 0  # Initialize the counter
     try:
         # Decode and split the CSV file for processing
@@ -626,43 +639,22 @@ def process_csv_file(file, dashboard_id=None):
                     url = row[column_mapping['url']] if column_mapping['url'] is not None else None
                     page_path = get_page_path(url) if url else '/'
 
-                    # If dashboard_id is provided, associate the UploadedFile with the dashboard
-                    if dashboard_id:
-                        dashboard = get_object_or_404(AuditDashboard, id=dashboard_id)
-                        uploaded_file = UploadedFile(
-                            url=url,
-                            page_path=page_path,
-                            type=row[column_mapping['type']] if column_mapping['type'] is not None else None,
-                            current_title=row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
-                            meta=row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
-                            h1=row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
-                            word_count=int(row[column_mapping['word_count']]) if column_mapping['word_count'] is not None and row[column_mapping['word_count']].isdigit() else 0,
-                            canonical_link=row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
-                            status_code=row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
-                            index_status=row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
-                            inlinks=int(row[column_mapping['inlinks']]) if column_mapping['inlinks'] is not None and row[column_mapping['inlinks']].isdigit() else 0,
-                            outlinks=int(row[column_mapping['outlinks']]) if column_mapping['outlinks'] is not None and row[column_mapping['outlinks']].isdigit() else 0,
-                            crawl_depth=int(row[column_mapping['crawl_depth']]) if column_mapping['crawl_depth'] is not None and row[column_mapping['crawl_depth']].isdigit() else 0,
-                            dashboard=dashboard
-                        )
-                    else:
-                        # Associate with dashboard__isnull=True
-                        uploaded_file = UploadedFile(
-                            url=url,
-                            page_path=page_path,
-                            type=row[column_mapping['type']] if column_mapping['type'] is not None else None,
-                            current_title=row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
-                            meta=row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
-                            h1=row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
-                            word_count=int(row[column_mapping['word_count']]) if column_mapping['word_count'] is not None and row[column_mapping['word_count']].isdigit() else 0,
-                            canonical_link=row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
-                            status_code=row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
-                            index_status=row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
-                            inlinks=int(row[column_mapping['inlinks']]) if column_mapping['inlinks'] is not None and row[column_mapping['inlinks']].isdigit() else 0,
-                            outlinks=int(row[column_mapping['outlinks']]) if column_mapping['outlinks'] is not None and row[column_mapping['outlinks']].isdigit() else 0,
-                            crawl_depth=int(row[column_mapping['crawl_depth']]) if column_mapping['crawl_depth'] is not None and row[column_mapping['crawl_depth']].isdigit() else 0
-                        )
-                    
+                    uploaded_file = UploadedFile(
+                        dashboard=audit_dashboard,  # Associate with the dashboard
+                        url=url,
+                        page_path=page_path,
+                        type=row[column_mapping['type']] if column_mapping['type'] is not None else None,
+                        current_title=row[column_mapping['current_title']] if column_mapping['current_title'] is not None else None,
+                        meta=row[column_mapping['meta']] if column_mapping['meta'] is not None else None,
+                        h1=row[column_mapping['h1']] if column_mapping['h1'] is not None else None,
+                        word_count=int(row[column_mapping['word_count']]) if column_mapping['word_count'] is not None and row[column_mapping['word_count']].isdigit() else 0,
+                        canonical_link=row[column_mapping['canonical_link']] if column_mapping['canonical_link'] is not None else None,
+                        status_code=row[column_mapping['status_code']] if column_mapping['status_code'] is not None else None,
+                        index_status=row[column_mapping['index_status']] if column_mapping['index_status'] is not None else None,
+                        inlinks=int(row[column_mapping['inlinks']]) if column_mapping['inlinks'] is not None and row[column_mapping['inlinks']].isdigit() else 0,
+                        outlinks=int(row[column_mapping['outlinks']]) if column_mapping['outlinks'] is not None and row[column_mapping['outlinks']].isdigit() else 0,
+                        crawl_depth=int(row[column_mapping['crawl_depth']]) if column_mapping['crawl_depth'] is not None and row[column_mapping['crawl_depth']].isdigit() else 0
+                    )
                     uploaded_file.save()
                     logging.info(f"Saved UploadedFile for URL: {url}")
                     records_processed += 1  # Increment the counter
@@ -675,8 +667,7 @@ def process_csv_file(file, dashboard_id=None):
                     logging.error(f"Unexpected error while processing row: {row} - {e}")
 
             # After processing Screaming Frog CSV, update the 'in_sitemap' status
-            # (Assuming you have a function named update_in_sitemap_status)
-            # update_in_sitemap_status()
+            update_in_sitemap_status(audit_dashboard)
 
         elif csv_type == 'keyword_research':
             # Keyword Research CSV column mappings
@@ -747,7 +738,7 @@ def process_csv_file(file, dashboard_id=None):
                     logging.error(f"ValueError while converting data: {row} - {e}")
 
             # Now update the Django table with the processed data
-            uploaded_files = UploadedFile.objects.all()
+            uploaded_files = UploadedFile.objects.filter(dashboard=audit_dashboard)
             uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
 
             for normalized_url, data in url_data.items():
@@ -781,7 +772,7 @@ def process_csv_file(file, dashboard_id=None):
             rows = list(reader)
 
             # Build mapping from normalized URL to UploadedFile
-            uploaded_files = UploadedFile.objects.all()
+            uploaded_files = UploadedFile.objects.filter(dashboard=audit_dashboard)
             uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
 
             for row in rows:
@@ -835,7 +826,7 @@ def process_csv_file(file, dashboard_id=None):
             rows = list(reader)
 
             # Create a dictionary mapping normalized page_path to UploadedFile instances
-            uploaded_files = UploadedFile.objects.all()
+            uploaded_files = UploadedFile.objects.filter(dashboard=audit_dashboard)
             uploaded_files_dict = {normalize_page_path(u.page_path): u for u in uploaded_files}
 
             # Process each row in the CSV
@@ -932,7 +923,7 @@ def process_csv_file(file, dashboard_id=None):
                     logging.error(f"Unexpected error while processing row: {row} - {e}")
 
             # Now update the Django table with the backlink counts
-            uploaded_files = UploadedFile.objects.all()
+            uploaded_files = UploadedFile.objects.filter(dashboard=audit_dashboard)
             uploaded_files_dict = {normalize_url(u.url): u for u in uploaded_files}
 
             for normalized_url, count in backlink_counts.items():
@@ -961,48 +952,47 @@ def process_csv_file(file, dashboard_id=None):
         return records_processed  # Return 0
 
 
-def audit_dashboard(request):
-    # Ensure that the 'in_sitemap' status is always updated when the dashboard is loaded
-    update_in_sitemap_status()  # This will update the in_sitemap field for all uploaded files
 
-    # Retrieve unsaved files (those with no associated dashboard) and order by 'id' for consistent ordering
+def audit_dashboard(request):
+    # Get any unsaved UploadedFiles (those without a dashboard)
     audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True).order_by('id')
 
     # Pagination logic
-    page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
-    rows_per_page = 15  # Set the number of rows per page
-
-    paginator = Paginator(audit_data_qs, rows_per_page)  # Paginate the data with 15 rows per page
-
+    page_number = request.GET.get('page', 1)
+    rows_per_page = 15
+    paginator = Paginator(audit_data_qs, rows_per_page)
     try:
-        page_obj = paginator.get_page(page_number)  # Get the current page of data
+        page_obj = paginator.get_page(page_number)
     except PageNotAnInteger:
-        page_obj = paginator.get_page(1)  # If page is not an integer, return the first page
+        page_obj = paginator.get_page(1)
     except EmptyPage:
-        page_obj = paginator.get_page(paginator.num_pages)  # If page is out of range, return the last page
+        page_obj = paginator.get_page(paginator.num_pages)
 
     # Initialize the table with paginated data
     table = UploadedFileTable(page_obj)
-    RequestConfig(request, paginate=False).configure(table)  # Set paginate=False to prevent Django Tables2 from auto-paginating
+    RequestConfig(request, paginate=False).configure(table)
 
     # Handle form submission for category and action_choice
     if request.method == 'POST':
         form = UploadedFileForm(request.POST)
         if form.is_valid():
-            form.save()  # Save the updated form fields
+            form.save()
             return JsonResponse({'success': True, 'message': 'Form submitted successfully.'})
         else:
             return JsonResponse({'success': False, 'error': 'Invalid form data.'}, status=400)
-
     else:
         form = UploadedFileForm()
 
     # Render the template with the paginated table and form
     return render(request, 'audit/audit_dashboard.html', {
-        'table': table,  # Pass the paginated table instance to the template
-        'form': form,  # Pass the form to the template
-        'page_obj': page_obj,  # Pass the page object for pagination controls in the template
+        'dashboard': None,  # No dashboard is loaded
+        'table': table,
+        'form': form,
+        'page_obj': page_obj,
     })
+
+
+
 
 
 @csrf_protect
@@ -1144,33 +1134,37 @@ def list_dashboard(request):
 def load_dashboard(request, id):
     # Get the specific dashboard
     dashboard = get_object_or_404(AuditDashboard, id=id)
-    
-    # Filter uploaded files related only to this specific dashboard
-    uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
-    
-    # Pagination Logic
-    page_number = request.GET.get('page', 1)  # Get the current page number from the URL query
-    rows_per_page = 15  # Set the same number of rows per page as in audit_dashboard
+    request.session['current_dashboard_id'] = dashboard.id
 
-    paginator = Paginator(uploaded_files, rows_per_page)  # Paginate the data with 15 rows per page
+
+    # Fetch uploaded files related to this dashboard
+    uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
+
+    # Pagination Logic
+    page_number = request.GET.get('page', 1)
+    rows_per_page = 15
+
+    paginator = Paginator(uploaded_files, rows_per_page)
 
     try:
-        page_obj = paginator.get_page(page_number)  # Get the current page of data
+        page_obj = paginator.get_page(page_number)
     except PageNotAnInteger:
-        page_obj = paginator.get_page(1)  # If page is not an integer, return the first page
+        page_obj = paginator.get_page(1)
     except EmptyPage:
-        page_obj = paginator.get_page(paginator.num_pages)  # If page is out of range, return the last page
+        page_obj = paginator.get_page(paginator.num_pages)
 
     # Initialize the table with paginated data
     table = UploadedFileTable(page_obj)
-    RequestConfig(request, paginate=False).configure(table)  # Set paginate=False to prevent Django Tables2 from auto-paginating
+    RequestConfig(request, paginate=False).configure(table)
 
     # Render the template with the paginated table
     return render(request, 'audit/audit_dashboard.html', {
         'dashboard': dashboard,
-        'table': table,  # Pass the paginated table to the template
-        'page_obj': page_obj,  # Pass the page object for pagination controls
+        'table': table,
+        'page_obj': page_obj,
     })
+
+
 
 
 @csrf_protect
@@ -1203,6 +1197,7 @@ def delete_dashboard(request, id):
     
     # Handle GET requests or other methods by redirecting to the dashboard list
     return redirect('list_dashboard')
+
 
 
 @csrf_protect

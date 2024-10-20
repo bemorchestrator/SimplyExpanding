@@ -4,15 +4,22 @@
 {% block head %}
     <!-- Bootstrap Icons CSS (Only for Icons) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-
     <!-- Tailwind CSS CDN (Ensure Tailwind is included if not already in base.html) -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
+    <!-- Hidden Div for Django Messages -->
+    <div id="django-messages" class="hidden">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="django-message" data-title="{{ message.tags|capfirst|escapejs }}" data-text="{{ message|escapejs }}" data-icon="{% if message.tags == 'error' %}error{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% else %}info{% endif %}"></div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
     <div class="mt-10 px-4 sm:px-8 lg:px-10 h-screen flex flex-col">
         <div class="bg-gray-800 rounded px-4 sm:px-8 py-6 flex-1 flex flex-col">
-
             <!-- Header Section -->
             <div class="flex flex-col md:flex-row justify-between items-center mb-5">
                 <h2 class="text-xl font-semibold text-white mb-4 md:mb-0">Website Audit Dashboard</h2>
@@ -21,29 +28,32 @@
                 {% if not is_shared_view %}
                 <div class="flex flex-wrap items-center space-x-2 relative">
                     <!-- Upload Button -->
-                    <button id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition mb-2 md:mb-0">
-                        <i class="bi bi-upload text-lg"></i>
+                    <button id="upload-btn" 
+                            class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition mb-2 md:mb-0" 
+                            data-has-dashboard="{% if dashboard %}1{% else %}0{% endif %}">
+                        <i class="bi bi-upload text-lg"></i> Upload
                     </button>
 
                     <!-- Fetch Google Search Console Data -->
                     <form action="{% url 'fetch_search_console_data' %}" method="POST" class="mb-2 md:mb-0">
                         {% csrf_token %}
-                        <button type="submit" class="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition">
+                        <button type="submit" class="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition" {% if not dashboard %} disabled {% endif %}>
                             <i class="bi bi-google text-lg"></i> <!-- Google Icon -->
                         </button>
                     </form>
 
                     <!-- Crawl Sitemap -->
-                    <form action="{% url 'crawl_sitemaps' %}" method="POST" class="mb-2 md:mb-0">
+                    <form action="{% url 'crawl_sitemaps' %}" method="GET" class="mb-2 md:mb-0">
+                        <!-- Changed method to GET -->
                         {% csrf_token %}
-                        <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
+                        <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition" {% if not dashboard %} disabled {% endif %}>
                             <i class="bi bi-bug text-lg"></i>
                         </button>
                     </form>
 
                     <!-- Column Filter Button with Dropdown -->
                     <div class="relative mb-2 md:mb-0">
-                        <button type="button" id="openColumnFilter" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition">
+                        <button type="button" id="openColumnFilter" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition" {% if not dashboard %} disabled {% endif %}>
                             <i class="bi bi-columns-gap text-lg"></i> <!-- Filter Icon -->
                         </button>
 
@@ -70,7 +80,7 @@
 
                     <!-- Save Button (Triggers the Modal) -->
                     <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition mb-2 md:mb-0">
-                        <i class="bi bi-cloud-upload text-lg"></i> <!-- Save Icon -->
+                        <i class="bi bi-cloud-upload text-lg"></i>
                     </button>
 
                     <!-- Delete Button -->
@@ -83,9 +93,9 @@
                         <i class="bi bi-trash text-lg"></i>
                     </button>
                 </div>
-                {% else %}
                 {% endif %}
             </div>
+
             <!-- Table and Card Rendering using django-tables2 -->
             <div class="table-container overflow-x-auto flex-1 w-full">
                 {% if not is_shared_view %}
@@ -100,97 +110,37 @@
                         <div class="block md:hidden space-y-4">
                             {% for obj in page_obj.object_list %}
                                 <div class="bg-gray-700 rounded-lg p-4 shadow-md">
-                                    <!-- Replace the following fields with your actual table columns -->
-                                    <div class="mb-2">
-                                        <strong>Action Choice:</strong> {{ obj.action_choice }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>URL:</strong> <a href="{{ obj.url }}" class="text-blue-400 underline break-all">{{ obj.url }}</a>
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Page Path:</strong> {{ obj.page_path }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Crawl Depth:</strong> {{ obj.crawl_depth }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Category:</strong> {{ obj.category }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>In Sitemap:</strong> {{ obj.in_sitemap }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Main KW:</strong> {{ obj.main_kw }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Volume:</strong> {{ obj.volume }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Ranking:</strong> {{ obj.ranking }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Best KW:</strong> {{ obj.best_kw }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Best KW Volume:</strong> {{ obj.best_kw_volume }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Best KW Ranking:</strong> {{ obj.best_kw_ranking }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Impressions:</strong> {{ obj.impressions }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Sessions:</strong> {{ obj.sessions }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>% Change Sessions:</strong> {{ obj.change_sessions }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Bounce Rate:</strong> {{ obj.bounce_rate }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Avg Time on Page:</strong> {{ obj.avg_time_on_page }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Losing Traffic:</strong> {{ obj.losing_traffic }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Links:</strong> {{ obj.links }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>SERP CTR:</strong> {{ obj.serp_ctr }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Type:</strong> {{ obj.type }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Current Title:</strong> {{ obj.current_title }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Meta:</strong> {{ obj.meta }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>H1:</strong> {{ obj.h1 }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Word Count:</strong> {{ obj.word_count }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Canonical Link:</strong> <a href="{{ obj.canonical_link }}" class="text-blue-400 underline break-all">{{ obj.canonical_link }}</a>
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Status Code:</strong> {{ obj.status_code }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Index/No Index:</strong> {{ obj.index_noindex }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Inlinks:</strong> {{ obj.inlinks }}
-                                    </div>
-                                    <div class="mb-2">
-                                        <strong>Outlinks:</strong> {{ obj.outlinks }}
-                                    </div>
+                                    <!-- Mobile view of each column rendered as cards -->
+                                    <div class="mb-2"><strong>Action Choice:</strong> {{ obj.action_choice }}</div>
+                                    <div class="mb-2"><strong>URL:</strong> <a href="{{ obj.url }}" class="text-blue-400 underline break-all">{{ obj.url }}</a></div>
+                                    <div class="mb-2"><strong>Page Path:</strong> {{ obj.page_path }}</div>
+                                    <div class="mb-2"><strong>Crawl Depth:</strong> {{ obj.crawl_depth }}</div>
+                                    <div class="mb-2"><strong>Category:</strong> {{ obj.category }}</div>
+                                    <div class="mb-2"><strong>In Sitemap:</strong> {{ obj.in_sitemap }}</div>
+                                    <div class="mb-2"><strong>Main KW:</strong> {{ obj.main_kw }}</div>
+                                    <div class="mb-2"><strong>KW Volume:</strong> {{ obj.kw_volume }}</div>
+                                    <div class="mb-2"><strong>KW Ranking:</strong> {{ obj.kw_ranking }}</div>
+                                    <div class="mb-2"><strong>Best KW:</strong> {{ obj.best_kw }}</div>
+                                    <div class="mb-2"><strong>Best KW Volume:</strong> {{ obj.best_kw_volume }}</div>
+                                    <div class="mb-2"><strong>Best KW Ranking:</strong> {{ obj.best_kw_ranking }}</div>
+                                    <div class="mb-2"><strong>Impressions:</strong> {{ obj.impressions }}</div>
+                                    <div class="mb-2"><strong>Sessions:</strong> {{ obj.sessions }}</div>
+                                    <div class="mb-2"><strong>% Change Sessions:</strong> {{ obj.percent_change_sessions }}</div>
+                                    <div class="mb-2"><strong>Bounce Rate:</strong> {{ obj.bounce_rate }}</div>
+                                    <div class="mb-2"><strong>Avg Time on Page:</strong> {{ obj.avg_time_on_page }}</div>
+                                    <div class="mb-2"><strong>Losing Traffic:</strong> {{ obj.losing_traffic }}</div>
+                                    <div class="mb-2"><strong>Links:</strong> {{ obj.links }}</div>
+                                    <div class="mb-2"><strong>SERP CTR:</strong> {{ obj.serp_ctr }}</div>
+                                    <div class="mb-2"><strong>Type:</strong> {{ obj.type }}</div>
+                                    <div class="mb-2"><strong>Current Title:</strong> {{ obj.current_title }}</div>
+                                    <div class="mb-2"><strong>Meta:</strong> {{ obj.meta }}</div>
+                                    <div class="mb-2"><strong>H1:</strong> {{ obj.h1 }}</div>
+                                    <div class="mb-2"><strong>Word Count:</strong> {{ obj.word_count }}</div>
+                                    <div class="mb-2"><strong>Canonical Link:</strong> <a href="{{ obj.canonical_link }}" class="text-blue-400 underline break-all">{{ obj.canonical_link }}</a></div>
+                                    <div class="mb-2"><strong>Status Code:</strong> {{ obj.status_code }}</div>
+                                    <div class="mb-2"><strong>Index Status:</strong> {{ obj.index_status }}</div>
+                                    <div class="mb-2"><strong>Inlinks:</strong> {{ obj.inlinks }}</div>
+                                    <div class="mb-2"><strong>Outlinks:</strong> {{ obj.outlinks }}</div>
                                 </div>
                             {% endfor %}
                         </div>
@@ -203,97 +153,37 @@
                     <div class="block md:hidden space-y-4">
                         {% for obj in page_obj.object_list %}
                             <div class="bg-gray-700 rounded-lg p-4 shadow-md">
-                                <!-- Replace the following fields with your actual table columns -->
-                                <div class="mb-2">
-                                    <strong>Action Choice:</strong> {{ obj.action_choice }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>URL:</strong> <a href="{{ obj.url }}" class="text-blue-400 underline break-all">{{ obj.url }}</a>
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Page Path:</strong> {{ obj.page_path }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Crawl Depth:</strong> {{ obj.crawl_depth }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Category:</strong> {{ obj.category }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>In Sitemap:</strong> {{ obj.in_sitemap }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Main KW:</strong> {{ obj.main_kw }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Volume:</strong> {{ obj.volume }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Ranking:</strong> {{ obj.ranking }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Best KW:</strong> {{ obj.best_kw }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Best KW Volume:</strong> {{ obj.best_kw_volume }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Best KW Ranking:</strong> {{ obj.best_kw_ranking }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Impressions:</strong> {{ obj.impressions }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Sessions:</strong> {{ obj.sessions }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>% Change Sessions:</strong> {{ obj.change_sessions }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Bounce Rate:</strong> {{ obj.bounce_rate }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Avg Time on Page:</strong> {{ obj.avg_time_on_page }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Losing Traffic:</strong> {{ obj.losing_traffic }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Links:</strong> {{ obj.links }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>SERP CTR:</strong> {{ obj.serp_ctr }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Type:</strong> {{ obj.type }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Current Title:</strong> {{ obj.current_title }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Meta:</strong> {{ obj.meta }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>H1:</strong> {{ obj.h1 }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Word Count:</strong> {{ obj.word_count }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Canonical Link:</strong> <a href="{{ obj.canonical_link }}" class="text-blue-400 underline break-all">{{ obj.canonical_link }}</a>
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Status Code:</strong> {{ obj.status_code }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Index/No Index:</strong> {{ obj.index_noindex }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Inlinks:</strong> {{ obj.inlinks }}
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Outlinks:</strong> {{ obj.outlinks }}
-                                </div>
+                                <!-- Mobile view of each column rendered as cards -->
+                                <div class="mb-2"><strong>Action Choice:</strong> {{ obj.action_choice }}</div>
+                                <div class="mb-2"><strong>URL:</strong> <a href="{{ obj.url }}" class="text-blue-400 underline break-all">{{ obj.url }}</a></div>
+                                <div class="mb-2"><strong>Page Path:</strong> {{ obj.page_path }}</div>
+                                <div class="mb-2"><strong>Crawl Depth:</strong> {{ obj.crawl_depth }}</div>
+                                <div class="mb-2"><strong>Category:</strong> {{ obj.category }}</div>
+                                <div class="mb-2"><strong>In Sitemap:</strong> {{ obj.in_sitemap }}</div>
+                                <div class="mb-2"><strong>Main KW:</strong> {{ obj.main_kw }}</div>
+                                <div class="mb-2"><strong>KW Volume:</strong> {{ obj.kw_volume }}</div>
+                                <div class="mb-2"><strong>KW Ranking:</strong> {{ obj.kw_ranking }}</div>
+                                <div class="mb-2"><strong>Best KW:</strong> {{ obj.best_kw }}</div>
+                                <div class="mb-2"><strong>Best KW Volume:</strong> {{ obj.best_kw_volume }}</div>
+                                <div class="mb-2"><strong>Best KW Ranking:</strong> {{ obj.best_kw_ranking }}</div>
+                                <div class="mb-2"><strong>Impressions:</strong> {{ obj.impressions }}</div>
+                                <div class="mb-2"><strong>Sessions:</strong> {{ obj.sessions }}</div>
+                                <div class="mb-2"><strong>% Change Sessions:</strong> {{ obj.percent_change_sessions }}</div>
+                                <div class="mb-2"><strong>Bounce Rate:</strong> {{ obj.bounce_rate }}</div>
+                                <div class="mb-2"><strong>Avg Time on Page:</strong> {{ obj.avg_time_on_page }}</div>
+                                <div class="mb-2"><strong>Losing Traffic:</strong> {{ obj.losing_traffic }}</div>
+                                <div class="mb-2"><strong>Links:</strong> {{ obj.links }}</div>
+                                <div class="mb-2"><strong>SERP CTR:</strong> {{ obj.serp_ctr }}</div>
+                                <div class="mb-2"><strong>Type:</strong> {{ obj.type }}</div>
+                                <div class="mb-2"><strong>Current Title:</strong> {{ obj.current_title }}</div>
+                                <div class="mb-2"><strong>Meta:</strong> {{ obj.meta }}</div>
+                                <div class="mb-2"><strong>H1:</strong> {{ obj.h1 }}</div>
+                                <div class="mb-2"><strong>Word Count:</strong> {{ obj.word_count }}</div>
+                                <div class="mb-2"><strong>Canonical Link:</strong> <a href="{{ obj.canonical_link }}" class="text-blue-400 underline break-all">{{ obj.canonical_link }}</a></div>
+                                <div class="mb-2"><strong>Status Code:</strong> {{ obj.status_code }}</div>
+                                <div class="mb-2"><strong>Index Status:</strong> {{ obj.index_status }}</div>
+                                <div class="mb-2"><strong>Inlinks:</strong> {{ obj.inlinks }}</div>
+                                <div class="mb-2"><strong>Outlinks:</strong> {{ obj.outlinks }}</div>
                             </div>
                         {% endfor %}
                     </div>
@@ -328,7 +218,7 @@
     </div>
 
     <!-- Save Dashboard Modal (Tailwind CSS - Dark Mode) -->
-    <div id="saveDashboardModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+    <div id="saveDashboardModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 {% if show_save_modal %}block{% else %}hidden{% endif %}">
         <div class="bg-gray-800 rounded-lg w-full max-w-md mx-4 shadow-lg">
             <div class="flex justify-between items-center p-4 border-b border-gray-700">
                 <h5 class="text-lg font-semibold text-white" id="saveDashboardModalLabel">Save Dashboard</h5>
@@ -367,6 +257,44 @@
     <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // SweetAlert2 Trigger for Django Messages
+            const messagesDiv = document.getElementById('django-messages');
+
+            if (messagesDiv) {
+                // Get all the message divs inside it
+                const messageElements = messagesDiv.querySelectorAll('.django-message');
+
+                // Iterate over each message div and trigger SweetAlert
+                messageElements.forEach(function (messageElement) {
+                    const title = messageElement.getAttribute('data-title');
+                    const text = messageElement.getAttribute('data-text');
+                    const icon = messageElement.getAttribute('data-icon');
+
+                    Swal.fire({
+                        title: title,
+                        text: text,
+                        icon: icon,
+                        confirmButtonText: 'OK'
+                    });
+                });
+            }
+
+            // Function to Get CSRF Token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
             // Delete All Button Functionality
             const deleteBtn = document.getElementById('delete-all-btn');
             const baseUrl = deleteBtn ? deleteBtn.getAttribute('data-base-url') : '';
@@ -423,8 +351,32 @@
             // Upload Button Click Event
             const uploadBtn = document.getElementById('upload-btn');
             if (uploadBtn) {
-                uploadBtn.addEventListener('click', function () {
-                    window.location.href = "{% url 'upload_file' %}";
+                uploadBtn.addEventListener('click', function (event) {
+                    const hasDashboard = this.getAttribute('data-has-dashboard') === '1';
+                    if (!hasDashboard) {
+                        event.preventDefault();
+                        Swal.fire({
+                            title: 'Save Dashboard First',
+                            text: "You need to save an audit dashboard before uploading files.",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Save Dashboard',
+                            cancelButtonText: 'Cancel'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Open the Save Dashboard Modal
+                                const openSaveModalBtn = document.getElementById('openSaveModal');
+                                if (openSaveModalBtn) {
+                                    openSaveModalBtn.click();
+                                }
+                            }
+                        });
+                    } else {
+                        // Proceed to the upload page
+                        window.location.href = "{% url 'upload_file' %}";
+                    }
                 });
             }
 
@@ -529,22 +481,6 @@
                     });
                 });
             }
-
-            // Function to Get CSRF Token
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
-            }
-        });
+        });     
     </script>
 {% endblock %}
