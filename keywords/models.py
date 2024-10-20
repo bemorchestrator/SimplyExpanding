@@ -70,6 +70,10 @@ class KeywordResearchEntry(models.Model):
     customer_journey = models.CharField(max_length=50, choices=CUSTOMER_JOURNEY_CHOICES, verbose_name='Customer Journey')
     serp_content_type = models.CharField(max_length=50, choices=SERP_CONTENT_TYPE_CHOICES, verbose_name='SERP Content Type')
     audit_entry = models.ForeignKey(UploadedFile, on_delete=models.CASCADE, related_name='keyword_entries', null=True, blank=True)
+    avg_rd = models.FloatField(verbose_name='Average RD', null=True, blank=True)
+    avg_da = models.FloatField(verbose_name='Average DA', null=True, blank=True)
+    avg_pa = models.FloatField(verbose_name='Average PA', null=True, blank=True)
+    avg_backlinks = models.IntegerField(verbose_name='Average Backlinks', null=True, blank=True)
     
 
     def __str__(self):

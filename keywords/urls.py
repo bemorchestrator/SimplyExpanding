@@ -10,4 +10,5 @@ urlpatterns = [
     path('delete/<int:id>/', views.delete_keyword_dashboard, name='delete_keyword_dashboard'),
     path('list/', views.list_keyword_dashboards, name='list_keyword_dashboard'),
     path('update-field/', views.update_field, name='update_field'),  # AJAX URL
+    path('upload/', views.upload_keyword_file, name='upload_keyword_file'),
 ]

@@ -1,20 +1,37 @@
 # keywords/views.py
 
+import csv
 import json
 import logging
+from statistics import mean
+import tempfile
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
+
+from google_auth import get_credentials
+
 from .models import KeywordResearchDashboard, KeywordResearchEntry
 from audit.models import AuditDashboard, UploadedFile
 from .forms import KeywordDashboardForm
 from keywords.tables import KeywordResearchTable
+from .utils import read_and_identify_csv
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from scipy import stats
+import numpy as np
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
+
+
 
 def import_update_on_page_entries(dashboard):
     """
@@ -337,3 +354,201 @@ def update_field(request):
     except Exception as e:
         logger.exception(f"Unexpected error in update_field view: {str(e)}")
         return JsonResponse({'success': False, 'error': 'An unexpected error occurred.'}, status=500)
+
+
+def upload_keyword_file(request):
+    """
+    View to upload keyword research CSV files, process the top 10 entries, 
+    and update the corresponding Primary Keyword in the dashboard.
+    """
+    try:
+        # Ensure Google credentials are available (reuse from session)
+        creds = get_credentials(request, 'drive')
+        if not creds:
+            messages.error(request, "Google Drive authentication is required.")
+            return redirect('authenticate_user', service='drive')
+
+        if request.method == 'POST':
+            primary_keyword_id = request.POST.get('primary_keyword')
+            file = request.FILES.get('file')
+
+            # Validate form inputs
+            if not primary_keyword_id:
+                messages.error(request, "Please select a primary keyword.")
+                return redirect_with_keyword_entries(request)
+
+            if not file:
+                messages.error(request, "No file selected.")
+                return redirect_with_keyword_entries(request)
+
+            # Handle file upload and process CSV
+            try:
+                keyword_entry = KeywordResearchEntry.objects.get(pk=primary_keyword_id)
+
+                # Fetch the associated dashboard for the keyword entry
+                dashboard = keyword_entry.keyword_dashboard  # Correct attribute
+
+                # Save file temporarily for processing
+                temp_file_path = handle_file_upload(file)
+
+                # Process CSV and update the entry
+                if temp_file_path:
+                    process_csv_and_update_entry(temp_file_path, keyword_entry)
+                    messages.success(request, "File uploaded and averages calculated successfully.")
+                    
+                    # Redirect to the specific dashboard using its ID
+                    return redirect('load_keyword_dashboard', id=dashboard.id)
+                else:
+                    messages.error(request, "File could not be processed.")
+
+                # Optionally upload file to Google Drive if needed
+                upload_file_to_google_drive(creds, temp_file_path, file.name)
+
+            except KeywordResearchEntry.DoesNotExist:
+                messages.error(request, "The selected primary keyword does not exist.")
+            except Exception as e:
+                logging.error(f"Error processing file: {str(e)}")
+                messages.error(request, f"Error processing file: {str(e)}")
+
+            # Redirect back to upload page if something went wrong
+            return redirect('upload_keyword_file')
+
+        # Pass available keywords to the template for selection
+        return redirect_with_keyword_entries(request)
+
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {str(e)}")
+        messages.error(request, f"An unexpected error occurred: {str(e)}")
+        return redirect('upload_keyword_file')
+
+
+
+def upload_file_to_google_drive(creds, temp_file_path, original_filename):
+    """
+    Upload the processed file to a fixed Google Drive folder using the credentials.
+    """
+    try:
+        service = build('drive', 'v3', credentials=creds)
+        file_metadata = {
+            'name': original_filename,
+            'parents': ['1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB']  # Hardcoded Google Drive folder ID
+        }
+        media = MediaFileUpload(temp_file_path, resumable=True)
+
+        # Upload the file and get the web link
+        uploaded_file_drive = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webViewLink'
+        ).execute()
+
+        if uploaded_file_drive:
+            logging.info(f"File uploaded to Google Drive: {uploaded_file_drive['webViewLink']}")
+        else:
+            raise Exception("File upload to Google Drive failed.")
+
+    except Exception as e:
+        logging.error(f"Error uploading file to Google Drive: {str(e)}")
+
+
+
+def handle_file_upload(file):
+    """
+    Handle file upload and save it temporarily.
+    """
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            for chunk in file.chunks():
+                temp_file.write(chunk)
+        logging.info(f"File successfully saved: {temp_file.name}")
+        return temp_file.name
+    except Exception as e:
+        logging.error(f"Error saving file: {str(e)}")
+        return None
+
+
+def process_csv_and_update_entry(temp_file_path, keyword_entry):
+    """
+    Process the CSV file, extract data, and update the keyword entry.
+    Now includes outlier detection using Z-scores and IQR.
+    """
+    try:
+        with open(temp_file_path, mode='r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            data = list(reader)
+
+            if not data:
+                raise Exception("CSV file is empty or improperly formatted.")
+
+            # Process the top 10 rows for analysis
+            top_10_results = data[:10]
+
+            # Extract the necessary columns for analysis
+            referring_domains = [float(row['Referring Domains']) for row in top_10_results if row['Referring Domains'].isdigit()]
+            dt = [float(row['DT']) for row in top_10_results if row['DT'].isdigit()]
+            pt = [float(row['PT']) for row in top_10_results if row['PT'].isdigit()]
+            backlinks = [float(row['Backlinks']) for row in top_10_results if row['Backlinks'].isdigit()]
+
+            # Detect and remove outliers from each column
+            filtered_rd = remove_outliers(referring_domains)
+            filtered_dt = remove_outliers(dt)
+            filtered_pt = remove_outliers(pt)
+            filtered_backlinks = remove_outliers(backlinks)
+
+            # Update the keyword entry with the calculated averages from filtered data
+            keyword_entry.avg_da = mean(filtered_dt) if filtered_dt else 0
+            keyword_entry.avg_pa = mean(filtered_pt) if filtered_pt else 0
+            keyword_entry.avg_rd = mean(filtered_rd) if filtered_rd else 0
+            keyword_entry.avg_backlinks = mean(filtered_backlinks) if filtered_backlinks else 0
+            keyword_entry.save()
+
+            logging.info(f"Keyword entry updated successfully for {keyword_entry.primary_keyword}")
+
+    except Exception as e:
+        logging.error(f"Error processing CSV: {str(e)}")
+        raise Exception(f"CSV processing failed: {str(e)}")
+
+
+def remove_outliers(data):
+    """
+    Removes outliers from the data using Z-scores and IQR.
+    """
+    if not data:
+        return []
+
+    # Step 1: Calculate Z-Scores
+    z_scores = np.abs(stats.zscore(data))
+
+    # Step 2: Calculate IQR (Interquartile Range)
+    q1, q3 = np.percentile(data, [25, 75])
+    iqr = q3 - q1
+    lower_bound = q1 - 2 * iqr
+    upper_bound = q3 + 2 * iqr
+
+    # Step 3: Filter out outliers using both Z-Scores and IQR
+    z_score_threshold = 3.5  # Adjusted Z-score threshold
+    return [value for value, z in zip(data, z_scores) if z <= z_score_threshold and lower_bound <= value <= upper_bound]
+
+
+def calculate_column_average(data, column_name):
+    """
+    Calculate the average value of a given column in the CSV data.
+    Now includes outlier removal.
+    """
+    try:
+        column_data = [float(row[column_name]) for row in data if row[column_name].isdigit()]
+        filtered_data = remove_outliers(column_data)
+        return mean(filtered_data) if filtered_data else 0
+    except Exception as e:
+        logging.warning(f"Could not calculate average for column {column_name}: {str(e)}")
+        return 0
+
+
+def redirect_with_keyword_entries(request):
+    """
+    Helper function to pass available keywords to the template for selection.
+    """
+    keyword_entries = KeywordResearchEntry.objects.filter(primary_keyword__isnull=False).exclude(primary_keyword="")
+    return render(request, 'keywords/upload.html', {'keyword_entries': keyword_entries})
+
+
