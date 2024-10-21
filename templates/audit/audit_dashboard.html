@@ -24,72 +24,97 @@
             <div class="flex flex-col md:flex-row justify-between items-center mb-5">
                 <h2 class="text-xl font-semibold text-white mb-4 md:mb-0">Website Audit Dashboard</h2>
 
-                <!-- Action Buttons -->
-                {% if not is_shared_view %}
+                <!-- Action Buttons with Tooltips Positioned Above Icons -->
                 <div class="flex flex-wrap items-center space-x-2 relative">
-                    <!-- Upload Button -->
-                    <button id="upload-btn" 
-                            class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition mb-2 md:mb-0" 
-                            data-has-dashboard="{% if dashboard %}1{% else %}0{% endif %}">
-                        <i class="bi bi-upload text-lg"></i>
-                    </button>
-
-                    <!-- Crawl Sitemap -->
-                    <form id="crawl-sitemap-form" action="{% url 'crawl_sitemaps' %}" method="GET" class="mb-2 md:mb-0">
-                        {% csrf_token %}
-                        <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
-                            <i class="bi bi-bug text-lg"></i>
+                    <!-- Upload Button with Tooltip -->
+                    <div class="relative group">
+                        <button id="upload-btn" 
+                                class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition mb-2 md:mb-0" 
+                                data-has-dashboard="{% if dashboard %}1{% else %}0{% endif %}">
+                            <i class="bi bi-upload text-lg"></i>
                         </button>
-                    </form>
-
-                    <!-- Column Filter Button with Dropdown -->
-                    <div class="relative mb-2 md:mb-0">
-                        <button type="button" id="openColumnFilter" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition">
-                            <i class="bi bi-columns-gap text-lg"></i> <!-- Filter Icon -->
-                        </button>
-
-                        <!-- Column Filter Dropdown (Initially hidden) -->
-                        <div id="columnFilterMenu" class="absolute right-0 mt-2 w-72 bg-gray-700 rounded shadow-lg p-4 text-white opacity-0 scale-95 transition-all duration-200 origin-top-left pointer-events-none z-50 max-h-80 overflow-y-auto">
-                            <div class="py-1 space-y-2">
-                                <!-- Repeat for each column -->
-                                {% for column in table.columns %}
-                                    <label class="flex items-center">
-                                        <input type="checkbox" class="column-checkbox" data-column="{{ forloop.counter }}" checked>
-                                        <span class="ml-2">{{ column.verbose_name }}</span>
-                                    </label>
-                                {% endfor %}
-                            </div>
+                        <!-- Tooltip -->
+                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Upload
                         </div>
                     </div>
 
-                    <!-- Share Button -->
+                    <!-- Crawl Sitemap Button with Tooltip -->
+                    <div class="relative group">
+                        <form id="crawl-sitemap-form" action="{% url 'crawl_sitemaps' %}" method="GET" class="mb-2 md:mb-0">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
+                                <i class="bi bi-bug text-lg"></i>
+                            </button>
+                        </form>
+                        <!-- Tooltip -->
+                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                            Crawl Sitemap
+                        </div>
+                    </div>
+
+                    <!-- Column Filter Button with Tooltip -->
+                    <div class="relative group mb-2 md:mb-0">
+                        <button type="button" id="openColumnFilter" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 transition">
+                            <i class="bi bi-columns-gap text-lg"></i>
+                        </button>
+                        <!-- Tooltip -->
+                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                            Column Filter
+                        </div>
+                    </div>
+
+                    <!-- Share Button with Tooltip -->
                     {% if dashboard %}
-                    <button id="share-btn" data-dashboard-id="{{ dashboard.id }}" class="bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition mb-2 md:mb-0">
-                        <i class="bi bi-share text-lg"></i> <!-- Share Icon -->
-                    </button>
+                    <div class="relative group">
+                        <button id="share-btn" data-dashboard-id="{{ dashboard.id }}" class="bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition mb-2 md:mb-0">
+                            <i class="bi bi-share text-lg"></i>
+                        </button>
+                        <!-- Tooltip -->
+                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Share
+                        </div>
+                    </div>
                     {% endif %}
 
-                    <!-- Save Button (Triggers the Modal) -->
-                    <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition mb-2 md:mb-0">
-                        <i class="bi bi-cloud-upload text-lg"></i>
-                    </button>
+                    <!-- Save Button with Tooltip -->
+                    <div class="relative group">
+                        <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition mb-2 md:mb-0">
+                            <i class="bi bi-cloud-upload text-lg"></i>
+                        </button>
+                        <!-- Tooltip -->
+                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Save
+                        </div>
+                    </div>
 
-                    <!-- Filter Icon -->
-                    <button id="filter-icon" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
-                        <i class="bi bi-funnel-fill text-lg"></i> <!-- Bootstrap filter icon -->
-                    </button>
+                    <!-- Filter Icon with Tooltip -->
+                    <div class="relative group">
+                        <button id="filter-icon" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
+                            <i class="bi bi-funnel-fill text-lg"></i>
+                        </button>
+                        <!-- Tooltip -->
+                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Filter
+                        </div>
+                    </div>
 
-                    <!-- Delete Button -->
-                    <button id="delete-all-btn"
-                            class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition mb-2 md:mb-0"
-                            data-base-url="{% url 'delete_uploaded_files' %}"
-                            {% if dashboard %}
-                                data-dashboard-id="{{ dashboard.id }}"
-                            {% endif %}>
-                        <i class="bi bi-trash text-lg"></i>
-                    </button>
+                    <!-- Delete Button with Tooltip -->
+                    <div class="relative group">
+                        <button id="delete-all-btn"
+                                class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition mb-2 md:mb-0"
+                                data-base-url="{% url 'delete_uploaded_files' %}"
+                                {% if dashboard %}
+                                    data-dashboard-id="{{ dashboard.id }}"
+                                {% endif %}>
+                            <i class="bi bi-trash text-lg"></i>
+                        </button>
+                        <!-- Tooltip -->
+                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Delete
+                        </div>
+                    </div>
                 </div>
-                {% endif %}
             </div>
 
             <!-- Filter Form with Horizontal Scrolling for Inputs Only -->
