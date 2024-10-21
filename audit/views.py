@@ -953,14 +953,17 @@ def process_csv_file(file, audit_dashboard):
 
 
 
+
+
 def audit_dashboard(request):
-    # Get any unsaved UploadedFiles (those without a dashboard)
-    audit_data_qs = UploadedFile.objects.filter(dashboard__isnull=True).order_by('id')
+    # Apply the UploadedFileFilter to the query
+    filter = UploadedFileFilter(request.GET, queryset=UploadedFile.objects.filter(dashboard__isnull=True).order_by('id'))
+    filtered_qs = filter.qs  # This is the filtered queryset
 
     # Pagination logic
     page_number = request.GET.get('page', 1)
     rows_per_page = 15
-    paginator = Paginator(audit_data_qs, rows_per_page)
+    paginator = Paginator(filtered_qs, rows_per_page)
     try:
         page_obj = paginator.get_page(page_number)
     except PageNotAnInteger:
@@ -968,7 +971,7 @@ def audit_dashboard(request):
     except EmptyPage:
         page_obj = paginator.get_page(paginator.num_pages)
 
-    # Initialize the table with paginated data
+    # Initialize the table with the filtered and paginated data
     table = UploadedFileTable(page_obj)
     RequestConfig(request, paginate=False).configure(table)
 
@@ -983,14 +986,14 @@ def audit_dashboard(request):
     else:
         form = UploadedFileForm()
 
-    # Render the template with the paginated table and form
+    # Render the template with the paginated table, form, and filters
     return render(request, 'audit/audit_dashboard.html', {
         'dashboard': None,  # No dashboard is loaded
         'table': table,
         'form': form,
         'page_obj': page_obj,
+        'filter': filter,  # Pass the filter to the template
     })
-
 
 
 
@@ -1136,15 +1139,18 @@ def load_dashboard(request, id):
     dashboard = get_object_or_404(AuditDashboard, id=id)
     request.session['current_dashboard_id'] = dashboard.id
 
-
     # Fetch uploaded files related to this dashboard
     uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
+
+    # Apply the UploadedFileFilter to the query
+    filter = UploadedFileFilter(request.GET, queryset=uploaded_files)
+    filtered_qs = filter.qs  # This is the filtered queryset
 
     # Pagination Logic
     page_number = request.GET.get('page', 1)
     rows_per_page = 15
 
-    paginator = Paginator(uploaded_files, rows_per_page)
+    paginator = Paginator(filtered_qs, rows_per_page)
 
     try:
         page_obj = paginator.get_page(page_number)
@@ -1157,11 +1163,12 @@ def load_dashboard(request, id):
     table = UploadedFileTable(page_obj)
     RequestConfig(request, paginate=False).configure(table)
 
-    # Render the template with the paginated table
+    # Render the template with the paginated table and filter
     return render(request, 'audit/audit_dashboard.html', {
         'dashboard': dashboard,
         'table': table,
         'page_obj': page_obj,
+        'filter': filter,  # Pass the filter to the template
     })
 
 
@@ -1223,10 +1230,14 @@ def shared_dashboard(request, share_token):
     dashboard = get_object_or_404(AuditDashboard, share_token=share_token)
     uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
     
+    # Apply the UploadedFileFilter to the query
+    filter = UploadedFileFilter(request.GET, queryset=uploaded_files)
+    filtered_qs = filter.qs  # This is the filtered queryset
+
     # Pagination logic (same as in your existing load_dashboard view)
     page_number = request.GET.get('page', 1)
     rows_per_page = 15
-    paginator = Paginator(uploaded_files, rows_per_page)
+    paginator = Paginator(filtered_qs, rows_per_page)
     try:
         page_obj = paginator.get_page(page_number)
     except PageNotAnInteger:
@@ -1245,4 +1256,5 @@ def shared_dashboard(request, share_token):
         'page_obj': page_obj,
         'is_shared_view': True,  # Indicate that this is a shared view
         'hide_sidebar': True,    # Hide the sidebar in the template
+        'filter': filter,        # Pass the filter to the template
     })

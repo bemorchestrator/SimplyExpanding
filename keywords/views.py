@@ -76,7 +76,8 @@ def import_update_on_page_entries(dashboard):
                 'best_kw': entry.best_kw or '',           
                 'best_kw_volume': entry.best_kw_volume,    
                 'best_kw_ranking': entry.best_kw_ranking,   
-                'action_choice': entry.action_choice or '',             
+                'action_choice': entry.action_choice or '',     
+                'links': entry.links,       
             }
         )
         if created:

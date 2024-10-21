@@ -74,6 +74,11 @@
                         <i class="bi bi-cloud-upload text-lg"></i>
                     </button>
 
+                    <!-- Filter Icon -->
+                    <button id="filter-icon" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
+                        <i class="bi bi-funnel-fill text-lg"></i> <!-- Bootstrap filter icon -->
+                    </button>
+
                     <!-- Delete Button -->
                     <button id="delete-all-btn"
                             class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition mb-2 md:mb-0"
@@ -86,6 +91,20 @@
                 </div>
                 {% endif %}
             </div>
+
+            <!-- Filter Form with Horizontal Scrolling and Consistent Width -->
+            <div id="filter-container" class="bg-gray-800 p-4 rounded-lg mb-4 overflow-x-auto">
+                <form method="get">
+                    <div class="flex space-x-4 whitespace-nowrap">
+                        {{ filter.form.as_p }} <!-- Dynamically render all filter fields -->
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">Apply Filters</button>
+                        <a href="{% url 'audit_dashboard' %}" class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition">Clear Filters</a>
+                    </div>
+                </form>
+            </div>
+
 
             <!-- Table and Card Rendering using django-tables2 -->
             <div class="table-container overflow-x-auto flex-1 w-full">
@@ -551,6 +570,27 @@
                     });
                 });
             }
-        });     
+
+            // Filter Icon Click Event to Toggle Filter Form
+            const filterIcon = document.getElementById('filter-icon');
+            const filterContainer = document.getElementById('filter-container');
+
+            if (filterIcon) {
+                filterIcon.addEventListener('click', function() {
+                    if (filterContainer.classList.contains('hidden')) {
+                        filterContainer.classList.remove('hidden');
+                    } else {
+                        filterContainer.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Optional: Close the filter form when clicking outside (if desired)
+            document.addEventListener('click', function(event) {
+                if (!filterContainer.contains(event.target) && !filterIcon.contains(event.target)) {
+                    filterContainer.classList.add('hidden');
+                }
+            });
+        });
     </script>
 {% endblock %}

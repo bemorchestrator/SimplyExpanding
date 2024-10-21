@@ -74,6 +74,7 @@ class KeywordResearchEntry(models.Model):
     avg_da = models.FloatField(verbose_name='Average DA', null=True, blank=True)
     avg_pa = models.FloatField(verbose_name='Average PA', null=True, blank=True)
     avg_backlinks = models.IntegerField(verbose_name='Average Backlinks', null=True, blank=True)
+    links = models.IntegerField(null=True, blank=True)
     
 
     def __str__(self):

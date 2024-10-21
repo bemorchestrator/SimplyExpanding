@@ -169,6 +169,7 @@
                         <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">PK Volume</th>
                         <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">PK Ranking</th>
                         <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Secondary Keywords</th>
+                        <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Links</th>
                         <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Customer Journey</th>
                         <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">SERP Content Type</th>
                         <th class="px-4 py-2 text-left font-medium text-white whitespace-nowrap">Avg RD</th>
@@ -220,6 +221,7 @@
                                 <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="secondary_keywords">
                                     {{ entry.secondary_keywords|default:"-"|linebreaksbr }}
                                 </td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm">{{ entry.links|default:"-" }}</td>
                                 <td class="px-4 py-2 whitespace-nowrap text-sm editable" data-id="{{ entry.id }}" data-field="customer_journey">
                                     {% if entry.customer_journey == 'Customer' %}
                                         <span class="bg-blue-500 text-white px-2 py-1 rounded">Customer</span>

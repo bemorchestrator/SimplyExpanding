@@ -1,53 +1,91 @@
-# filters.py
-
 import django_filters
+from django import forms  # Import the forms module from Django
 from .models import UploadedFile
-from django.db.models import Q
+
+CONTAINS_CHOICES = [
+    ('contains', 'Contains'),
+    ('does_not_contain', 'Does Not Contain'),
+]
+
+SITEMAP_CHOICES = [
+    (True, 'Yes'),
+    (False, 'No')
+]
 
 class UploadedFileFilter(django_filters.FilterSet):
-    search = django_filters.CharFilter(method='filter_by_all_fields', label='Search')
+    # Action choice filter with a consistent width
+    action_choice = django_filters.ChoiceFilter(
+        field_name='action_choice',
+        choices=UploadedFile.ACTION_CHOICES,
+        label='Action Choice',
+        widget=forms.Select(attrs={
+            'class': 'bg-gray-800 text-white border border-gray-600 rounded-md py-2 px-3 w-48'
+        })
+    )
+
+    # Filter to select contains/does not contain with consistent width
+    url_contains = django_filters.ChoiceFilter(
+        choices=CONTAINS_CHOICES,
+        label='URL Filter Type',
+        method='filter_by_url_type',
+        widget=forms.Select(attrs={
+            'class': 'bg-gray-800 text-white border-l border-gray-600 rounded-l-md py-2 px-3 w-48'
+        })
+    )
+
+    # Input field for the URL filter with consistent width
+    url_value = django_filters.CharFilter(
+        field_name='url',
+        label='URL',
+        method='filter_by_url_value',
+        widget=forms.TextInput(attrs={
+            'class': 'bg-gray-800 text-white border-t border-r border-b border-gray-600 rounded-r-md py-2 px-3 w-48',
+            'placeholder': 'Enter URL...'
+        })
+    )
+
+    # Input field for crawl depth with consistent width
+    crawl_depth = django_filters.NumberFilter(
+        field_name='crawl_depth',
+        label='Crawl Depth',
+        widget=forms.NumberInput(attrs={
+            'class': 'bg-gray-800 text-white border border-gray-600 rounded-md py-2 px-3 w-48',
+            'placeholder': 'Enter depth...'
+        })
+    )
+
+    # Dropdown filter for the category column with consistent width
+    category = django_filters.ChoiceFilter(
+        field_name='category',
+        label='Category',
+        choices=UploadedFile.CATEGORY_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'bg-gray-800 text-white border border-gray-600 rounded-md py-2 px-3 w-48'
+        })
+    )
+
+    # Dropdown filter for In Sitemap (Yes/No)
+    in_sitemap = django_filters.ChoiceFilter(
+        field_name='in_sitemap',
+        label='In Sitemap',
+        choices=SITEMAP_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'bg-gray-800 text-white border border-gray-600 rounded-md py-2 px-3 w-48'
+        })
+    )
 
     class Meta:
         model = UploadedFile
-        fields = {
-            'url': ['icontains'],  # Filter URLs by partial match
-            'page_path': ['icontains'],  # Filter page paths
-            'crawl_depth': ['exact', 'gte', 'lte'],  # Filter by exact or range
-            'category': ['icontains'],  # Filter by category (partial match)
-            'main_kw': ['icontains'],  # Filter by main keyword
-            'kw_volume': ['exact', 'gte', 'lte'],  # Keyword volume (range)
-            'kw_ranking': ['exact', 'gte', 'lte'],  # Keyword ranking
-            'best_kw': ['icontains'],  # Best keyword filter
-            'best_kw_volume': ['exact', 'gte', 'lte'],  # Best keyword volume filter
-            'best_kw_ranking': ['exact', 'gte', 'lte'],  # Best keyword ranking
-            'impressions': ['exact', 'gte', 'lte'],  # Filter by impressions (range)
-            'sessions': ['exact', 'gte', 'lte'],  # Filter by session count
-            'percent_change_sessions': ['exact', 'gte', 'lte'],  # Filter session % change
-            'bounce_rate': ['exact', 'gte', 'lte'],  # Filter by bounce rate
-            'avg_time_on_page': ['exact', 'gte', 'lte'],  # Filter avg time on page
-            'losing_traffic': ['exact'],  # Exact filter for losing traffic
-            'links': ['exact', 'gte', 'lte'],  # Filter by number of links
-            'serp_ctr': ['exact', 'gte', 'lte'],  # Filter SERP click-through-rate
-            'type': ['icontains'],  # Filter by type (partial match)
-            'current_title': ['icontains'],  # Filter by current title
-            'meta': ['icontains'],  # Filter by meta description
-            'h1': ['icontains'],  # Filter by H1 tag content
-            'word_count': ['exact', 'gte', 'lte'],  # Filter by word count
-            'canonical_link': ['icontains'],  # Filter by canonical link
-            'status_code': ['exact'],  # Filter by status code
-            'index_status': ['icontains'],  # Filter by index status (partial match)
-            'inlinks': ['exact', 'gte', 'lte'],  # Filter by inlinks
-            'outlinks': ['exact', 'gte', 'lte'],  # Filter by outlinks
-            'action_choice': ['exact'],  # Filter by action choice
-        }
+        fields = ['action_choice', 'url_contains', 'url_value', 'crawl_depth', 'category', 'in_sitemap']
 
-    def filter_by_all_fields(self, queryset, name, value):
-        """Search across multiple fields."""
-        return queryset.filter(
-            Q(url__icontains=value) |
-            Q(page_path__icontains=value) |
-            Q(main_kw__icontains=value) |
-            Q(current_title__icontains=value) |
-            Q(meta__icontains=value) |
-            Q(h1__icontains=value)
-        )
+    def filter_by_url_type(self, queryset, name, value):
+        self.url_filter_type = value
+        return queryset
+
+    def filter_by_url_value(self, queryset, name, value):
+        filter_type = getattr(self, 'url_filter_type', 'contains')
+        if filter_type == 'contains':
+            return queryset.filter(url__icontains=value)
+        elif filter_type == 'does_not_contain':
+            return queryset.exclude(url__icontains=value)
+        return queryset
