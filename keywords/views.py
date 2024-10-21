@@ -8,6 +8,7 @@ import tempfile
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_protect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
@@ -279,12 +280,13 @@ def list_keyword_dashboards(request):
     except EmptyPage:
         page_obj = paginator.get_page(paginator.num_pages)
 
-    return render(request, 'audit/list_dashboards.html', {
+    return render(request, 'keywords/list_dashboards.html', {
         'dashboards': page_obj.object_list,
         'page_obj': page_obj,
         'per_page': per_page,
         'per_page_options': [10, 15, 20, 50],
     })
+
 
 
 
@@ -358,7 +360,7 @@ def update_field(request):
 
 def upload_keyword_file(request):
     """
-    View to upload keyword research CSV files, process the top 10 entries, 
+    View to upload keyword research CSV files, process the top 10 entries,
     and update the corresponding Primary Keyword in the dashboard.
     """
     try:
@@ -368,25 +370,36 @@ def upload_keyword_file(request):
             messages.error(request, "Google Drive authentication is required.")
             return redirect('authenticate_user', service='drive')
 
+        dashboard_id = request.GET.get('dashboard_id')
+        if not dashboard_id:
+            messages.error(request, "Dashboard ID is missing.")
+            return redirect('list_keyword_dashboard')
+
+        # Ensure the dashboard exists
+        dashboard = get_object_or_404(KeywordResearchDashboard, id=dashboard_id)
+
         if request.method == 'POST':
             primary_keyword_id = request.POST.get('primary_keyword')
             file = request.FILES.get('file')
 
+            # Log the received primary_keyword_id
+            logging.info(f"Primary keyword ID received: {primary_keyword_id}")
+            logging.info(f"File received: {file}")
+
             # Validate form inputs
             if not primary_keyword_id:
                 messages.error(request, "Please select a primary keyword.")
-                return redirect_with_keyword_entries(request)
+                return redirect_with_keyword_entries(request, dashboard_id)
 
             if not file:
                 messages.error(request, "No file selected.")
-                return redirect_with_keyword_entries(request)
+                return redirect_with_keyword_entries(request, dashboard_id)
 
             # Handle file upload and process CSV
             try:
+                # Fetch the KeywordResearchEntry based on primary_keyword_id
                 keyword_entry = KeywordResearchEntry.objects.get(pk=primary_keyword_id)
-
-                # Fetch the associated dashboard for the keyword entry
-                dashboard = keyword_entry.keyword_dashboard  # Correct attribute
+                logging.info(f"Keyword entry found: {keyword_entry}")
 
                 # Save file temporarily for processing
                 temp_file_path = handle_file_upload(file)
@@ -405,21 +418,24 @@ def upload_keyword_file(request):
                 upload_file_to_google_drive(creds, temp_file_path, file.name)
 
             except KeywordResearchEntry.DoesNotExist:
+                logging.error(f"KeywordResearchEntry with ID {primary_keyword_id} does not exist.")
                 messages.error(request, "The selected primary keyword does not exist.")
             except Exception as e:
                 logging.error(f"Error processing file: {str(e)}")
                 messages.error(request, f"Error processing file: {str(e)}")
 
             # Redirect back to upload page if something went wrong
-            return redirect('upload_keyword_file')
+            return redirect(f"{reverse('upload_keyword_file')}?dashboard_id={dashboard_id}")
 
-        # Pass available keywords to the template for selection
-        return redirect_with_keyword_entries(request)
+        else:
+            # It's a GET request
+            return redirect_with_keyword_entries(request, dashboard_id)
 
     except Exception as e:
         logging.error(f"An unexpected error occurred: {str(e)}")
         messages.error(request, f"An unexpected error occurred: {str(e)}")
-        return redirect('upload_keyword_file')
+        return redirect(f"{reverse('upload_keyword_file')}?dashboard_id={dashboard_id}")
+
 
 
 
@@ -544,11 +560,19 @@ def calculate_column_average(data, column_name):
         return 0
 
 
-def redirect_with_keyword_entries(request):
+def redirect_with_keyword_entries(request, dashboard_id):
     """
     Helper function to pass available keywords to the template for selection.
     """
-    keyword_entries = KeywordResearchEntry.objects.filter(primary_keyword__isnull=False).exclude(primary_keyword="")
-    return render(request, 'keywords/upload.html', {'keyword_entries': keyword_entries})
+    keyword_entries = KeywordResearchEntry.objects.filter(
+        keyword_dashboard__id=dashboard_id,
+        primary_keyword__isnull=False
+    ).exclude(primary_keyword="")
+    return render(request, 'keywords/upload.html', {
+        'keyword_entries': keyword_entries,
+        'dashboard_id': dashboard_id
+    })
+
+
 
 

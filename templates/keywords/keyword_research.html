@@ -123,20 +123,20 @@
         <form method="POST" action="{% url 'upload_keyword_file' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="flex justify-between mb-4 items-center space-x-4">
-                <div class="flex items-center space-x-2">
+                <form method="GET" action="" class="flex items-center space-x-2">
                     <label for="per_page" class="text-white text-sm">Rows per page:</label>
                     <select name="per_page" id="per_page" onchange="this.form.submit()" class="bg-gray-700 text-gray-200 rounded focus:outline-none text-sm">
                         {% for option in per_page_options %}
                             <option value="{{ option }}" {% if per_page == option|stringformat:"s" %}selected{% endif %}>{{ option }}</option>
                         {% endfor %}
                     </select>
-                </div>
-
+                </form>
+            
                 <!-- Upload Button -->
-                <button type="submit" id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">
+                <a href="{% url 'upload_keyword_file' %}?dashboard_id={{ dashboard.id }}" id="upload-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">
                     <i class="bi bi-upload text-lg"></i>
-                </button>
-            </div>
+                </a>
+            </div>            
         </form>
 
 

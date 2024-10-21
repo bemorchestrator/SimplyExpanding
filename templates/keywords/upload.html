@@ -16,9 +16,9 @@
         {% endif %}
 
         <!-- File Upload Form -->
-        <form method="POST" enctype="multipart/form-data" action="{% url 'upload_keyword_file' %}" onsubmit="showSpinner()">
+        <form method="POST" enctype="multipart/form-data" action="{% url 'upload_keyword_file' %}?dashboard_id={{ dashboard_id }}" onsubmit="showSpinner()">
             {% csrf_token %}
-
+        
             <!-- Select Primary Keyword -->
             <div class="mb-4">
                 <label for="primary_keyword" class="block text-gray-300 mb-2">Select Primary Keyword</label>
@@ -33,13 +33,13 @@
                     {% endif %}
                 </select>
             </div>
-
+        
             <!-- File Upload -->
             <div class="mb-4">
                 <label for="file" class="block text-gray-300 mb-2">Select CSV File</label>
                 <input type="file" name="file" id="file" class="w-full px-4 py-2 text-white " required>
             </div>
-
+        
             <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">
                 <i class="bi bi-upload"></i> Upload
             </button>
