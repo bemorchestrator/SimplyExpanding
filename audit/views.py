@@ -63,7 +63,7 @@ GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
 
 def audit_result(request):
     # Order the audit_data queryset by 'id' to ensure consistent ordering across pages
-    audit_data = UploadedFile.objects.all().order_by('id')  # You can replace 'id' with any other field if needed
+    audit_data = UploadedFile.objects.all().order_by('uploaded_at')  # You can replace 'id' with any other field if needed
     logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files.")
 
     # Pagination Logic
