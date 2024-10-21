@@ -92,13 +92,18 @@
                 {% endif %}
             </div>
 
-            <!-- Filter Form with Horizontal Scrolling and Consistent Width -->
-            <div id="filter-container" class="bg-gray-800 p-4 rounded-lg mb-4 overflow-x-auto">
+            <!-- Filter Form with Horizontal Scrolling for Inputs Only -->
+            <div id="filter-container" class="bg-gray-800 p-4 rounded-lg mb-4">
                 <form method="get">
-                    <div class="flex space-x-4 whitespace-nowrap">
-                        {{ filter.form.as_p }} <!-- Dynamically render all filter fields -->
+                    <!-- Scrollable filter fields with margin-bottom to avoid the scroll bar being too close to the input fields -->
+                    <div class="overflow-x-auto mb-6 pb-4"> <!-- Added mb-4 and pb-2 -->
+                        <div class="flex space-x-4 whitespace-nowrap">
+                            {{ filter.form.as_p }} <!-- Dynamically render all filter fields -->
+                        </div>
                     </div>
-                    <div class="flex justify-end space-x-2 mt-4">
+
+                    <!-- Fixed position buttons -->
+                    <div class="flex justify-end space-x-2">
                         <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">Apply Filters</button>
                         <a href="{% url 'audit_dashboard' %}" class="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition">Clear Filters</a>
                     </div>
