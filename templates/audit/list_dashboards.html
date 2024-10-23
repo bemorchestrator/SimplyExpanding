@@ -13,6 +13,7 @@
                         <!-- Audit Dashboard Columns -->
                         <th class="py-3 px-6 border-b border-gray-700 text-white text-left">Audit Dashboard</th>
                         <th class="py-3 px-6 border-b border-gray-700 text-white text-left">Created At</th>
+                        <th class="py-3 px-6 border-b border-gray-700 text-white text-left">Client Name</th> <!-- New Client Name Column -->
                         <th class="py-3 px-6 border-b border-gray-700 text-white text-left">Actions</th>
 
                         <!-- Keyword Dashboard Columns -->
@@ -27,6 +28,16 @@
                             <!-- Audit Dashboard Data -->
                             <td class="py-3 px-6 border-b border-gray-700 text-white">{{ dashboard.name }}</td>
                             <td class="py-3 px-6 border-b border-gray-700 text-gray-400">{{ dashboard.created_at }}</td>
+
+                            <!-- New Client Name Data -->
+                            <td class="py-3 px-6 border-b border-gray-700 text-gray-400">
+                                {% if dashboard.client %}
+                                    {{ dashboard.client.business_name }}
+                                {% else %}
+                                    No Client
+                                {% endif %}
+                            </td>
+
                             <td class="py-3 px-6 border-b border-gray-700">
                                 <div class="flex space-x-2">
                                     <a href="{% url 'load_dashboard' dashboard.id %}" class="bg-blue-500 text-white px-2 py-1 rounded">Load</a>
