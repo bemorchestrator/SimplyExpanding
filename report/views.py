@@ -16,6 +16,7 @@ from googleapiclient.discovery import build
 
 from audit.models import AuditDashboard
 from client.models import ClientOnboarding
+from keywords.models import KeywordResearchDashboard
 from report.models import Report
 from django.contrib import messages
 
@@ -111,47 +112,49 @@ def client_portal(request, client_id):
     # Fetch the audit dashboard associated with the client
     audit_dashboard = AuditDashboard.objects.filter(client=client).first()
 
+    # Fetch the keyword research dashboard associated with the audit dashboard
+    keyword_dashboard = KeywordResearchDashboard.objects.filter(audit_dashboard=audit_dashboard).first()
+
     # Define the available report types for the client, regardless of audit dashboard availability
     report_types = [
         {
             'name': 'Google Search Console',
             'report_type': 'google_search_console',
             'url': reverse('google_search_console_report', kwargs={'client_id': client.id}),
+            'available': True,
         },
         {
             'name': 'Google Analytics',
             'report_type': 'google_analytics',
             'url': reverse('google_analytics_report', kwargs={'client_id': client.id}),
+            'available': True,
         },
         {
             'name': 'Keyword Research',
             'report_type': 'keyword_research',
-            'url': reverse('keyword_research_report', kwargs={'client_id': client.id}),
+            'url': reverse('load_keyword_dashboard', kwargs={'id': keyword_dashboard.id}) if keyword_dashboard else '#',
+            'available': bool(keyword_dashboard),
         },
         {
             'name': 'Website Audit',
             'report_type': 'website_audit',
-            # Use the audit_dashboard variable if it exists, otherwise use '#'
             'url': reverse('load_dashboard', kwargs={'id': audit_dashboard.id}) if audit_dashboard else '#',
+            'available': bool(audit_dashboard),
         },
     ]
 
-    # Handle case where no audit dashboard exists for this client
-    if not audit_dashboard:
-        messages.error(request, "No audit dashboard available for this client.")
-        # No redirect; just return the current page with the message, but keep report types
-        return render(
-            request,
-            'report/landing.html',
-            {'client': client, 'report': report, 'report_types': report_types}
-        )
+    # Handle case where neither the audit dashboard nor the keyword dashboard exists
+    if not audit_dashboard and not keyword_dashboard:
+        messages.error(request, "No audit or keyword research dashboard available for this client.")
 
-    # Pass the client, report, and report types to the template if everything is fine
+    # Pass the client, report, and report types to the template
     return render(
         request,
         'report/landing.html',
         {'client': client, 'report': report, 'report_types': report_types},
     )
+
+
 
 
 def client_list(request):
@@ -478,3 +481,5 @@ def website_audit_report(request, client_id):
     return render(
         request, 'report/website_audit_detail.html', {'client': client, 'data': audit_data}
     )
+
+

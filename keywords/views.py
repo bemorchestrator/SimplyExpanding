@@ -238,13 +238,13 @@ def load_keyword_dashboard(request, id):
     # Fetch the specific saved KeywordResearchDashboard by its ID
     dashboard = get_object_or_404(KeywordResearchDashboard, id=id)
 
-    # Import relevant entries every time the dashboard is loaded
+    # Import relevant entries from the associated audit dashboard with 'update_on_page' action choice
     import_update_on_page_entries(dashboard)
 
     # Fetch related entries for the KeywordResearchDashboard
     keyword_entries = KeywordResearchEntry.objects.filter(keyword_dashboard=dashboard).order_by('id')
 
-    # Pagination Logic
+    # Pagination logic
     per_page = request.GET.get('per_page', 10)  # Default to 10 entries per page
     paginator = Paginator(keyword_entries, per_page)
     page_number = request.GET.get('page')
@@ -256,13 +256,18 @@ def load_keyword_dashboard(request, id):
     except EmptyPage:
         page_obj = paginator.get_page(paginator.num_pages)
 
-    # Pass the saved dashboard and paginated entries to the template
+    # Fetch the associated audit dashboard, if it exists
+    audit_dashboard = dashboard.audit_dashboard
+
+    # Pass the saved dashboard, audit dashboard, and paginated keyword entries to the template
     return render(request, 'keywords/keyword_research.html', {
         'dashboard': dashboard,
+        'audit_dashboard': audit_dashboard,  # Pass the associated audit dashboard
         'keyword_entries': page_obj,  # Pass paginated keyword entries to the hardcoded table
         'per_page_options': [10, 25, 50],  # Options for the dropdown
         'per_page': per_page,  # Current per_page value
     })
+
 
 
 def delete_keyword_dashboard(request, id):

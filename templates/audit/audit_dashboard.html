@@ -26,32 +26,74 @@
 
                 <!-- Action Buttons with Tooltips Positioned Above Icons -->
                 <div class="flex flex-wrap items-center space-x-2 relative">
-                    <!-- Upload Button with Tooltip -->
-                    <div class="relative group">
-                        <button id="upload-btn" 
-                                class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition mb-2 md:mb-0" 
-                                data-has-dashboard="{% if dashboard %}1{% else %}0{% endif %}">
-                            <i class="bi bi-upload text-lg"></i>
-                        </button>
-                        <!-- Tooltip -->
-                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Upload
-                        </div>
-                    </div>
-
-                    <!-- Crawl Sitemap Button with Tooltip -->
-                    <div class="relative group">
-                        <form id="crawl-sitemap-form" action="{% url 'crawl_sitemaps' %}" method="GET" class="mb-2 md:mb-0">
-                            {% csrf_token %}
-                            <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
-                                <i class="bi bi-bug text-lg"></i>
+                    {% if user.is_authenticated %}
+                        <!-- Upload Button with Tooltip -->
+                        <div class="relative group">
+                            <button id="upload-btn" 
+                                    class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition mb-2 md:mb-0" 
+                                    data-has-dashboard="{% if dashboard %}1{% else %}0{% endif %}">
+                                <i class="bi bi-upload text-lg"></i>
                             </button>
-                        </form>
-                        <!-- Tooltip -->
-                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                            Crawl Sitemap
+                            <!-- Tooltip -->
+                            <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                Upload
+                            </div>
                         </div>
-                    </div>
+
+                        <!-- Crawl Sitemap Button with Tooltip -->
+                        <div class="relative group">
+                            <form id="crawl-sitemap-form" action="{% url 'crawl_sitemaps' %}" method="GET" class="mb-2 md:mb-0">
+                                {% csrf_token %}
+                                <button type="submit" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition">
+                                    <i class="bi bi-bug text-lg"></i>
+                                </button>
+                            </form>
+                            <!-- Tooltip -->
+                            <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                Crawl Sitemap
+                            </div>
+                        </div>
+
+                        <!-- Share Button with Tooltip -->
+                        {% if dashboard %}
+                        <div class="relative group">
+                            <button id="share-btn" data-dashboard-id="{{ dashboard.id }}" class="bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition mb-2 md:mb-0">
+                                <i class="bi bi-share text-lg"></i>
+                            </button>
+                            <!-- Tooltip -->
+                            <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                Share
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Save Button with Tooltip -->
+                        <div class="relative group">
+                            <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition mb-2 md:mb-0">
+                                <i class="bi bi-cloud-upload text-lg"></i>
+                            </button>
+                            <!-- Tooltip -->
+                            <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                Save
+                            </div>
+                        </div>
+
+                        <!-- Delete Button with Tooltip -->
+                        <div class="relative group">
+                            <button id="delete-all-btn"
+                                    class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition mb-2 md:mb-0"
+                                    data-base-url="{% url 'delete_uploaded_files' %}"
+                                    {% if dashboard %}
+                                        data-dashboard-id="{{ dashboard.id }}"
+                                    {% endif %}>
+                                <i class="bi bi-trash text-lg"></i>
+                            </button>
+                            <!-- Tooltip -->
+                            <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                Delete
+                            </div>
+                        </div>
+                    {% endif %}
 
                     <!-- Column Filter Button with Tooltip -->
                     <div class="relative group mb-2 md:mb-0">
@@ -64,30 +106,6 @@
                         </div>
                     </div>
 
-                    <!-- Share Button with Tooltip -->
-                    {% if dashboard %}
-                    <div class="relative group">
-                        <button id="share-btn" data-dashboard-id="{{ dashboard.id }}" class="bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition mb-2 md:mb-0">
-                            <i class="bi bi-share text-lg"></i>
-                        </button>
-                        <!-- Tooltip -->
-                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Share
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Save Button with Tooltip -->
-                    <div class="relative group">
-                        <button type="button" id="openSaveModal" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition mb-2 md:mb-0">
-                            <i class="bi bi-cloud-upload text-lg"></i>
-                        </button>
-                        <!-- Tooltip -->
-                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Save
-                        </div>
-                    </div>
-
                     <!-- Filter Icon with Tooltip -->
                     <div class="relative group">
                         <button id="filter-icon" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition">
@@ -96,22 +114,6 @@
                         <!-- Tooltip -->
                         <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Filter
-                        </div>
-                    </div>
-
-                    <!-- Delete Button with Tooltip -->
-                    <div class="relative group">
-                        <button id="delete-all-btn"
-                                class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition mb-2 md:mb-0"
-                                data-base-url="{% url 'delete_uploaded_files' %}"
-                                {% if dashboard %}
-                                    data-dashboard-id="{{ dashboard.id }}"
-                                {% endif %}>
-                            <i class="bi bi-trash text-lg"></i>
-                        </button>
-                        <!-- Tooltip -->
-                        <div class="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 bg-gray-700 text-white text-sm py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Delete
                         </div>
                     </div>
                 </div>
@@ -555,9 +557,11 @@
 
             // Close the dropdown if clicked outside
             document.addEventListener('click', function(event) {
-                if (!columnFilterMenu.contains(event.target) && !openColumnFilter.contains(event.target)) {
-                    columnFilterMenu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    columnFilterMenu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                if (columnFilterMenu && openColumnFilter) {
+                    if (!columnFilterMenu.contains(event.target) && !openColumnFilter.contains(event.target)) {
+                        columnFilterMenu.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                        columnFilterMenu.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    }
                 }
             });
 
@@ -631,8 +635,10 @@
 
             // Optional: Close the filter form when clicking outside (if desired)
             document.addEventListener('click', function(event) {
-                if (!filterContainer.contains(event.target) && !filterIcon.contains(event.target)) {
-                    filterContainer.classList.add('hidden');
+                if (filterContainer && filterIcon) {
+                    if (!filterContainer.contains(event.target) && !filterIcon.contains(event.target)) {
+                        filterContainer.classList.add('hidden');
+                    }
                 }
             });
         });

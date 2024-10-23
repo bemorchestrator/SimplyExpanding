@@ -16,6 +16,7 @@
     <!-- Main Container -->
     <div class="flex flex-row w-full">
         <!-- Sidebar -->
+        {% if user.is_authenticated %}
         <div id="sidebar" class="bg-gray-800 flex flex-col fixed top-0 left-0 h-screen transition-transform duration-300 ease-in-out z-40 overflow-y-auto w-60 transform -translate-x-full md:translate-x-0">
             <div class="flex items-center justify-between py-4 px-4">
                 <div class="flex items-center">
@@ -52,24 +53,30 @@
                 </div>
             </div>
         </div>
-
+        {% endif %}
+        
         <!-- Overlay (for mobile) -->
+        {% if user.is_authenticated %}
         <div id="overlay" class="fixed inset-0 bg-black opacity-50 hidden z-30"></div>
+        {% endif %}
 
         <!-- Content -->
-        <div id="content" class="flex-1 flex flex-col p-6 bg-gray-800 transition-all duration-300 ease-in-out ml-0 md:ml-60 overflow-y-auto h-screen">
+        <div id="content" class="flex-1 flex flex-col p-6 bg-gray-800 transition-all duration-300 ease-in-out ml-0 {% if user.is_authenticated %}md:ml-60{% endif %} overflow-y-auto h-screen">
             <!-- Header -->
             <div class="flex justify-between items-center mb-4">
                 <!-- Left Side -->
                 <div class="flex items-center space-x-4">
+                    {% if user.is_authenticated %}
                     <!-- Hamburger Menu Icon for mobile -->
                     <div class="md:hidden">
                         <button id="hamburger-btn" class="text-gray-400 focus:outline-none">
                             <i class="bi bi-list text-2xl"></i>
                         </button>
                     </div>
+                    {% endif %}
                 </div>
                 <!-- Right Side (Mobile Logout) -->
+                {% if user.is_authenticated %}
                 <div class="flex items-center space-x-4 md:hidden">
                     <!-- User Profile Picture (Mobile) -->
                     <div class="w-10 h-10 rounded-full overflow-hidden">
@@ -80,8 +87,8 @@
                     <!-- Mobile Logout Button -->
                     <a href="{% url 'home:logout' %}" class="text-indigo-400 hover:text-indigo-300 text-sm">Logout</a>
                 </div>
+                {% endif %}
             </div>
-
             <!-- Page Content -->
             {% block content %}
             {% endblock %}
@@ -91,12 +98,14 @@
     <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            {% if user.is_authenticated %}
             // Sidebar functionality
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('toggle-btn');
             const hamburgerBtn = document.getElementById('hamburger-btn');
             const overlay = document.getElementById('overlay');
             const menuTexts = document.querySelectorAll('.menu-text');
+            const content = document.getElementById('content');
             let isCollapsed = false;
 
             // Toggle sidebar width on desktop
@@ -107,15 +116,15 @@
                         toggleBtn.classList.replace('bi-chevron-left', 'bi-chevron-right');
                         menuTexts.forEach(menuText => menuText.classList.add('hidden'));
                         isCollapsed = true;
-                        document.getElementById('content').classList.add('md:ml-16');
-                        document.getElementById('content').classList.remove('md:ml-60');
+                        content.classList.add('md:ml-16');
+                        content.classList.remove('md:ml-60');
                     } else {
                         sidebar.classList.remove('collapsed');
                         toggleBtn.classList.replace('bi-chevron-right', 'bi-chevron-left');
                         menuTexts.forEach(menuText => menuText.classList.remove('hidden'));
                         isCollapsed = false;
-                        document.getElementById('content').classList.add('md:ml-60');
-                        document.getElementById('content').classList.remove('md:ml-16');
+                        content.classList.add('md:ml-60');
+                        content.classList.remove('md:ml-16');
                     }
                 });
             }
@@ -154,6 +163,7 @@
                     }
                 }
             });
+            {% endif %}
         });
     </script>
 
