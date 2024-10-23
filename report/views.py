@@ -2,8 +2,6 @@
 
 from datetime import datetime, timedelta
 import logging
-from pyexpat.errors import messages
-
 from django.core.exceptions import PermissionDenied
 from django.http import (
     HttpResponse,
@@ -19,6 +17,8 @@ from googleapiclient.discovery import build
 from audit.models import AuditDashboard
 from client.models import ClientOnboarding
 from report.models import Report
+from django.contrib import messages
+
 
 logger = logging.getLogger(__name__)
 
@@ -108,15 +108,10 @@ def client_portal(request, client_id):
         client=client, defaults={'title': f"{client.business_name} Report"}
     )
 
-    # Fetch the audit dashboard for this specific client using the model, not the view
-    audit_dashboard = AuditDashboard.objects.filter(user=client.user).first()
+    # Fetch the audit dashboard associated with the client
+    audit_dashboard = AuditDashboard.objects.filter(client=client).first()
 
-    # Handle case where no audit dashboard exists for this client
-    if not audit_dashboard:
-        messages.error(request, "No audit dashboard available for this client.")
-        return redirect('some_default_view')  # Redirect to a default page or handle error
-
-    # Define the available report types for the client
+    # Define the available report types for the client, regardless of audit dashboard availability
     report_types = [
         {
             'name': 'Google Search Console',
@@ -136,17 +131,27 @@ def client_portal(request, client_id):
         {
             'name': 'Website Audit',
             'report_type': 'website_audit',
-            'url': reverse('load_dashboard', kwargs={'id': audit_dashboard.id}),  # Corrected here
+            # Use the audit_dashboard variable if it exists, otherwise use '#'
+            'url': reverse('load_dashboard', kwargs={'id': audit_dashboard.id}) if audit_dashboard else '#',
         },
     ]
 
-    # Pass the client, report, and report types to the template
+    # Handle case where no audit dashboard exists for this client
+    if not audit_dashboard:
+        messages.error(request, "No audit dashboard available for this client.")
+        # No redirect; just return the current page with the message, but keep report types
+        return render(
+            request,
+            'report/landing.html',
+            {'client': client, 'report': report, 'report_types': report_types}
+        )
+
+    # Pass the client, report, and report types to the template if everything is fine
     return render(
         request,
         'report/landing.html',
         {'client': client, 'report': report, 'report_types': report_types},
     )
-
 
 
 def client_list(request):

@@ -32,6 +32,7 @@ from django.views.decorators.csrf import csrf_exempt
 from requests import Timeout
 import requests
 
+from google_auth import SERVICE_ACCOUNT_FILE
 from keywords.models import KeywordResearchDashboard
 
 from .filters import UploadedFileFilter
@@ -69,7 +70,6 @@ root_logger.addHandler(console_handler)
 GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
 
 # Paths to service account key JSON files
-SERVICE_ACCOUNT_DRIVE_FILE = r'C:\Users\bem\Desktop\credentials\drive_service_account.json'  # Update with your path
 SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'  # Update with your path
 
 def get_drive_credentials():
@@ -77,7 +77,7 @@ def get_drive_credentials():
     SCOPES = ['https://www.googleapis.com/auth/drive']
     try:
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_DRIVE_FILE, scopes=SCOPES
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES
         )
         return credentials
     except Exception as e:
@@ -89,7 +89,7 @@ def get_search_console_credentials():
     SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
     try:
         credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE, scopes=SCOPES
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES
         )
         return credentials
     except Exception as e:
