@@ -1,0 +1,459 @@
+<!-- templates/report/search_console_detail.html -->
+
+{% load static %}  <!-- Load static files -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ client.title }} - Google Search Console Report</title>
+    
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Additional CSS if needed -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    
+    <!-- CSRF Token for AJAX requests if necessary -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body class="bg-gray-900 text-white">
+
+    <div class="container mx-auto mt-10">
+    
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-white">{{ client.title }} (Google Search Console)</h1>
+            <!-- Date Filter and Compare Button -->
+            <div class="flex items-center space-x-4">
+                <form method="GET" class="flex items-center space-x-4">
+                    <!-- Preserve existing GET parameters -->
+                    <input type="hidden" name="date_range" value="{{ date_range }}">
+                    <input type="hidden" name="start_date" value="{{ start_date }}">
+                    <input type="hidden" name="end_date" value="{{ end_date }}">
+    
+                    {% if compare %}
+                        <input type="hidden" name="compare" value="true">
+                    {% endif %}
+    
+                    <!-- Date Range Selector -->
+                    <label for="date-range" class="text-gray-200 font-semibold">Date Range:</label>
+                    <select id="date-range" name="date_range" class="bg-gray-800 text-white py-2 px-4 rounded-md">
+                        <option value="7" {% if date_range == '7' %}selected{% endif %}>Last 7 Days</option>
+                        <option value="14" {% if date_range == '14' %}selected{% endif %}>Last 14 Days</option>
+                        <option value="28" {% if date_range == '28' %}selected{% endif %}>Last 28 Days</option>
+                        <option value="30" {% if date_range == '30' %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if date_range == '90' %}selected{% endif %}>Last 90 Days</option>
+                        <option value="180" {% if date_range == '180' %}selected{% endif %}>Last 6 Months</option>
+                        <option value="365" {% if date_range == '365' %}selected{% endif %}>Last 12 Months</option>
+                        <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom</option>
+                    </select>
+    
+                    <!-- Custom Date Range Inputs (Visible Only When 'Custom' is Selected) -->
+                    <div id="custom-date-range" class="{% if date_range != 'custom' %}hidden{% endif %} flex space-x-4">
+                        <input type="date" id="start-date" name="start_date" value="{{ start_date }}" class="bg-gray-800 text-white py-2 px-4 rounded-md">
+                        <input type="date" id="end-date" name="end_date" value="{{ end_date }}" class="bg-gray-800 text-white py-2 px-4 rounded-md">
+                    </div>
+    
+                    <!-- Compare/Disable Compare Button -->
+                    {% if compare %}
+                        <a href="{% url 'google_search_console_report' client.id %}?date_range={{ date_range }}&start_date={{ start_date }}&end_date={{ end_date }}" class="bg-gray-600 text-white py-2 px-4 rounded-md">
+                            Disable Compare
+                        </a>
+                    {% else %}
+                        <button type="submit" name="compare" value="true" class="bg-blue-600 text-white py-2 px-4 rounded-md">
+                            Compare
+                        </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    
+        <!-- Cards Section for Overview Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <!-- Card for Total Clicks -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-200">Total Clicks</h2>
+                        <p class="text-4xl font-bold text-white">{{ total_clicks }}</p>
+                    </div>
+                    {% if compare %}
+                        <div class="flex items-center ml-4">
+                            {% if delta_total_clicks > 0 %}
+                                <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h3V6a1 1 0 112 0v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-green-500 ml-1">+{{ delta_total_clicks }}</span>
+                            {% elif delta_total_clicks < 0 %}
+                                <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M14 10a1 1 0 01-1 1H10v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 112 0v3h3a1 1 0 011 1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-red-500 ml-1">{{ delta_total_clicks }}</span>
+                            {% else %}
+                                <span class="text-gray-400 ml-1">0</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% if compare %}
+                    <!-- Placeholder for Small Graph -->
+                    <div class="mt-4">
+                        <canvas id="totalClicksChart" class="w-full h-64"></canvas>
+                    </div>
+                {% endif %}
+            </div>
+    
+            <!-- Card for Total Impressions -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-200">Total Impressions</h2>
+                        <p class="text-4xl font-bold text-white">{{ total_impressions }}</p>
+                    </div>
+                    {% if compare %}
+                        <div class="flex items-center ml-4">
+                            {% if delta_total_impressions > 0 %}
+                                <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h3V6a1 1 0 112 0v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-green-500 ml-1">+{{ delta_total_impressions }}</span>
+                            {% elif delta_total_impressions < 0 %}
+                                <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M14 10a1 1 0 01-1 1H10v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 112 0v3h3a1 1 0 011 1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-red-500 ml-1">{{ delta_total_impressions }}</span>
+                            {% else %}
+                                <span class="text-gray-400 ml-1">0</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% if compare %}
+                    <!-- Placeholder for Small Graph -->
+                    <div class="mt-4">
+                        <canvas id="totalImpressionsChart" class="w-full h-64"></canvas>
+                    </div>
+                {% endif %}
+            </div>
+    
+            <!-- Card for CTR -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-200">CTR</h2>
+                        <p class="text-4xl font-bold text-white">{{ total_ctr|floatformat:2 }}%</p>
+                    </div>
+                    {% if compare %}
+                        <div class="flex items-center ml-4">
+                            {% if delta_total_ctr > 0 %}
+                                <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h3V6a1 1 0 112 0v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-green-500 ml-1">+{{ delta_total_ctr|floatformat:2 }}%</span>
+                            {% elif delta_total_ctr < 0 %}
+                                <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M14 10a1 1 0 01-1 1H10v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 112 0v3h3a1 1 0 011 1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-red-500 ml-1">{{ delta_total_ctr|floatformat:2 }}%</span>
+                            {% else %}
+                                <span class="text-gray-400 ml-1">0%</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% if compare %}
+                    <!-- Placeholder for Small Graph -->
+                    <div class="mt-4">
+                        <canvas id="totalCtrChart" class="w-full h-64"></canvas>
+                    </div>
+                {% endif %}
+            </div>
+    
+            <!-- Card for Average Position -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-200">Average Position</h2>
+                        <p class="text-4xl font-bold text-white">{{ avg_position|floatformat:2 }}</p>
+                    </div>
+                    {% if compare %}
+                        <div class="flex items-center ml-4">
+                            {% if delta_avg_position > 0 %}
+                                <svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M14 10a1 1 0 01-1 1H10v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 112 0v3h3a1 1 0 011 1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-red-500 ml-1">+{{ delta_avg_position|floatformat:2 }}</span>
+                            {% elif delta_avg_position < 0 %}
+                                <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h3V6a1 1 0 112 0v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-green-500 ml-1">{{ delta_avg_position|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-gray-400 ml-1">0</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% if compare %}
+                    <!-- Placeholder for Small Graph -->
+                    <div class="mt-4">
+                        <canvas id="avgPositionChart" class="w-full h-64"></canvas>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    
+        <!-- Header for Top 10 Queries Generating Most Traffic -->
+        <h2 class="text-2xl font-bold mb-4 text-white">Top 10 Queries Generating Most Traffic</h2>
+    
+        <!-- Table for Top 10 Queries -->
+        <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-gray-800 rounded-lg shadow-md table-fixed">
+                <colgroup>
+                    <col class="w-1/3"> <!-- Query -->
+                    <col class="w-1/6"> <!-- Clicks -->
+                    <col class="w-1/6"> <!-- Impressions -->
+                    <col class="w-1/6"> <!-- CTR -->
+                    <col class="w-1/6"> <!-- Position -->
+                    {% if compare %}
+                        <col class="w-1/6"> <!-- Delta Clicks -->
+                        <col class="w-1/6"> <!-- Delta Impressions -->
+                        <col class="w-1/6"> <!-- Delta CTR -->
+                        <col class="w-1/6"> <!-- Delta Position -->
+                    {% endif %}
+                </colgroup>
+                <thead class="text-sm">
+                    <tr class="text-left text-gray-400">
+                        <th class="py-3 px-6">Query</th>
+                        <th class="py-3 px-6">Clicks</th>
+                        <th class="py-3 px-6">Impressions</th>
+                        <th class="py-3 px-6">CTR</th>
+                        <th class="py-3 px-6">Position</th>
+                        {% if compare %}
+                            <th class="py-3 px-6">Δ Clicks</th>
+                            <th class="py-3 px-6">Δ Impressions</th>
+                            <th class="py-3 px-6">Δ CTR</th>
+                            <th class="py-3 px-6">Δ Position</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for row in top_queries %}
+                    <tr class="border-t border-gray-700 text-gray-300">
+                        <td class="py-3 px-6">{{ row.query }}</td>
+                        <td class="py-3 px-6">{{ row.clicks }}</td>
+                        <td class="py-3 px-6">{{ row.impressions }}</td>
+                        <td class="py-3 px-6">{{ row.ctr|floatformat:2 }}%</td>
+                        <td class="py-3 px-6">{{ row.position|floatformat:2 }}</td>
+                        {% if compare %}
+                            <td class="py-3 px-6">
+                                {% if row.delta_clicks > 0 %}
+                                    <span class="text-green-500">+{{ row.delta_clicks }}</span>
+                                {% elif row.delta_clicks < 0 %}
+                                    <span class="text-red-500">{{ row.delta_clicks }}</span>
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6">
+                                {% if row.delta_impressions > 0 %}
+                                    <span class="text-green-500">+{{ row.delta_impressions }}</span>
+                                {% elif row.delta_impressions < 0 %}
+                                    <span class="text-red-500">{{ row.delta_impressions }}</span>
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6">
+                                {% if row.delta_ctr > 0 %}
+                                    <span class="text-green-500">+{{ row.delta_ctr|floatformat:2 }}%</span>
+                                {% elif row.delta_ctr < 0 %}
+                                    <span class="text-red-500">{{ row.delta_ctr|floatformat:2 }}%</span>
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6">
+                                {% if row.delta_position > 0 %}
+                                    <span class="text-red-500">+{{ row.delta_position|floatformat:2 }}</span>
+                                {% elif row.delta_position < 0 %}
+                                    <span class="text-green-500">{{ row.delta_position|floatformat:2 }}</span>
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+        <!-- Header for Top 10 Performing Pages -->
+        <h2 class="text-2xl font-bold mb-4 text-white">Top 10 Performing Pages</h2>
+    
+        <!-- Table for Top 10 Performing Pages -->
+        <div class="overflow-x-auto mb-8">
+            <table class="min-w-full bg-gray-800 rounded-lg shadow-md table-fixed">
+                <colgroup>
+                    <col class="w-1/3"> <!-- URL -->
+                    <col class="w-1/6"> <!-- Clicks -->
+                    <col class="w-1/6"> <!-- Impressions -->
+                    <col class="w-1/6"> <!-- CTR -->
+                    <col class="w-1/6"> <!-- Position -->
+                    {% if compare %}
+                        <col class="w-1/6"> <!-- Delta Clicks -->
+                        <col class="w-1/6"> <!-- Delta Impressions -->
+                        <col class="w-1/6"> <!-- Delta CTR -->
+                        <col class="w-1/6"> <!-- Delta Position -->
+                    {% endif %}
+                </colgroup>
+                <thead class="text-sm">
+                    <tr class="text-left text-gray-400">
+                        <th class="py-3 px-6">URL</th>
+                        <th class="py-3 px-6">Clicks</th>
+                        <th class="py-3 px-6">Impressions</th>
+                        <th class="py-3 px-6">CTR</th>
+                        <th class="py-3 px-6">Position</th>
+                        {% if compare %}
+                            <th class="py-3 px-6">Δ Clicks</th>
+                            <th class="py-3 px-6">Δ Impressions</th>
+                            <th class="py-3 px-6">Δ CTR</th>
+                            <th class="py-3 px-6">Δ Position</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for row in top_pages %}
+                    <tr class="border-t border-gray-700 text-gray-300">
+                        <td class="py-3 px-6">{{ row.url }}</td>
+                        <td class="py-3 px-6">{{ row.clicks }}</td>
+                        <td class="py-3 px-6">{{ row.impressions }}</td>
+                        <td class="py-3 px-6">{{ row.ctr|floatformat:2 }}%</td>
+                        <td class="py-3 px-6">{{ row.position|floatformat:2 }}</td>
+                        {% if compare %}
+                            <td class="py-3 px-6">
+                                {% if row.delta_clicks > 0 %}
+                                    <span class="text-green-500">+{{ row.delta_clicks }}</span>
+                                {% elif row.delta_clicks < 0 %}
+                                    <span class="text-red-500">{{ row.delta_clicks }}</span>
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6">
+                                {% if row.delta_impressions > 0 %}
+                                    <span class="text-green-500">+{{ row.delta_impressions }}</span>
+                                {% elif row.delta_impressions < 0 %}
+                                    <span class="text-red-500">{{ row.delta_impressions }}</span>
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6">
+                                {% if row.delta_ctr > 0 %}
+                                    <span class="text-green-500">+{{ row.delta_ctr|floatformat:2 }}%</span>
+                                {% elif row.delta_ctr < 0 %}
+                                    <span class="text-red-500">{{ row.delta_ctr|floatformat:2 }}%</span>
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6">
+                                {% if row.delta_position > 0 %}
+                                    <span class="text-red-500">+{{ row.delta_position|floatformat:2 }}</span>
+                                {% elif row.delta_position < 0 %}
+                                    <span class="text-green-500">{{ row.delta_position|floatformat:2 }}</span>
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+        <!-- Header for Top 10 Pages That Lost Traffic -->
+        <h2 class="text-2xl font-bold mb-4 text-white">Top 10 Pages That Lost Traffic</h2>
+    
+        <!-- Table for Top 10 Pages That Lost Traffic -->
+        <div class="overflow-x-auto mb-16">
+            <table class="min-w-full bg-gray-800 rounded-lg shadow-md table-fixed">
+                <colgroup>
+                    <col class="w-1/4"> <!-- URL -->
+                    <col class="w-1/12"> <!-- Traffic Loss (Clicks) -->
+                    <col class="w-1/12"> <!-- Current Clicks -->
+                    <col class="w-1/12"> <!-- Previous Clicks -->
+                    <col class="w-1/12"> <!-- Impressions -->
+                    <col class="w-1/12"> <!-- CTR -->
+                    <col class="w-1/12"> <!-- Position -->
+                </colgroup>
+                <thead class="text-sm">
+                    <tr class="text-left text-gray-400">
+                        <th class="py-3 px-6">URL</th>
+                        <th class="py-3 px-6">Traffic Loss (Clicks)</th>
+                        <th class="py-3 px-6">Current Clicks</th>
+                        <th class="py-3 px-6">Previous Clicks</th>
+                        <th class="py-3 px-6">Impressions</th>
+                        <th class="py-3 px-6">CTR</th>
+                        <th class="py-3 px-6">Position</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm ">
+                    {% for row in traffic_loss_data %}
+                    <tr class="border-t border-gray-700 text-gray-300">
+                        <td class="py-3 px-6">{{ row.url }}</td>
+                        <td class="py-3 px-6">{{ row.clicks_loss }}</td>
+                        <td class="py-3 px-6">{{ row.current_clicks }}</td>
+                        <td class="py-3 px-6">{{ row.prev_clicks }}</td>
+                        <td class="py-3 px-6">{{ row.impressions }}</td>
+                        <td class="py-3 px-6">{{ row.ctr|floatformat:2 }}%</td>
+                        <td class="py-3 px-6">{{ row.position|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+    </div>
+    
+    <!-- Pass Primitive and Simple Data to JavaScript -->
+    <script>
+        window.searchConsoleData = {
+            compare: {{ compare|yesno:"true,false" }},
+            date_range: "{{ date_range }}",
+            start_date: "{{ start_date }}",
+            end_date: "{{ end_date }}",
+            total_clicks: {{ total_clicks }},
+            previous_total_clicks: {{ previous_total_clicks|default:0 }},
+            total_impressions: {{ total_impressions }},
+            previous_total_impressions: {{ previous_total_impressions|default:0 }},
+            total_ctr: {{ total_ctr|floatformat:2 }},
+            previous_total_ctr: {{ previous_total_ctr|floatformat:2|default:0 }},
+            avg_position: {{ avg_position|floatformat:2 }},
+            previous_avg_position: {{ previous_avg_position|floatformat:2|default:0 }}
+        };
+    </script>
+    
+    <!-- Pass Complex Data Structures Using json_script -->
+    {{ top_queries|json_script:"top-queries-data" }}
+    {{ top_pages|json_script:"top-pages-data" }}
+    {{ traffic_loss_data|json_script:"traffic-loss-data" }}
+    
+    <!-- Include Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Include External JavaScript File -->
+    <script src="{% static 'js/search_console_detail.js' %}"></script>
+    
+    <!-- Optional: Include any additional JavaScript files or inline scripts -->
+    <script>
+        // Initialize charts or any other JavaScript functionality here
+    </script>
+    
+</body>
+</html>

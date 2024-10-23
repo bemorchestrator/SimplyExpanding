@@ -1,10 +1,8 @@
 # views.py
+
 import os
 import csv
 import re
-from uuid import uuid4
-from django.urls import reverse
-import requests
 import logging
 import tempfile
 import json
@@ -13,34 +11,44 @@ import cloudscraper
 import certifi
 import ssl
 from urllib.parse import urlparse
+from uuid import uuid4
+from datetime import datetime, timedelta
 
-from requests.exceptions import SSLError, ConnectionError, Timeout, RequestException
+from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import HttpResponseBadRequest, JsonResponse
+from django.http import (
+    HttpResponseBadRequest,
+    JsonResponse,
+    HttpResponseServerError,
+)
 from django.views.decorators.csrf import csrf_protect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, ProtectedError
 from django.template.loader import render_to_string
+from django.views.decorators.http import require_POST
+from django_tables2 import RequestConfig
 from django.views.decorators.csrf import csrf_exempt
+from requests import Timeout
+import requests
 
 from keywords.models import KeywordResearchDashboard
 
-from .filters import UploadedFileFilter 
-from .forms import AuditDashboardForm, FileUploadForm, SitemapForm, UploadedFileForm
+from .filters import UploadedFileFilter
+from .forms import (
+    AuditDashboardForm,
+    FileUploadForm,
+    SitemapForm,
+    UploadedFileForm,
+)
 from .models import AuditDashboard, UploadedFile, SitemapURL, Sitemap
-from .google_drive_utils import upload_file_to_drive
-from google_auth import get_credentials
+from .utils import identify_csv_type, normalize_page_path
+from .tables import UploadedFileTable
+
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from django_tables2 import RequestConfig
-from .tables import UploadedFileTable 
-from .utils import identify_csv_type, normalize_page_path
-from google.oauth2.credentials import Credentials
-from datetime import datetime, timedelta
+from google.oauth2 import service_account
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from django.views.decorators.http import require_POST
-from django.db.models import ProtectedError
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +68,37 @@ root_logger.addHandler(console_handler)
 # Define the fixed folder ID for Google Drive
 GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
 
+# Paths to service account key JSON files
+SERVICE_ACCOUNT_DRIVE_FILE = r'C:\Users\bem\Desktop\credentials\drive_service_account.json'  # Update with your path
+SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'  # Update with your path
+
+def get_drive_credentials():
+    """Get Google Drive credentials using service account."""
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_DRIVE_FILE, scopes=SCOPES
+        )
+        return credentials
+    except Exception as e:
+        logger.error(f"Failed to load Drive service account credentials: {e}")
+        return None
+
+def get_search_console_credentials():
+    """Get Google Search Console credentials using service account."""
+    SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE, scopes=SCOPES
+        )
+        return credentials
+    except Exception as e:
+        logger.error(f"Failed to load Search Console service account credentials: {e}")
+        return None
 
 def audit_result(request):
-    # Order the audit_data queryset by 'id' to ensure consistent ordering across pages
-    audit_data = UploadedFile.objects.all().order_by('uploaded_at')  # You can replace 'id' with any other field if needed
+    # Order the audit_data queryset by 'uploaded_at' to ensure consistent ordering across pages
+    audit_data = UploadedFile.objects.all().order_by('uploaded_at')  # You can replace 'uploaded_at' with any other field if needed
     logging.info(f"Audit data retrieved for dashboard: {len(audit_data)} files.")
 
     # Pagination Logic
@@ -96,7 +131,6 @@ def audit_result(request):
         'rows_per_page': rows_per_page,  # Pass rows_per_page to the template
     })
 
-
 def normalize_url(url):
     url = url.strip().lower()  # Convert to lowercase and strip spaces
     parsed_url = urlparse(url)
@@ -105,7 +139,6 @@ def normalize_url(url):
         netloc = netloc[4:]
     path = parsed_url.path.rstrip('/')
     return netloc + path
-
 
 def upload_file(request):
     # Retrieve the current dashboard from the session
@@ -145,11 +178,11 @@ def upload_file(request):
                     logging.info(f"Temporary file created: {temp_file_path}")
 
                 # Step 1: Get Google Drive credentials
-                creds = get_credentials(request, 'drive')
+                creds = get_drive_credentials()
                 if not creds:
                     messages.error(request, "Google Drive authentication failed.")
                     logging.error("Google Drive authentication failed.")
-                    return redirect('authenticate_user')
+                    return redirect('audit_dashboard')
 
                 # Step 2: Upload the file to Google Drive
                 try:
@@ -177,7 +210,7 @@ def upload_file(request):
 
                     # Step 3: Process CSV data before storing in the database
                     file.seek(0)  # Reset file pointer to process CSV
-                    records_processed = process_csv_file(file, audit_dashboard) 
+                    records_processed = process_csv_file(file, audit_dashboard)
 
                     if records_processed > 0:
                         messages.success(request, "File uploaded successfully and audit data processed.")
@@ -215,46 +248,39 @@ def upload_file(request):
 
     return render(request, 'audit/upload.html', {'form': form})
 
-
-
-
-
-
-
 def fetch_search_console_data(creds, site_url, start_date, end_date):
     try:
-        service = build('searchconsole', 'v1', credentials=creds)
-        
+        service = build('webmasters', 'v3', credentials=creds)
+
         # Define the query for search analytics
-        request = {
+        request_body = {
             'startDate': start_date,
             'endDate': end_date,
             'dimensions': ['page'],
             'rowLimit': 1000  # Adjust the row limit as needed
         }
-        
+
         # Make the API request to get the search analytics data
-        response = service.searchanalytics().query(siteUrl=site_url, body=request).execute()
+        response = service.searchanalytics().query(siteUrl=site_url, body=request_body).execute()
         return response.get('rows', [])
-    
+
     except Exception as e:
         logging.error(f"Error fetching data from Google Search Console: {e}")
         return []
 
-
 def populate_audit_dashboard_with_search_console_data(request):
     site_url = 'https://www.example.com'
-    
+
     # Calculate 6 months ago from today
     end_date = datetime.today().strftime('%Y-%m-%d')
     start_date = (datetime.today() - timedelta(days=180)).strftime('%Y-%m-%d')  # Approx. 6 months (180 days)
 
     # Fetch Google Search Console credentials
-    creds = get_credentials(request)
+    creds = get_search_console_credentials()
     if not creds:
         messages.error(request, "Google Search Console authentication failed.")
         logging.error("Google Search Console authentication failed.")
-        return redirect('authenticate_user')
+        return redirect('audit_dashboard')
 
     try:
         # Fetch data using 6-month date range
@@ -263,7 +289,7 @@ def populate_audit_dashboard_with_search_console_data(request):
         logging.error(f"Error fetching data from Google Search Console: {e}")
         messages.error(request, "An error occurred while fetching data from Google Search Console.")
         return redirect('audit_dashboard')
-    
+
     if not rows:
         logging.info(f"No data returned for {site_url} between {start_date} and {end_date}.")
         messages.error(request, "No data found in the last 6 months.")
@@ -297,7 +323,6 @@ def populate_audit_dashboard_with_search_console_data(request):
     messages.success(request, "Audit data updated with the last 6 months of Search Console data.")
     return redirect('audit_dashboard')
 
-
 def scrape_sitemap(sitemap_url):
     """
     Scrapes the sitemap from the given URL.
@@ -324,9 +349,9 @@ def scrape_sitemap(sitemap_url):
         # Parse the sitemap XML
         return parse_sitemap(response.content, sitemap_url)
 
-    except (SSLError, ConnectionError, Timeout) as e:
+    except (ssl.SSLError, ConnectionError, Timeout) as e:
         logging.error(f"cloudscraper failed for {sitemap_url}. Error: {e}")
-    except RequestException as e:
+    except requests.exceptions.RequestException as e:
         logging.error(f"RequestException with cloudscraper for {sitemap_url}. Error: {e}")
 
     # Fallback attempt with requests, disabling SSL verification
@@ -340,15 +365,14 @@ def scrape_sitemap(sitemap_url):
         # Parse the sitemap XML
         return parse_sitemap(response.content, sitemap_url)
 
-    except (SSLError, ConnectionError, Timeout) as e:
+    except (ssl.SSLError, ConnectionError, Timeout) as e:
         logging.error(f"requests failed for {sitemap_url}. Error: {e}")
-    except RequestException as e:
+    except requests.exceptions.RequestException as e:
         logging.error(f"RequestException with requests for {sitemap_url}. Error: {e}")
 
     # If both attempts fail, return None
     logging.warning(f"Both cloudscraper and requests failed to fetch the sitemap: {sitemap_url}")
     return None
-
 
 def parse_sitemap(content, sitemap_url):
     """
@@ -383,7 +407,6 @@ def parse_sitemap(content, sitemap_url):
         logging.error(f"XML parsing error for sitemap: {sitemap_url}. Error: {parse_err}")
         return None
 
-
 @csrf_protect
 def crawl_sitemaps(request):
     crawled_results = {}
@@ -408,7 +431,7 @@ def crawl_sitemaps(request):
 
                             # Create Sitemap entry
                             sitemap = Sitemap.objects.create(url=sitemap_url)
-                            
+
                             # Save the normalized sitemap URLs
                             sitemap_urls_bulk = [
                                 SitemapURL(sitemap=sitemap, url=url) for url in normalized_urls
@@ -491,7 +514,6 @@ def crawl_sitemaps(request):
         'sitemaps': page_obj
     })
 
-
 @csrf_protect
 def delete_sitemap(request, sitemap_id):
     if request.method == 'POST':
@@ -522,18 +544,21 @@ def delete_sitemap(request, sitemap_id):
             return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
-
-def update_in_sitemap_status(audit_dashboard):
+def update_in_sitemap_status(audit_dashboard=None):
     """
     Updates the 'in_sitemap' field in UploadedFile by checking
     if the 'url' exists in the crawled SitemapURL entries.
+    If audit_dashboard is provided, only updates files associated with that dashboard.
     """
     # Fetch all sitemap URLs and normalize them for comparison
     sitemap_urls = SitemapURL.objects.values_list('url', flat=True)
     normalized_sitemap_urls = set(normalize_url(url) for url in sitemap_urls)
 
-    # Fetch all audit files associated with the dashboard
-    audit_files = UploadedFile.objects.filter(dashboard=audit_dashboard)
+    # Fetch audit files
+    if audit_dashboard:
+        audit_files = UploadedFile.objects.filter(dashboard=audit_dashboard)
+    else:
+        audit_files = UploadedFile.objects.all()
 
     # Batch update to avoid too many save() calls in a loop
     bulk_updates = []
@@ -553,24 +578,21 @@ def update_in_sitemap_status(audit_dashboard):
     if bulk_updates:
         UploadedFile.objects.bulk_update(bulk_updates, ['in_sitemap'])
 
-
-
 def get_page_path(url):
     """
     Extracts the path from a URL. If the URL has no path, returns '/'.
     Handles different URL formats, including those with or without trailing slashes.
     """
     logging.debug(f"Extracting path from URL: {url}")
-    
+
     # Regular expression to extract the part of the URL after the domain
     pattern = r'https?://[^/]+(/.*)?'
     match = re.match(pattern, url)
-    
+
     path = match.group(1) if match and match.group(1) else '/'
     logging.debug(f"Extracted path: {path}")
-    
-    return path
 
+    return path
 
 def process_csv_file(file, audit_dashboard):
     records_processed = 0  # Initialize the counter
@@ -951,12 +973,12 @@ def process_csv_file(file, audit_dashboard):
         logging.error(f"Error while processing CSV file: {e}")
         return records_processed  # Return 0
 
-
-
-
-
 def audit_dashboard(request):
-    # Apply the UploadedFileFilter to the query
+    """
+    View to display the audit dashboard when no specific dashboard is loaded.
+    Shows UploadedFile entries that are not associated with any AuditDashboard.
+    """
+    # Apply the UploadedFileFilter to the queryset
     filter = UploadedFileFilter(request.GET, queryset=UploadedFile.objects.filter(dashboard__isnull=True).order_by('id'))
     filtered_qs = filter.qs  # This is the filtered queryset
 
@@ -975,28 +997,28 @@ def audit_dashboard(request):
     table = UploadedFileTable(page_obj)
     RequestConfig(request, paginate=False).configure(table)
 
-    # Handle form submission for category and action_choice
-    if request.method == 'POST':
-        form = UploadedFileForm(request.POST)
-        if form.is_valid():
-            form.save()
+    # Instantiate the forms
+    uploaded_file_form = UploadedFileForm()
+    audit_dashboard_form = AuditDashboardForm()  # Instantiate AuditDashboardForm
+
+    # Handle form submission for category and action_choice via AJAX
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        uploaded_file_form = UploadedFileForm(request.POST)
+        if uploaded_file_form.is_valid():
+            uploaded_file_form.save()
             return JsonResponse({'success': True, 'message': 'Form submitted successfully.'})
         else:
             return JsonResponse({'success': False, 'error': 'Invalid form data.'}, status=400)
-    else:
-        form = UploadedFileForm()
 
-    # Render the template with the paginated table, form, and filters
+    # Render the template with the paginated table, forms, and filters
     return render(request, 'audit/audit_dashboard.html', {
         'dashboard': None,  # No dashboard is loaded
         'table': table,
-        'form': form,
+        'uploaded_file_form': uploaded_file_form,  # Renamed for clarity
+        'audit_form': audit_dashboard_form,        # Pass AuditDashboardForm as 'audit_form'
         'page_obj': page_obj,
         'filter': filter,  # Pass the filter to the template
     })
-
-
-
 
 @csrf_protect
 @require_POST
@@ -1031,7 +1053,6 @@ def delete_uploaded_files(request, dashboard_id=None):
         logger.error(f"Error deleting UploadedFile records: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-
 @csrf_protect
 def update_action_choice(request):
     if request.method == 'POST':
@@ -1051,7 +1072,6 @@ def update_action_choice(request):
 
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
-
 @csrf_protect
 def update_category(request):
     if request.method == 'POST':
@@ -1067,29 +1087,29 @@ def update_category(request):
             audit_entry = UploadedFile.objects.get(id=audit_id)
             audit_entry.category = category
             audit_entry.save()
-            
+
             # Return a success response as JSON
             return JsonResponse({'success': True, 'message': 'Category updated successfully.'})
-        
+
         except UploadedFile.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Audit entry not found.'}, status=404)
 
     # Return an error if the request is not a POST request
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
-
 @csrf_protect
 def save_audit_dashboard(request):
     if request.method == 'POST':
         form = AuditDashboardForm(request.POST)
-        
+
         if form.is_valid():
             dashboard_name = form.cleaned_data['name']
             overwrite = form.cleaned_data.get('overwrite_existing', False)
-            
+            client = form.cleaned_data.get('client')  # Get the optional client selection
+
             # Check if a dashboard with the same name already exists
             existing_dashboard = AuditDashboard.objects.filter(name=dashboard_name).first()
-            
+
             if existing_dashboard:
                 if overwrite:
                     # If overwriting is allowed, delete the old dashboard
@@ -1104,7 +1124,8 @@ def save_audit_dashboard(request):
             dashboard = AuditDashboard.objects.create(
                 user=request.user,  # Associate the dashboard with the current user
                 name=dashboard_name,
-                description=form.cleaned_data.get('description', '')
+                description=form.cleaned_data.get('description', ''),
+                client=client  # Optionally link the client if one is selected
             )
 
             # Move current unsaved data (those without a dashboard) to the new dashboard
@@ -1133,23 +1154,25 @@ def list_dashboard(request):
         'keyword_research_dashboards': keyword_research_dashboards,  # Pass both to the template
     })
 
-
 def load_dashboard(request, id):
-    # Get the specific dashboard
+    """
+    View to load and display a specific audit dashboard.
+    Associates the current session with the selected dashboard.
+    """
+    # Get the specific dashboard or return 404
     dashboard = get_object_or_404(AuditDashboard, id=id)
     request.session['current_dashboard_id'] = dashboard.id
 
     # Fetch uploaded files related to this dashboard
     uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
 
-    # Apply the UploadedFileFilter to the query
+    # Apply the UploadedFileFilter to the queryset
     filter = UploadedFileFilter(request.GET, queryset=uploaded_files)
     filtered_qs = filter.qs  # This is the filtered queryset
 
     # Pagination Logic
     page_number = request.GET.get('page', 1)
     rows_per_page = 15
-
     paginator = Paginator(filtered_qs, rows_per_page)
 
     try:
@@ -1163,16 +1186,17 @@ def load_dashboard(request, id):
     table = UploadedFileTable(page_obj)
     RequestConfig(request, paginate=False).configure(table)
 
-    # Render the template with the paginated table and filter
+    # Instantiate the AuditDashboardForm (optional: prepopulate if needed)
+    audit_dashboard_form = AuditDashboardForm()
+
+    # Render the template with the paginated table, form, and filter
     return render(request, 'audit/audit_dashboard.html', {
         'dashboard': dashboard,
         'table': table,
+        'audit_form': audit_dashboard_form,  # Pass AuditDashboardForm as 'audit_form'
         'page_obj': page_obj,
         'filter': filter,  # Pass the filter to the template
     })
-
-
-
 
 @csrf_protect
 def delete_dashboard(request, id):
@@ -1188,24 +1212,22 @@ def delete_dashboard(request, id):
             # Log and add a success message for the user
             logging.info(f"Dashboard '{dashboard_name}' deleted successfully.")
             messages.success(request, f"Dashboard '{dashboard_name}' has been deleted successfully.")
-        
+
         except ProtectedError as e:
             # Handle protected relationships
             logging.error(f"ProtectedError: Cannot delete dashboard '{dashboard.name}' due to related records.")
             messages.error(request, f"Cannot delete dashboard '{dashboard.name}' because it has related records.")
-        
+
         except Exception as e:
             # Log the error and add an error message for the user
             logging.error(f"Error deleting dashboard '{dashboard.name}': {e}")
             messages.error(request, f"Failed to delete dashboard '{dashboard.name}': {e}")
-        
+
         # Redirect to the list of saved dashboards
         return redirect('list_dashboard')
-    
+
     # Handle GET requests or other methods by redirecting to the dashboard list
     return redirect('list_dashboard')
-
-
 
 @csrf_protect
 def generate_shareable_link(request, id):
@@ -1224,12 +1246,11 @@ def generate_shareable_link(request, id):
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
 
-
 def shared_dashboard(request, share_token):
     # Retrieve the dashboard using the share token
     dashboard = get_object_or_404(AuditDashboard, share_token=share_token)
     uploaded_files = UploadedFile.objects.filter(dashboard=dashboard)
-    
+
     # Apply the UploadedFileFilter to the query
     filter = UploadedFileFilter(request.GET, queryset=uploaded_files)
     filtered_qs = filter.qs  # This is the filtered queryset
@@ -1244,11 +1265,11 @@ def shared_dashboard(request, share_token):
         page_obj = paginator.get_page(1)
     except EmptyPage:
         page_obj = paginator.get_page(paginator.num_pages)
-    
+
     # Initialize the table with paginated data
     table = UploadedFileTable(page_obj)
     RequestConfig(request, paginate=False).configure(table)
-    
+
     # Render the template with the 'is_shared_view' flag and 'hide_sidebar'
     return render(request, 'audit/shared_dashboard.html', {
         'dashboard': dashboard,

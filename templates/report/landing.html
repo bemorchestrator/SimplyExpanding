@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ client.business_name }}'s Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+</head>
+<body class="bg-gray-900 text-gray-100">
+
+    <div class="min-h-screen flex flex-col items-center justify-center">
+    
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-4">{{ client.business_name }}'s Dashboard</h1>
+            <p class="text-lg">Select a report to view detailed analytics for {{ client.business_name }}.</p>
+        </header>
+
+        <!-- Report cards container -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl">
+            {% for report_type in report_types %}
+            <!-- Dynamic Report Card -->
+            <a href="{{ report_type.url }}" class="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg shadow-lg transition duration-300">
+                <h2 class="text-2xl font-semibold mb-4">{{ report_type.name }}</h2>
+                <p class="text-sm text-gray-400">View the {{ report_type.name }} report for {{ client.business_name }}.</p>
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Show a message if no reports are available -->
+        {% if not report_types %}
+            <p class="text-lg text-gray-400 mt-6">No reports are available for {{ client.business_name }}.</p>
+        {% endif %}
+
+    </div>
+</body>
+</html>

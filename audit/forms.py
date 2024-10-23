@@ -1,4 +1,6 @@
 from django import forms
+
+from client.models import ClientOnboarding
 from .models import AuditDashboard, UploadedFile
 
 
@@ -25,7 +27,16 @@ class SitemapForm(forms.Form):
     )
 
 class AuditDashboardForm(forms.ModelForm):
-    overwrite_existing = forms.BooleanField(required=False, label="Overwrite existing dashboard")
+    overwrite_existing = forms.BooleanField(required=False)
+
     class Meta:
         model = AuditDashboard
-        fields = ['name', 'description']
+        fields = ['name', 'description', 'client']
+        widgets = {
+            'client': forms.Select(attrs={'class': 'form-control', 'placeholder': 'Select a client (optional)'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['client'].queryset = ClientOnboarding.objects.all()  # Load all clients
+        self.fields['client'].required = False  # Make the client optional

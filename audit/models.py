@@ -1,5 +1,7 @@
 from django.db import models
-from django.contrib.auth.models import User  # If you want to track which user created the dashboard
+from django.contrib.auth.models import User
+
+from client.models import ClientOnboarding  # If you want to track which user created the dashboard
 
 class AuditDashboard(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # Optional, to track who created the dashboard
@@ -7,6 +9,7 @@ class AuditDashboard(models.Model):
     description = models.TextField(blank=True, null=True)  # Optional description of the dashboard
     created_at = models.DateTimeField(auto_now_add=True)
     share_token = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    client = models.ForeignKey(ClientOnboarding, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.name

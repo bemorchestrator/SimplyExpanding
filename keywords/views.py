@@ -3,35 +3,49 @@
 import csv
 import json
 import logging
-from statistics import mean
 import tempfile
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render, redirect
+from statistics import mean
+
+import numpy as np
 from django.contrib import messages
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_protect
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
-
-from google_auth import get_credentials
-
-from .models import KeywordResearchDashboard, KeywordResearchEntry
-from audit.models import AuditDashboard, UploadedFile
-from .forms import KeywordDashboardForm
-from keywords.tables import KeywordResearchTable
-from .utils import read_and_identify_csv
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from google.oauth2 import service_account
 from scipy import stats
-import numpy as np
 
+from audit.models import AuditDashboard, UploadedFile
+
+from .forms import KeywordDashboardForm
+from .models import KeywordResearchDashboard, KeywordResearchEntry
+from .utils import read_and_identify_csv
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-
+# Google Drive folder ID
 GOOGLE_DRIVE_FIXED_FOLDER_ID = '1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB'
 
+# Path to your service account key JSON file for Google Drive access
+SERVICE_ACCOUNT_DRIVE_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'  # Update with your actual path
+
+
+def get_drive_credentials():
+    """Get Google Drive credentials using service account."""
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_DRIVE_FILE, scopes=SCOPES
+        )
+        return credentials
+    except Exception as e:
+        logger.error(f"Failed to load Drive service account credentials: {e}")
+        return None
 
 
 def import_update_on_page_entries(dashboard):
@@ -70,14 +84,14 @@ def import_update_on_page_entries(dashboard):
             url=entry.url,
             defaults={
                 'category': entry.category or '',
-                'main_kw': entry.main_kw or '',            
-                'kw_volume': entry.kw_volume,              
-                'kw_ranking': entry.kw_ranking,            
-                'best_kw': entry.best_kw or '',           
-                'best_kw_volume': entry.best_kw_volume,    
-                'best_kw_ranking': entry.best_kw_ranking,   
-                'action_choice': entry.action_choice or '',     
-                'links': entry.links,       
+                'main_kw': entry.main_kw or '',
+                'kw_volume': entry.kw_volume,
+                'kw_ranking': entry.kw_ranking,
+                'best_kw': entry.best_kw or '',
+                'best_kw_volume': entry.best_kw_volume,
+                'best_kw_ranking': entry.best_kw_ranking,
+                'action_choice': entry.action_choice or '',
+                'links': entry.links,
             }
         )
         if created:
@@ -105,6 +119,7 @@ def import_update_on_page_entries(dashboard):
     deleted_count, _ = stale_entries.delete()
     if deleted_count > 0:
         logger.info(f"Deleted {deleted_count} stale KeywordResearchEntry instances from dashboard '{dashboard.name}'.")
+
 
 @csrf_protect
 def create_keyword_dashboard(request):
@@ -161,6 +176,7 @@ def create_keyword_dashboard(request):
 
     return render(request, 'keywords/keyword_research.html', context)
 
+
 def save_keyword_dashboard(request, dashboard_id=None):
     """
     View to save or update an existing KeywordResearchDashboard and import relevant entries.
@@ -214,6 +230,7 @@ def save_keyword_dashboard(request, dashboard_id=None):
         'per_page': per_page,  # Pass current per_page to template for selection
     })
 
+
 def load_keyword_dashboard(request, id):
     """
     View to load a specific KeywordResearchDashboard and import relevant entries.
@@ -247,6 +264,7 @@ def load_keyword_dashboard(request, id):
         'per_page': per_page,  # Current per_page value
     })
 
+
 def delete_keyword_dashboard(request, id):
     """
     View to delete a specific KeywordResearchDashboard.
@@ -260,7 +278,6 @@ def delete_keyword_dashboard(request, id):
         return redirect('list_dashboard')  # Redirect back to the list of dashboards
 
     return redirect('list_dashboard')
-
 
 
 def list_keyword_dashboards(request):
@@ -287,8 +304,6 @@ def list_keyword_dashboards(request):
         'per_page': per_page,
         'per_page_options': [10, 15, 20, 50],
     })
-
-
 
 
 @require_POST
@@ -365,12 +380,6 @@ def upload_keyword_file(request):
     and update the corresponding Primary Keyword in the dashboard.
     """
     try:
-        # Ensure Google credentials are available (reuse from session)
-        creds = get_credentials(request, 'drive')
-        if not creds:
-            messages.error(request, "Google Drive authentication is required.")
-            return redirect('authenticate_user', service='drive')
-
         dashboard_id = request.GET.get('dashboard_id')
         if not dashboard_id:
             messages.error(request, "Dashboard ID is missing.")
@@ -409,14 +418,19 @@ def upload_keyword_file(request):
                 if temp_file_path:
                     process_csv_and_update_entry(temp_file_path, keyword_entry)
                     messages.success(request, "File uploaded and averages calculated successfully.")
-                    
+
+                    # Upload file to Google Drive
+                    creds = get_drive_credentials()
+                    if not creds:
+                        messages.error(request, "Google Drive authentication failed.")
+                        return redirect('upload_keyword_file')
+
+                    upload_file_to_google_drive(creds, temp_file_path, file.name)
+
                     # Redirect to the specific dashboard using its ID
                     return redirect('load_keyword_dashboard', id=dashboard.id)
                 else:
                     messages.error(request, "File could not be processed.")
-
-                # Optionally upload file to Google Drive if needed
-                upload_file_to_google_drive(creds, temp_file_path, file.name)
 
             except KeywordResearchEntry.DoesNotExist:
                 logging.error(f"KeywordResearchEntry with ID {primary_keyword_id} does not exist.")
@@ -438,8 +452,6 @@ def upload_keyword_file(request):
         return redirect(f"{reverse('upload_keyword_file')}?dashboard_id={dashboard_id}")
 
 
-
-
 def upload_file_to_google_drive(creds, temp_file_path, original_filename):
     """
     Upload the processed file to a fixed Google Drive folder using the credentials.
@@ -448,7 +460,7 @@ def upload_file_to_google_drive(creds, temp_file_path, original_filename):
         service = build('drive', 'v3', credentials=creds)
         file_metadata = {
             'name': original_filename,
-            'parents': ['1yEieevdY2PQgJH4eV4QIcdLO5kJ-w1nB']  # Hardcoded Google Drive folder ID
+            'parents': [GOOGLE_DRIVE_FIXED_FOLDER_ID]  # Use the fixed folder ID
         }
         media = MediaFileUpload(temp_file_path, resumable=True)
 
@@ -466,7 +478,6 @@ def upload_file_to_google_drive(creds, temp_file_path, original_filename):
 
     except Exception as e:
         logging.error(f"Error uploading file to Google Drive: {str(e)}")
-
 
 
 def handle_file_upload(file):
@@ -573,7 +584,3 @@ def redirect_with_keyword_entries(request, dashboard_id):
         'keyword_entries': keyword_entries,
         'dashboard_id': dashboard_id
     })
-
-
-
-
