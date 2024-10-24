@@ -23,7 +23,8 @@ from googleapiclient.errors import HttpError
 logger = logging.getLogger(__name__)
 
 # Path to service account key JSON file for Search Console access
-SERVICE_ACCOUNT_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'
+SERVICE_ACCOUNT_FILE = '/var/www/credentials/se_service_account.json'
+
 
 
 def get_search_console_credentials():

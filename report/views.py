@@ -31,7 +31,7 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 # Path to your service account key JSON file for Google Search Console access
-SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'  # Update with your actual path
+SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE = '/var/www/credentials/se_service_account.json'  # Update with your actual path
 
 
 def get_analytics_credentials():

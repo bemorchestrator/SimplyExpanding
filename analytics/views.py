@@ -17,7 +17,8 @@ from google.oauth2 import service_account
 logger = logging.getLogger(__name__)
 
 # Path to service account key JSON file for Analytics access
-SERVICE_ACCOUNT_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'
+SERVICE_ACCOUNT_FILE = '/var/www/credentials/se_service_account.json'
+
 
 def get_analytics_credentials():
     """Get Google Analytics credentials using service account."""
