@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto mt-10 px-4">
+    
+    {% if error_message %}
+    <div class="bg-red-500 text-white p-4 rounded-lg shadow-lg mb-4 flex items-center">
+        <i class="fas fa-exclamation-circle mr-2"></i>{{ error_message }}
+    </div>
+    {% else %}
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-white mb-4 md:mb-0">Google Analytics Report</h1>
+        <!-- Date Range and Compare Options -->
+        <div class="flex items-center space-x-4">
+            <form method="GET" class="flex items-center space-x-4">
+                <!-- Date Range Selector -->
+                <label for="date-range" class="text-gray-200 font-semibold">Date Range:</label>
+                <select id="date-range" name="date_range" class="bg-gray-800 text-white py-2 px-4 rounded-md">
+                    <option value="7" {% if date_range == '7' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="14" {% if date_range == '14' %}selected{% endif %}>Last 14 Days</option>
+                    <option value="30" {% if date_range == '30' %}selected{% endif %}>Last 30 Days</option>
+                    <option value="90" {% if date_range == '90' %}selected{% endif %}>Last 90 Days</option>
+                    <!-- Add more date range options as needed -->
+                </select>
+                <!-- Compare Toggle Button -->
+                {% if compare %}
+                    <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition">
+                        Clear Comparison
+                    </button>
+                {% else %}
+                    <button type="submit" name="compare" value="true" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">
+                        Compare
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Cards Section for Overview Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        <!-- Active Users Card -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+            <h2 class="text-lg font-semibold text-gray-200">Active Users</h2>
+            <p class="text-4xl font-bold text-white">{{ active_users }}</p>
+            {% if compare %}
+                {% if delta_active_users_sign == 'positive' %}
+                <p class="text-sm text-green-500">▲ {{ delta_active_users_value }}</p>
+                {% elif delta_active_users_sign == 'negative' %}
+                <p class="text-sm text-red-500">▼ {{ delta_active_users_value }}</p>
+                {% else %}
+                <p class="text-sm text-gray-500">No change</p>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- New Users Card -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+            <h2 class="text-lg font-semibold text-gray-200">New Users</h2>
+            <p class="text-4xl font-bold text-white">{{ new_users }}</p>
+            {% if compare %}
+                {% if delta_new_users_sign == 'positive' %}
+                <p class="text-sm text-green-500">▲ {{ delta_new_users_value }}</p>
+                {% elif delta_new_users_sign == 'negative' %}
+                <p class="text-sm text-red-500">▼ {{ delta_new_users_value }}</p>
+                {% else %}
+                <p class="text-sm text-gray-500">No change</p>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Sessions Card -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+            <h2 class="text-lg font-semibold text-gray-200">Sessions</h2>
+            <p class="text-4xl font-bold text-white">{{ sessions }}</p>
+            {% if compare %}
+                {% if delta_sessions_sign == 'positive' %}
+                <p class="text-sm text-green-500">▲ {{ delta_sessions_value }}</p>
+                {% elif delta_sessions_sign == 'negative' %}
+                <p class="text-sm text-red-500">▼ {{ delta_sessions_value }}</p>
+                {% else %}
+                <p class="text-sm text-gray-500">No change</p>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Bounce Rate Card -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+            <h2 class="text-lg font-semibold text-gray-200">Bounce Rate</h2>
+            <p class="text-4xl font-bold text-white">{{ bounce_rate|floatformat:2 }}%</p>
+            {% if compare %}
+                {% if delta_bounce_rate_sign == 'positive' %}
+                <p class="text-sm text-green-500">▲ {{ delta_bounce_rate_value|floatformat:2 }}%</p>
+                {% elif delta_bounce_rate_sign == 'negative' %}
+                <p class="text-sm text-red-500">▼ {{ delta_bounce_rate_value|floatformat:2 }}%</p>
+                {% else %}
+                <p class="text-sm text-gray-500">No change</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Graph Section -->
+    <h2 class="text-2xl font-bold mb-4 text-white">Sessions Over Time</h2>
+    <div class="bg-gray-800 p-6 rounded-lg shadow-md mb-10 overflow-x-auto">
+        <!-- Adjusted Chart Size: Reduced height for better layout -->
+        <canvas id="sessionsChart" class="w-full h-48"></canvas>
+    </div>
+
+    <!-- Table for Top Performing Pages -->
+    <h2 class="text-2xl font-bold mb-4 text-white">Top Performing Pages</h2>
+    <div class="overflow-x-auto mb-8">
+        <table class="min-w-full bg-gray-800 rounded-lg shadow-md table-fixed">
+            <thead class="text-sm">
+                <tr class="text-left text-gray-400">
+                    <th class="py-3 px-6">Page Path</th>
+                    <th class="py-3 px-6">Users</th>
+                    <th class="py-3 px-6">Sessions</th>
+                    <th class="py-3 px-6">Bounce Rate</th>
+                    <th class="py-3 px-6">Average Session Duration</th>
+                    {% if compare %}
+                    <th class="py-3 px-6">Δ Users</th>
+                    <th class="py-3 px-6">Δ Sessions</th>
+                    <th class="py-3 px-6">Δ Bounce Rate</th>
+                    <th class="py-3 px-6">Δ Avg Session Duration</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="text-sm text-gray-300">
+                {% for page in top_pages %}
+                <tr class="border-t border-gray-700">
+                    <td class="py-3 px-6">{{ page.pagePath }}</td>
+                    <td class="py-3 px-6">{{ page.activeUsers }}</td>
+                    <td class="py-3 px-6">{{ page.sessions }}</td>
+                    <td class="py-3 px-6">{{ page.bounceRate|floatformat:2 }}%</td>
+                    <td class="py-3 px-6">{{ page.averageSessionDuration }}</td>
+                    {% if compare %}
+                        <td class="py-3 px-6">
+                            {% if page.delta_activeUsers_sign == 'positive' %}
+                                <span class="text-green-500">▲ {{ page.delta_activeUsers_value }}</span>
+                            {% elif page.delta_activeUsers_sign == 'negative' %}
+                                <span class="text-red-500">▼ {{ page.delta_activeUsers_value }}</span>
+                            {% else %}
+                                <span class="text-gray-500">No change</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-6">
+                            {% if page.delta_sessions_sign == 'positive' %}
+                                <span class="text-green-500">▲ {{ page.delta_sessions_value }}</span>
+                            {% elif page.delta_sessions_sign == 'negative' %}
+                                <span class="text-red-500">▼ {{ page.delta_sessions_value }}</span>
+                            {% else %}
+                                <span class="text-gray-500">No change</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-6">
+                            {% if page.delta_bounce_rate_sign == 'positive' %}
+                                <span class="text-green-500">▲ {{ page.delta_bounce_rate_value|floatformat:2 }}%</span>
+                            {% elif page.delta_bounce_rate_sign == 'negative' %}
+                                <span class="text-red-500">▼ {{ page.delta_bounce_rate_value|floatformat:2 }}%</span>
+                            {% else %}
+                                <span class="text-gray-500">No change</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-6">
+                            {% if page.delta_averageSessionDuration_sign == 'positive' %}
+                                <span class="text-green-500">▲ {{ page.delta_averageSessionDuration_value }}</span>
+                            {% elif page.delta_averageSessionDuration_sign == 'negative' %}
+                                <span class="text-red-500">▼ {{ page.delta_averageSessionDuration_value }}</span>
+                            {% else %}
+                                <span class="text-gray-500">No change</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Optional: Add More Sections like Additional Charts Here -->
+
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Graph Rendering Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Prepare data for the Sessions Over Time chart
+            const sessionsChartCtx = document.getElementById('sessionsChart').getContext('2d');
+            const sessionsChart = new Chart(sessionsChartCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ graph_dates|safe }},  // e.g., ["2024-10-01", "2024-10-02", ...]
+                    datasets: [{
+                        label: 'Sessions',
+                        data: {{ graph_sessions|safe }},  // e.g., [120, 150, 130, ...]
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(75, 192, 192, 1)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Allows custom height
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        },
+                        title: {
+                            display: false, // No chart title
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: false, // Removed X axis title
+                            },
+                            ticks: {
+                                color: '#ffffff',
+                            },
+                            grid: {
+                                display: false, // Removed X axis grid lines
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: false, // Removed Y axis title
+                            },
+                            ticks: {
+                                color: '#ffffff',
+                            },
+                            grid: {
+                                display: false, // Removed Y axis grid lines
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+    {% endif %}
+</div>
+{% endblock content %}
