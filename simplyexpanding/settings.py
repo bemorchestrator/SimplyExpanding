@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'django_filters',
     'keywords',
     'report',
+    'analytics',
 ]
 
 MIDDLEWARE = [

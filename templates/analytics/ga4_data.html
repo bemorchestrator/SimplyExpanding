@@ -10,18 +10,18 @@
     <form method="POST" class="mb-6 rounded-lg p-4">
         {% csrf_token %}
         <div class="flex flex-wrap md:flex-row md:items-end gap-4">
-            <!-- Dropdown to Select GA4 Property -->
-            <div class="flex-grow md:flex-1">
-                <label class="block text-gray-300 text-sm font-bold mb-2" for="property_id">Select GA4 Property</label>
-                <select name="property_id" id="property_id" class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline focus:bg-gray-600" required>
-                    <!-- Include the selected property as an option -->
-                    {% if property_id and property_display_name %}
-                        <option value="{{ property_id }}" selected>{{ property_display_name }}</option>
-                    {% else %}
-                        <option value="" disabled selected>Select a Property</option>
-                    {% endif %}
-                    <!-- Options will be populated via JavaScript when dropdown is focused -->
-                </select>
+            <!-- Search Input for GA4 Property -->
+            <div class="flex-grow md:flex-1 relative">
+                <label class="block text-gray-300 text-sm font-bold mb-2" for="property_search">Search GA4 Property</label>
+                <input type="text" id="property_search" name="property_search"
+                       class="shadow appearance-none border border-gray-600 rounded w-full py-2 px-3 bg-gray-700 text-gray-300 leading-tight focus:outline-none focus:shadow-outline"
+                       placeholder="Start typing domain or property name..." autocomplete="off">
+                       
+                <!-- Hidden input to store the selected property ID -->
+                <input type="hidden" id="property_id" name="property_id">
+                
+                <!-- Div to display search results -->
+                <div id="property_results" class="absolute z-10 bg-gray-700 w-full rounded hidden"></div>
             </div>
 
             <!-- Date Range Preset Dropdown -->
@@ -178,8 +178,11 @@
     {% endif %}
 </div>
 
-<!-- JavaScript to toggle the custom date input and export/clear functions -->
+<!-- JavaScript to handle search and toggle custom date input -->
 <script>
+    // Get the URL using Django's URL template tag
+    const searchPropertiesUrl = "{% url 'search_properties' %}";
+
     function toggleCustomDateInput() {
         const dateRange = document.getElementById('date_range').value;
         const customDateInput = document.getElementById('custom_date_input');
@@ -190,45 +193,54 @@
         }
     }
 
-    // JavaScript to fetch properties via AJAX when the dropdown gains focus
+    // JavaScript to handle property search with AJAX
     document.addEventListener('DOMContentLoaded', function() {
-        const propertySelect = document.getElementById('property_id');
-        let propertiesLoaded = false;
+        const searchInput = document.getElementById('property_search');
+        const propertyIdInput = document.getElementById('property_id');
+        const propertyResults = document.getElementById('property_results');
 
-        // Fetch properties only when the dropdown gains focus
-        propertySelect.addEventListener('focus', function() {
-            if (!propertiesLoaded) {
-                fetchProperties();
-                propertiesLoaded = true;
+        searchInput.addEventListener('input', function() {
+            const query = searchInput.value;
+            if (query.length > 2) {  // Start searching after 2 characters
+                fetch(`${searchPropertiesUrl}?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Clear existing results
+                        propertyResults.innerHTML = '';
+                        if (data.properties && data.properties.length > 0) {
+                            propertyResults.classList.remove('hidden');
+                            data.properties.forEach(function (property) {
+                                const option = document.createElement('div');
+                                option.className = 'cursor-pointer px-3 py-2 hover:bg-gray-600';
+                                option.textContent = property.display_name;
+                                option.dataset.propertyId = property.property_id;
+                                option.addEventListener('click', function() {
+                                    // Set the input values
+                                    searchInput.value = property.display_name;
+                                    propertyIdInput.value = property.property_id;
+                                    // Hide the results
+                                    propertyResults.classList.add('hidden');
+                                });
+                                propertyResults.appendChild(option);
+                            });
+                        } else {
+                            propertyResults.classList.add('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching properties:', error);
+                    });
+            } else {
+                propertyResults.classList.add('hidden');  // Hide the results if query is too short
             }
         });
 
-        function fetchProperties() {
-            fetch("{% url 'get_ga4_properties' %}")
-            .then(response => response.json())
-            .then(data => {
-                if (data.properties) {
-                    // Get the selected property ID
-                    const selectedPropertyId = "{{ property_id|default:''|escapejs }}";
-
-                    // Keep the existing options (selected property), and add new options
-                    data.properties.forEach(function(property) {
-                        // Skip adding the already selected property to avoid duplicates
-                        if (property.property_id !== selectedPropertyId) {
-                            const option = document.createElement('option');
-                            option.value = property.property_id;
-                            option.text = property.display_name;
-                            propertySelect.add(option);
-                        }
-                    });
-                } else {
-                    alert('Error fetching properties: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching properties:', error);
-            });
-        }
+        // Hide the results if clicking outside
+        document.addEventListener('click', function(event) {
+            if (!searchInput.contains(event.target) && !propertyResults.contains(event.target)) {
+                propertyResults.classList.add('hidden');
+            }
+        });
     });
 
     // Export table data to CSV
@@ -296,10 +308,6 @@
         if (table) {
             table.style.display = 'none'; // Hide the table
         }
-        // Optionally reset other inputs or perform actions
-        // For example, you might want to reset the form
-        // document.querySelector('form').reset();
-        // toggleCustomDateInput(); // Update the custom date input visibility
     }
 
     // Ensure the custom date input is displayed correctly on page load
@@ -307,4 +315,14 @@
         toggleCustomDateInput();
     });
 </script>
+
+<!-- Optional CSS for search results -->
+<style>
+    #property_results {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #4B5563; /* Tailwind gray-700 */
+    }
+</style>
+
 {% endblock %}

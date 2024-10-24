@@ -3,7 +3,6 @@
 import json
 import logging
 import datetime
-import os
 from django.shortcuts import render
 from django.http import (
     HttpResponseBadRequest,
@@ -20,7 +19,6 @@ logger = logging.getLogger(__name__)
 # Path to service account key JSON file for Analytics access
 SERVICE_ACCOUNT_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'
 
-
 def get_analytics_credentials():
     """Get Google Analytics credentials using service account."""
     SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
@@ -32,7 +30,6 @@ def get_analytics_credentials():
     except Exception as e:
         logger.error(f"Failed to load service account credentials: {e}")
         return None
-
 
 # Utility function to handle preset date ranges
 def get_date_range(preset):
@@ -50,7 +47,6 @@ def get_date_range(preset):
     else:
         return None, None
 
-
 def format_duration(duration):
     try:
         duration = int(duration)
@@ -62,8 +58,6 @@ def format_duration(duration):
     except (ValueError, TypeError):
         return '0:00'
 
-
-# Fetch Google Analytics data view
 def fetch_ga4_data(request):
     try:
         creds = get_analytics_credentials()
@@ -71,6 +65,7 @@ def fetch_ga4_data(request):
             logger.error("Could not obtain Analytics credentials.")
             return HttpResponseServerError("Could not obtain Analytics credentials.")
 
+        # Initialize BetaAnalyticsDataClient using the service account credentials
         client = BetaAnalyticsDataClient(credentials=creds)
 
         report_data = []
@@ -83,7 +78,7 @@ def fetch_ga4_data(request):
         date_range = None
         property_id = None
 
-        # Check if we have POST request for form data
+        # Handle POST request with form data
         if request.method == 'POST':
             property_id = request.POST.get('property_id')
             date_range = request.POST.get('date_range', 'last_7_days')
@@ -91,7 +86,7 @@ def fetch_ga4_data(request):
             compare = request.POST.get('compare') == 'true'
             comparison_range = request.POST.get('comparison_range', 'none')
 
-            # Custom date selection or handle preset date ranges
+            # Handle custom date ranges or preset date ranges
             if date_range == 'custom':
                 start_date = request.POST.get('start_date')
                 end_date = request.POST.get('end_date')
@@ -106,16 +101,16 @@ def fetch_ga4_data(request):
                 start_date = start_date_obj.strftime('%Y-%m-%d')
                 end_date = end_date_obj.strftime('%Y-%m-%d')
 
-            # Validate inputs
+            # Validate inputs to ensure required fields are not missing
             if not property_id or not start_date or not end_date or not row_limit:
                 logger.warning("One or more required fields are missing.")
                 return HttpResponseBadRequest("Please provide valid inputs.")
 
-            # Remove 'properties/' prefix if present
+            # Remove 'properties/' prefix if present in the property_id
             if property_id.startswith("properties/"):
                 property_id = property_id.replace("properties/", "")
 
-            # Request body for GA4 data
+            # Prepare the request body for the GA4 data request
             request_body = {
                 'property': f'properties/{property_id}',
                 'metrics': [
@@ -131,7 +126,7 @@ def fetch_ga4_data(request):
 
             logger.debug(f"Request body for GA4 data: {request_body}")
 
-            # Fetching GA4 data
+            # Attempt to fetch GA4 data
             try:
                 response = client.run_report(request=request_body)
                 for row in response.rows:
@@ -151,39 +146,40 @@ def fetch_ga4_data(request):
                 logger.error(f"Error fetching Google Analytics data: {str(e)}", exc_info=True)
                 return HttpResponseBadRequest(f"Error fetching data: {str(e)}")
 
-            # Handle comparison if requested
+            # Handle comparison if comparison is requested
             if compare and comparison_range != 'none':
-                comparison_start_date, comparison_end_date = None, None
-                start_date_obj = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
-                end_date_obj = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
-
-                if comparison_range == 'preceding_period':
-                    delta = end_date_obj - start_date_obj
-                    comparison_start_date = (start_date_obj - delta).strftime('%Y-%m-%d')
-                    comparison_end_date = (end_date_obj - delta).strftime('%Y-%m-%d')
-                elif comparison_range == 'preceding_period_match_day':
-                    comparison_start_date = (start_date_obj - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-                    comparison_end_date = (end_date_obj - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-                elif comparison_range == 'same_period_last_year':
-                    comparison_start_date = (start_date_obj - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
-                    comparison_end_date = (end_date_obj - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
-                else:
-                    logger.warning(f"Invalid comparison range selected: {comparison_range}")
-                    return HttpResponseBadRequest("Invalid comparison range selected.")
-
-                # Prepare the comparison request body
-                comparison_request_body = {
-                    'property': f'properties/{property_id}',
-                    'metrics': request_body['metrics'],
-                    'dimensions': request_body['dimensions'],
-                    'date_ranges': [{'start_date': comparison_start_date, 'end_date': comparison_end_date}],
-                    'limit': int(row_limit),
-                }
-
-                logger.debug(f"Comparison request body: {comparison_request_body}")
-
-                # Fetch comparison data
                 try:
+                    comparison_start_date, comparison_end_date = None, None
+                    start_date_obj = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+                    end_date_obj = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                    # Handle different comparison ranges
+                    if comparison_range == 'preceding_period':
+                        delta = (end_date_obj - start_date_obj)
+                        comparison_start_date = (start_date_obj - delta).strftime('%Y-%m-%d')
+                        comparison_end_date = (end_date_obj - delta).strftime('%Y-%m-%d')
+                    elif comparison_range == 'preceding_period_match_day':
+                        comparison_start_date = (start_date_obj - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+                        comparison_end_date = (end_date_obj - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+                    elif comparison_range == 'same_period_last_year':
+                        comparison_start_date = (start_date_obj - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
+                        comparison_end_date = (end_date_obj - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
+                    else:
+                        logger.warning(f"Invalid comparison range selected: {comparison_range}")
+                        return HttpResponseBadRequest("Invalid comparison range selected.")
+
+                    # Prepare the request body for comparison data
+                    comparison_request_body = {
+                        'property': f'properties/{property_id}',
+                        'metrics': request_body['metrics'],
+                        'dimensions': request_body['dimensions'],
+                        'date_ranges': [{'start_date': comparison_start_date, 'end_date': comparison_end_date}],
+                        'limit': int(row_limit),
+                    }
+
+                    logger.debug(f"Comparison request body: {comparison_request_body}")
+
+                    # Fetch comparison data
                     comparison_response = client.run_report(request=comparison_request_body)
                     for row in comparison_response.rows:
                         avg_session_duration = format_duration(
@@ -198,50 +194,50 @@ def fetch_ga4_data(request):
                             "avg_session_duration": avg_session_duration,
                         })
                     logger.debug(f"Fetched {len(comparison_data)} rows of comparison data.")
+                    
+                    # Calculate the differences and update report data
+                    comparison_dict = {data["page_path"]: data for data in comparison_data}
+                    for main_data in report_data:
+                        comp_data = comparison_dict.get(main_data["page_path"], None)
+                        if comp_data:
+                            main_data["total_users_diff"] = main_data["total_users"] - comp_data["total_users"]
+                            main_data["bounce_rate_diff"] = main_data["bounce_rate"] - comp_data["bounce_rate"]
+                            main_data["sessions_diff"] = main_data["sessions"] - comp_data["sessions"]
+
+                            # Calculate the avg_session_duration_diff in seconds
+                            try:
+                                main_minutes, main_seconds = map(int, main_data["avg_session_duration"].split(":"))
+                                main_total_seconds = main_minutes * 60 + main_seconds
+                            except (IndexError, ValueError):
+                                main_total_seconds = 0
+
+                            try:
+                                comp_minutes, comp_seconds = map(int, comp_data["avg_session_duration"].split(":"))
+                                comp_total_seconds = comp_minutes * 60 + comp_seconds
+                            except (IndexError, ValueError):
+                                comp_total_seconds = 0
+
+                            diff_seconds = main_total_seconds - comp_total_seconds
+                            main_data["avg_session_duration_diff"] = format_duration(diff_seconds)
+                        else:
+                            # If no comparison data exists for this page_path, set differences to None
+                            main_data["total_users_diff"] = None
+                            main_data["bounce_rate_diff"] = None
+                            main_data["sessions_diff"] = None
+                            main_data["avg_session_duration_diff"] = None
+
                 except Exception as e:
                     logger.error(f"Error fetching comparison data: {str(e)}", exc_info=True)
                     return HttpResponseBadRequest(f"Error fetching comparison data: {str(e)}")
-
-                # Calculate the differences
-                comparison_dict = {data["page_path"]: data for data in comparison_data}
-                for main_data in report_data:
-                    comp_data = comparison_dict.get(main_data["page_path"], None)
-                    if comp_data:
-                        main_data["total_users_diff"] = main_data["total_users"] - comp_data["total_users"]
-                        main_data["bounce_rate_diff"] = main_data["bounce_rate"] - comp_data["bounce_rate"]
-                        main_data["sessions_diff"] = main_data["sessions"] - comp_data["sessions"]
-
-                        # Calculate the avg_session_duration_diff in seconds
-                        try:
-                            main_minutes, main_seconds = map(int, main_data["avg_session_duration"].split(":"))
-                            main_total_seconds = main_minutes * 60 + main_seconds
-                        except (IndexError, ValueError):
-                            main_total_seconds = 0
-
-                        try:
-                            comp_minutes, comp_seconds = map(int, comp_data["avg_session_duration"].split(":"))
-                            comp_total_seconds = comp_minutes * 60 + comp_seconds
-                        except (IndexError, ValueError):
-                            comp_total_seconds = 0
-
-                        diff_seconds = main_total_seconds - comp_total_seconds
-                        main_data["avg_session_duration_diff"] = format_duration(diff_seconds)
-                    else:
-                        # If no comparison data exists for this page_path, set differences to None
-                        main_data["total_users_diff"] = None
-                        main_data["bounce_rate_diff"] = None
-                        main_data["sessions_diff"] = None
-                        main_data["avg_session_duration_diff"] = None
-
             else:
-                # Ensure difference fields are None when not comparing
+                # Set difference fields to None if comparison is not requested
                 for main_data in report_data:
                     main_data["total_users_diff"] = None
                     main_data["bounce_rate_diff"] = None
                     main_data["sessions_diff"] = None
                     main_data["avg_session_duration_diff"] = None
 
-            # Render the results
+            # Render the results to the template
             return render(request, 'analytics/ga4_data.html', {
                 'report_data': report_data,
                 'property_id': property_id,
@@ -254,19 +250,19 @@ def fetch_ga4_data(request):
             })
 
         else:
-            # Handle GET request or empty form
+            # Handle GET request (or if form is not submitted)
             logger.debug("Rendering GA4 data form.")
             return render(request, 'analytics/ga4_data.html', {
                 'report_data': None,
                 'property_id': None,
                 'compare': None,
                 'comparison_range': 'none',
+                'row_limit': 10,  # Provide default value
             })
 
     except Exception as e:
         logger.error("Error in fetch_ga4_data view:", exc_info=True)
         return HttpResponseServerError(f"Error in fetch_ga4_data view: {str(e)}")
-
 
 def get_ga4_properties(request):
     try:
@@ -275,21 +271,24 @@ def get_ga4_properties(request):
         if not creds:
             logger.error("Could not obtain Analytics credentials.")
             return HttpResponseServerError("Could not obtain Analytics credentials.")
-
+        
         # Create a client for Analytics Admin API
         admin_client = AnalyticsAdminServiceClient(credentials=creds)
 
-        # Fetch the GA4 properties
+        # Fetch the GA4 properties for all accounts
         properties = []
-        accounts = admin_client.list_account_summaries()
+        accounts = admin_client.list_accounts()  # Fetch all accounts available to the service account
+        
         for account in accounts:
-            for property_summary in account.property_summaries:
+            # Now fetch properties for each account
+            account_summaries = admin_client.list_account_summaries(account=account.name)
+            for property_summary in account_summaries:
                 properties.append({
-                    'property_id': property_summary.property,
+                    'property_id': property_summary.property.split('/')[-1],  # Extract ID without 'properties/' prefix
                     'display_name': property_summary.display_name
                 })
 
-        logger.debug(f"Fetched {len(properties)} GA4 properties.")
+        logger.debug(f"Fetched {len(properties)} GA4 properties across all accounts.")
 
         # Return the properties as JSON
         return JsonResponse({'properties': properties})
@@ -297,3 +296,40 @@ def get_ga4_properties(request):
     except Exception as e:
         logger.error(f"Error fetching GA4 properties: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def search_properties(request):
+    query = request.GET.get('query', '').strip()
+
+    if query:
+        try:
+            creds = get_analytics_credentials()
+            if not creds:
+                logger.error("Could not obtain Analytics credentials.")
+                return JsonResponse({'error': 'Could not obtain Analytics credentials.'}, status=500)
+
+            # Create a client for Analytics Admin API
+            admin_client = AnalyticsAdminServiceClient(credentials=creds)
+
+            # Fetch properties that match the query
+            properties = []
+            accounts = admin_client.list_account_summaries()
+            for account in accounts:
+                for property_summary in account.property_summaries:
+                    logger.debug(f"Property found: {property_summary.display_name}, ID: {property_summary.property}")
+                    if query.lower() in property_summary.display_name.lower() or query.lower() in property_summary.property.lower():
+                        properties.append({
+                            'property_id': property_summary.property.split('/')[-1],
+                            'display_name': property_summary.display_name
+                        })
+
+
+            logger.debug(f"Search query '{query}' returned {len(properties)} properties.")
+
+            return JsonResponse({'properties': properties})
+
+        except Exception as e:
+            logger.error(f"Error fetching GA4 properties: {str(e)}", exc_info=True)
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'properties': []})
