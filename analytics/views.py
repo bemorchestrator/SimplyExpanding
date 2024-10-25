@@ -11,25 +11,14 @@ from django.http import (
 )
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.admin_v1alpha import AnalyticsAdminServiceClient
-from google.oauth2 import service_account
+from googleapiclient.discovery import build  # Ensure this is imported if needed elsewhere
+
+# Import the get_service_credentials function from your Google auth module
+# Adjust the import path based on your project structure
+from google_auth import get_service_credentials
 
 # Initialize logger
 logger = logging.getLogger(__name__)
-
-# Path to service account key JSON file for Analytics access
-SERVICE_ACCOUNT_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'
-
-def get_analytics_credentials():
-    """Get Google Analytics credentials using service account."""
-    SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
-    try:
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
-        )
-        return credentials
-    except Exception as e:
-        logger.error(f"Failed to load service account credentials: {e}")
-        return None
 
 # Utility function to handle preset date ranges
 def get_date_range(preset):
@@ -60,7 +49,8 @@ def format_duration(duration):
 
 def fetch_ga4_data(request):
     try:
-        creds = get_analytics_credentials()
+        # Use the centralized credentials retrieval
+        creds = get_service_credentials('analytics')
         if not creds:
             logger.error("Could not obtain Analytics credentials.")
             return HttpResponseServerError("Could not obtain Analytics credentials.")
@@ -266,8 +256,8 @@ def fetch_ga4_data(request):
 
 def get_ga4_properties(request):
     try:
-        # Get credentials
-        creds = get_analytics_credentials()
+        # Use the centralized credentials retrieval
+        creds = get_service_credentials('analytics')
         if not creds:
             logger.error("Could not obtain Analytics credentials.")
             return HttpResponseServerError("Could not obtain Analytics credentials.")
@@ -282,7 +272,7 @@ def get_ga4_properties(request):
         for account in accounts:
             # Now fetch properties for each account
             account_summaries = admin_client.list_account_summaries(account=account.name)
-            for property_summary in account_summaries:
+            for property_summary in account_summaries.property_summaries:
                 properties.append({
                     'property_id': property_summary.property.split('/')[-1],  # Extract ID without 'properties/' prefix
                     'display_name': property_summary.display_name
@@ -297,13 +287,13 @@ def get_ga4_properties(request):
         logger.error(f"Error fetching GA4 properties: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
 
-
 def search_properties(request):
     query = request.GET.get('query', '').strip()
 
     if query:
         try:
-            creds = get_analytics_credentials()
+            # Use the centralized credentials retrieval
+            creds = get_service_credentials('analytics')
             if not creds:
                 logger.error("Could not obtain Analytics credentials.")
                 return JsonResponse({'error': 'Could not obtain Analytics credentials.'}, status=500)
@@ -314,15 +304,14 @@ def search_properties(request):
             # Fetch properties that match the query
             properties = []
             accounts = admin_client.list_account_summaries()
-            for account in accounts:
-                for property_summary in account.property_summaries:
+            for account_summary in accounts:
+                for property_summary in account_summary.property_summaries:
                     logger.debug(f"Property found: {property_summary.display_name}, ID: {property_summary.property}")
                     if query.lower() in property_summary.display_name.lower() or query.lower() in property_summary.property.lower():
                         properties.append({
                             'property_id': property_summary.property.split('/')[-1],
                             'display_name': property_summary.display_name
                         })
-
 
             logger.debug(f"Search query '{query}' returned {len(properties)} properties.")
 

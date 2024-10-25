@@ -1,12 +1,10 @@
 # search_console/views.py
 
 import logging
-import os
 import csv
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 
-from django.conf import settings
 from django.http import (
     HttpResponseBadRequest,
     HttpResponseServerError,
@@ -14,35 +12,21 @@ from django.http import (
 )
 from django.shortcuts import render
 
-from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+# Import the get_service_credentials function from your Google auth module
+# Adjust the import path based on your project structure
+from google_auth import get_service_credentials
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Path to service account key JSON file for Search Console access
-SERVICE_ACCOUNT_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'
-
-
-def get_search_console_credentials():
-    """Get Google Search Console credentials using service account."""
-    SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
-    try:
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
-        )
-        return credentials
-    except Exception as e:
-        logger.error(f"Failed to load service account credentials: {e}")
-        return None
-
 
 def get_search_console_service():
-    """Get Google Search Console service using service account credentials."""
+    """Get Google Search Console service using centralized service account credentials."""
     try:
-        credentials = get_search_console_credentials()
+        credentials = get_service_credentials('search_console')
         if not credentials:
             raise ValueError("No valid service account credentials available.")
 
@@ -129,7 +113,7 @@ def search_console_data(request):
     try:
         logger.debug("Accessing search_console_data view.")
 
-        # Get the Search Console service using service account
+        # Get the Search Console service using centralized credentials
         service = get_search_console_service()
         if not service:
             logger.error("Could not initiate Google Search Console service.")

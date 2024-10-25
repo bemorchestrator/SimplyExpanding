@@ -4,10 +4,22 @@
 
 {% block content %}
 <div class="container mx-auto p-4 text-gray-100 mt-10">
+    <!-- Spinner (Initially Hidden) -->
+    <div id="spinner" class="hidden fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="defragmentation-spinner flex space-x-2 mb-4">
+            <div class="block w-4 h-4 bg-blue-500 animate-pulse"></div>
+            <div class="block w-4 h-4 bg-blue-600 animate-pulse"></div>
+            <div class="block w-4 h-4 bg-blue-700 animate-pulse"></div>
+            <div class="block w-4 h-4 bg-blue-800 animate-pulse"></div>
+            <div class="block w-4 h-4 bg-blue-900 animate-pulse"></div>
+        </div>
+        <p class="text-lg text-gray-100">We are processing your report and connecting via API...</p>
+    </div>
+
     <h1 class="text-3xl font-bold mb-4">Google Analytics 4 Data Report</h1>
 
     <!-- Form for fetching data -->
-    <form method="POST" class="mb-6 rounded-lg p-4">
+    <form method="POST" class="mb-6 rounded-lg p-4" id="data-fetch-form">
         {% csrf_token %}
         <div class="flex flex-wrap md:flex-row md:items-end gap-4">
             <!-- Search Input for GA4 Property -->
@@ -241,6 +253,13 @@
                 propertyResults.classList.add('hidden');
             }
         });
+
+        // Handle form submission to show spinner
+        const form = document.getElementById('data-fetch-form');
+        form.addEventListener('submit', function() {
+            const spinner = document.getElementById('spinner');
+            spinner.classList.remove('hidden');
+        });
     });
 
     // Export table data to CSV
@@ -316,13 +335,58 @@
     });
 </script>
 
-<!-- Optional CSS for search results -->
+<!-- Spinner Styles -->
 <style>
-    #property_results {
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #4B5563; /* Tailwind gray-700 */
+    .defragmentation-spinner div {
+        animation: pulse 1.5s infinite;
+    }
+
+    .defragmentation-spinner div:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .defragmentation-spinner div:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .defragmentation-spinner div:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .defragmentation-spinner div:nth-child(4) {
+        animation-delay: 0.4s;
+    }
+
+    .defragmentation-spinner div:nth-child(5) {
+        animation-delay: 0.5s;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.5);
+        }
     }
 </style>
 
+<!-- SweetAlert2 JS and CSS (Ensure these are not already included in base.html) -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+<!-- Display Django Messages using SweetAlert2 -->
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: "{{ message|escapejs }}",
+                });
+            {% endfor %}
+        });
+    </script>
+{% endif %}
 {% endblock %}

@@ -11,9 +11,9 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
 
 from analytics.views import fetch_ga4_data
 from audit.models import AuditDashboard
@@ -21,43 +21,15 @@ from client.models import ClientOnboarding
 from keywords.models import KeywordResearchDashboard
 from report.models import Report
 from django.contrib import messages
-from google.oauth2 import service_account
 from google.analytics.admin_v1beta import AnalyticsAdminServiceClient
 from google.analytics.data_v1beta.types import RunReportRequest
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from urllib.parse import urlparse
 from django.core.cache import cache
+from google_auth import get_service_credentials
 
 logger = logging.getLogger(__name__)
 
-# Path to your service account key JSON file for Google Search Console access
-SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE = r'C:\Users\bem\Desktop\credentials\se_service_account.json'  # Update with your actual path
-
-
-def get_analytics_credentials():
-    """Get Google Analytics credentials using service account."""
-    SCOPES = ['https://www.googleapis.com/auth/analytics.readonly']
-    try:
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE, scopes=SCOPES
-        )
-        return credentials
-    except Exception as e:
-        logger.error(f"Failed to load service account credentials: {e}")
-        return None
-
-
-def get_search_console_credentials():
-    """Get Google Search Console credentials using service account."""
-    SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
-    try:
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_SEARCH_CONSOLE_FILE, scopes=SCOPES
-        )
-        return credentials
-    except Exception as e:
-        logger.error(f"Failed to load Search Console service account credentials: {e}")
-        return None
 
 
 # Function to fetch Google Search Console data
@@ -66,7 +38,7 @@ def fetch_search_console_data(
 ):
     try:
         # Use the service account to authenticate for Google Search Console
-        creds = get_search_console_credentials()
+        creds = get_service_credentials('search_console')
 
         if not creds:
             logger.error("Failed to obtain credentials for Google Search Console.")
@@ -177,8 +149,6 @@ def client_portal(request, client_id):
             'report_types': report_types,
         }
     )
-
-
 
 
 def client_list(request):
@@ -456,8 +426,6 @@ def google_search_console_report(request, client_id):
         )
 
 
-
-
 # View for Keyword Research Report
 def keyword_research_report(request, client_id):
     client = get_object_or_404(ClientOnboarding, id=client_id)
@@ -502,7 +470,7 @@ def get_property_id_for_website(website_url):
 
     logger.debug(f"Cache miss for website {website_url}. Looking up property ID.")
     
-    creds = get_analytics_credentials()
+    creds = get_service_credentials('analytics')
     if not creds:
         logger.error("Could not obtain Analytics credentials.")
         return None
@@ -556,10 +524,9 @@ def format_duration(duration):
         return '0:00'
 
 
-
 def fetch_ga4_data(property_id, start_date='30daysAgo', end_date='today'):
     """Fetch GA4 data for the given property ID using service account credentials."""
-    creds = get_analytics_credentials()
+    creds = get_service_credentials('analytics')
     if not creds:
         logger.error("Could not obtain Analytics credentials.")
         return None
@@ -637,8 +604,6 @@ def fetch_ga4_data(property_id, start_date='30daysAgo', end_date='today'):
         return None
 
 
-
-
 def google_analytics_report(request, client_id):
     client = get_object_or_404(ClientOnboarding, id=client_id)
 
@@ -711,7 +676,7 @@ def google_analytics_report(request, client_id):
 
     # Fetch time-series data for the graph
     try:
-        client_ts = BetaAnalyticsDataClient(credentials=get_analytics_credentials())
+        client_ts = BetaAnalyticsDataClient(credentials=get_service_credentials('analytics'))
         request_ts = RunReportRequest(
             property=f'properties/{property_id}',
             date_ranges=[{"start_date": start_date_str, "end_date": end_date_str}],
@@ -862,6 +827,17 @@ def google_analytics_report(request, client_id):
                 page['delta_averageSessionDuration_sign'] = 'no_change'
                 page['delta_averageSessionDuration_value'] = '0:00'
 
+        # If compare is False, ensure delta variables are set to default
+        else:
+            delta_active_users_sign = 'no_change'
+            delta_active_users_value = 0
+            delta_new_users_sign = 'no_change'
+            delta_new_users_value = 0
+            delta_sessions_sign = 'no_change'
+            delta_sessions_value = 0
+            delta_bounce_rate_sign = 'no_change'
+            delta_bounce_rate_value = 0.0
+
     # If compare is False, ensure delta variables are set to default
     else:
         delta_active_users_sign = 'no_change'
@@ -904,8 +880,6 @@ def google_analytics_report(request, client_id):
     return render(request, 'report/google_analytics_detail.html', context)
 
 
-
-
 def parse_duration(duration_str):
     """Convert 'minutes:seconds' string to total seconds."""
     try:
@@ -913,6 +887,7 @@ def parse_duration(duration_str):
         return minutes * 60 + seconds
     except (ValueError, TypeError):
         return 0
+
 
 def format_duration_seconds(total_seconds):
     """Convert total seconds to 'minutes:seconds' format, handling negative durations."""
@@ -925,5 +900,3 @@ def format_duration_seconds(total_seconds):
         return f"-{duration_str}" if is_negative else duration_str
     except (ValueError, TypeError):
         return '0:00'
-
-

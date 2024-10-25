@@ -6,23 +6,41 @@
 <!-- Include Bootstrap Icons CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 
+<!-- SweetAlert2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+<!-- Spinner (Initially Hidden) -->
+<div id="spinner" class="hidden fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-50" role="alert" aria-live="assertive">
+    <div class="defragmentation-spinner flex space-x-2 mb-4">
+        <div class="block w-4 h-4 bg-blue-500 animate-pulse"></div>
+        <div class="block w-4 h-4 bg-blue-600 animate-pulse"></div>
+        <div class="block w-4 h-4 bg-blue-700 animate-pulse"></div>
+        <div class="block w-4 h-4 bg-blue-800 animate-pulse"></div>
+        <div class="block w-4 h-4 bg-blue-900 animate-pulse"></div>
+    </div>
+    <p class="text-lg text-gray-100">We are processing your request...</p>
+</div>
+
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <div class="w-full py-6 px-4 lg:px-8">
     <div class="py-6">
         <!-- Tabs -->
         <div class="mb-6">
             <div class="flex border-b border-gray-200">
-                <a href="?tab=url" class="py-2 px-4 text-white {% if tab == 'url' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
+                <a href="?tab=url" class="tab-link py-2 px-4 text-white {% if tab == 'url' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
                     URL to Keywords
                 </a>
-                <a href="?tab=keyword" class="ml-4 py-2 px-4 text-white {% if tab == 'keyword' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
+                <a href="?tab=keyword" class="tab-link ml-4 py-2 px-4 text-white {% if tab == 'keyword' %}border-b-2 border-indigo-500 font-medium{% else %}hover:text-indigo-500{% endif %}">
                     Keyword to Pages
                 </a>
             </div>
         </div>
 
         <!-- Form to input URL or keyword, date range, and row limit -->
-        <div class=" rounded-lg p-6 mb-6">
-            <form method="POST" novalidate class="grid grid-cols-12 gap-4">
+        <div class="rounded-lg p-6 mb-6 bg-gray-800">
+            <form method="POST" novalidate class="grid grid-cols-12 gap-4" id="data-fetch-form">
                 {% csrf_token %}
                 <input type="hidden" name="tab" value="{{ tab }}">
 
@@ -31,14 +49,14 @@
                     <label for="input_value" class="block text-sm font-medium text-white">
                         {% if tab == 'url' %}Enter URL:{% else %}Enter Keyword:{% endif %}
                     </label>
-                    <input type="text" id="input_value" name="input_value" value="{{ input_value|default:'' }}" class="mt-1 block w-full p-2 border text-white bg-gray-800 border-gray-600 rounded-md shadow-sm" placeholder="{% if tab == 'url' %}Enter a URL{% else %}Enter a keyword{% endif %}">
+                    <input type="text" id="input_value" name="input_value" value="{{ input_value|default:'' }}" class="mt-1 block w-full p-2 border text-white bg-gray-700 border-gray-600 rounded-md shadow-sm" placeholder="{% if tab == 'url' %}Enter a URL{% else %}Enter a keyword{% endif %}">
                 </div>
 
                 <!-- Site Selection Dropdown (only for keyword tab) -->
                 {% if tab == 'keyword' %}
                 <div class="col-span-12 sm:col-span-3">
                     <label for="selected_site" class="block text-sm font-medium text-white">Select Site:</label>
-                    <select id="selected_site" name="selected_site" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
+                    <select id="selected_site" name="selected_site" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-white">
                         <option value="">-- Select Site --</option>
                         {% for site in available_sites %}
                             <option value="{{ site }}" {% if site == selected_site %}selected{% endif %}>{{ site }}</option>
@@ -50,25 +68,25 @@
                 <!-- Start Date Input -->
                 <div class="col-span-12 sm:col-span-2">
                     <label for="start_date" class="block text-sm font-medium text-white">Start Date:</label>
-                    <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-white">
                 </div>
 
                 <!-- End Date Input -->
                 <div class="col-span-12 sm:col-span-2">
                     <label for="end_date" class="block text-sm font-medium text-white">End Date:</label>
-                    <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-white">
                 </div>
 
                 <!-- Row Limit Input -->
                 <div class="col-span-12 sm:col-span-2">
                     <label for="row_limit" class="block text-sm font-medium text-white">Number of Rows:</label>
-                    <input type="number" id="row_limit" name="row_limit" value="{{ row_limit|default:10 }}" min="1" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-800 text-white">
+                    <input type="number" id="row_limit" name="row_limit" value="{{ row_limit|default:10 }}" min="1" class="mt-1 block w-full p-2 border border-gray-600 rounded-md shadow-sm bg-gray-700 text-white">
                 </div>
 
                 <!-- Buttons for URL to Keywords Tab -->
                 {% if tab == 'url' %}
                 <div class="col-span-12 sm:col-span-3 flex space-x-4 mt-6 sm:mt-0">
-                    <button type="submit" name="fetch_data" value="1" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mt-6" style="height: 38px;">
+                    <button type="submit" name="fetch_data" value="1" class="w-full py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" style="height: 38px;">
                         Fetch Data
                     </button>
                 </div>
@@ -139,7 +157,8 @@
                                     </td>
                                 {% elif header.field == 'page' %}
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
-                                        <a href="?tab=url&input_value={{ row|get_item:header.field|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&fetch_data=1" class="text-blue-400 hover:underline" title="{{ row|get_item:header.field }}">
+                                        <!-- Added 'result-link' class to these links -->
+                                        <a href="?tab=url&input_value={{ row|get_item:header.field|urlencode }}&start_date={{ start_date }}&end_date={{ end_date }}&row_limit={{ row_limit }}&fetch_data=1" class="text-blue-400 hover:underline result-link" title="{{ row|get_item:header.field }}">
                                             {{ row|get_item:header.field|truncatechars:50 }}
                                         </a>
                                     </td>
@@ -167,56 +186,94 @@
     </div>
 </div>
 
-<!-- JavaScript for Real-Time Table Filtering and Form Validation -->
+<!-- JavaScript for Spinner, Real-Time Table Filtering, and Form Validation -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Custom Form Validation
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(event) {
-            const inputValue = document.getElementById('input_value');
-            const startDate = document.getElementById('start_date');
-            const endDate = document.getElementById('end_date');
-            const rowLimit = document.getElementById('row_limit');
-            const selectedSite = document.getElementById('selected_site');
+        // Function to show the spinner
+        function showSpinner() {
+            const spinner = document.getElementById('spinner');
+            spinner.classList.remove('hidden');
+        }
 
-            let valid = true;
-            let messages = [];
+        // Function to hide the spinner (optional, since it will be hidden on page load)
+        function hideSpinner() {
+            const spinner = document.getElementById('spinner');
+            spinner.classList.add('hidden');
+        }
 
-            // Validate Input Value
-            if (!inputValue.value.trim()) {
-                messages.push('Please enter a URL or keyword.');
-                valid = false;
-            }
+        // Custom Form Validation and Spinner Display
+        const form = document.getElementById('data-fetch-form');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                const inputValue = document.getElementById('input_value');
+                const startDate = document.getElementById('start_date');
+                const endDate = document.getElementById('end_date');
+                const rowLimit = document.getElementById('row_limit');
+                const selectedSite = document.getElementById('selected_site');
 
-            // Validate Selected Site (only for keyword tab)
-            const tabValue = '{{ tab }}';
-            if (tabValue === 'keyword' && (!selectedSite || !selectedSite.value.trim())) {
-                messages.push('Please select a site.');
-                valid = false;
-            }
+                let valid = true;
+                let messages = [];
 
-            // Validate Start Date
-            if (!startDate.value) {
-                messages.push('Please select a start date.');
-                valid = false;
-            }
+                // Validate Input Value
+                if (!inputValue.value.trim()) {
+                    messages.push('Please enter a URL or keyword.');
+                    valid = false;
+                }
 
-            // Validate End Date
-            if (!endDate.value) {
-                messages.push('Please select an end date.');
-                valid = false;
-            }
+                // Validate Selected Site (only for keyword tab)
+                const tabValue = '{{ tab }}';
+                if (tabValue === 'keyword' && (!selectedSite || !selectedSite.value.trim())) {
+                    messages.push('Please select a site.');
+                    valid = false;
+                }
 
-            // Validate Row Limit
-            if (!rowLimit.value || parseInt(rowLimit.value) < 1) {
-                messages.push('Please enter a valid number of rows.');
-                valid = false;
-            }
+                // Validate Start Date
+                if (!startDate.value) {
+                    messages.push('Please select a start date.');
+                    valid = false;
+                }
 
-            if (!valid) {
-                alert(messages.join('\n'));
-                event.preventDefault();
-            }
+                // Validate End Date
+                if (!endDate.value) {
+                    messages.push('Please select an end date.');
+                    valid = false;
+                }
+
+                // Validate Row Limit
+                if (!rowLimit.value || parseInt(rowLimit.value) < 1) {
+                    messages.push('Please enter a valid number of rows.');
+                    valid = false;
+                }
+
+                if (!valid) {
+                    // Use SweetAlert2 for displaying validation errors
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Validation Error',
+                        html: messages.join('<br>'),
+                    });
+                    event.preventDefault();
+                } else {
+                    // Show the spinner when the form is valid and is being submitted
+                    showSpinner();
+                }
+            });
+        }
+
+        // Add spinner display on tab link clicks
+        const tabLinks = document.querySelectorAll('.tab-link');
+        tabLinks.forEach(function(link) {
+            link.addEventListener('click', function() {
+                showSpinner();
+            });
+        });
+
+        // Add spinner display on result link clicks (Keyword to Pages Tab)
+        const resultLinks = document.querySelectorAll('.result-link');
+        resultLinks.forEach(function(link) {
+            link.addEventListener('click', function() {
+                showSpinner();
+            });
         });
 
         // Real-Time Table Filtering and Toggle Comparison only if data is available
@@ -231,7 +288,7 @@
             searchInput.addEventListener('keyup', function() {
                 const filter = searchInput.value.toLowerCase();
                 for (let i = 0; i < rows.length; i++) {
-                    const queryCell = rows[i].getElementsByTagName('td')[1];
+                    const queryCell = rows[i].getElementsByTagName('td')[1]; // Adjust index based on 'query' column
                     if (queryCell) {
                         const queryText = queryCell.textContent || queryCell.innerText;
                         if (queryText.toLowerCase().indexOf(filter) > -1) {
@@ -271,4 +328,60 @@
         {% endif %}
     });
 </script>
+
+<!-- Spinner Styles -->
+<style>
+    .defragmentation-spinner div {
+        animation: pulse 1.5s infinite;
+    }
+
+    .defragmentation-spinner div:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .defragmentation-spinner div:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .defragmentation-spinner div:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .defragmentation-spinner div:nth-child(4) {
+        animation-delay: 0.4s;
+    }
+
+    .defragmentation-spinner div:nth-child(5) {
+        animation-delay: 0.5s;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.5);
+        }
+    }
+
+    /* Ensure the spinner is above all other elements */
+    #spinner {
+        z-index: 1000;
+    }
+</style>
+
+<!-- Display Django Messages using SweetAlert2 -->
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: "{{ message|escapejs }}",
+                });
+            {% endfor %}
+        });
+    </script>
+{% endif %}
 {% endblock %}
